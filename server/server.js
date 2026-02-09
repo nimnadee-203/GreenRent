@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import cors from "cors";
 import { connectDB } from "./config/db.js";
 
-// Load environment variables
 dotenv.config();
 
 // Connect to Database
@@ -15,7 +14,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Test Route
+
 app.get("/", (req, res) => {
     res.send("GreenRent API is running...");
 });
