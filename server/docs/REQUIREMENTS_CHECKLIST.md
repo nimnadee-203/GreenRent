@@ -11,7 +11,7 @@
 **Status:** ✅ **COMPLETE**
 
 - Express.js server running on Node.js
-- File: [server.js](../server.js)
+- File: [src/server.js](../src/server.js)
 - Port: 5000 (configurable via env)
 - Proper middleware setup (CORS, JSON parsing)
 
@@ -77,10 +77,10 @@ Your component (Eco Sustainability Rating Engine) is one of the project's compon
 - ✅ 500 Internal Server Error - Server errors
 
 **Files:**
-- [routes/ecoRatingRoutes.js](../routes/ecoRatingRoutes.js)
-- [routes/renterReviewRoutes.js](../routes/renterReviewRoutes.js)
-- [controllers/ecoRatingController.js](../controllers/ecoRatingController.js)
-- [controllers/renterReviewController.js](../controllers/renterReviewController.js)
+- [src/routes/ecoRatingRoutes.js](../src/routes/ecoRatingRoutes.js)
+- [src/routes/renterReviewRoutes.js](../src/routes/renterReviewRoutes.js)
+- [src/controllers/ecoRatingController.js](../src/controllers/ecoRatingController.js)
+- [src/controllers/renterReviewController.js](../src/controllers/renterReviewController.js)
 
 ---
 
@@ -104,7 +104,7 @@ Your component (Eco Sustainability Rating Engine) is one of the project's compon
 - Data: European AQI + 6 pollutant measurements (PM10, PM2.5, CO, NO2, SO2, O3)
 
 **Files:**
-- [services/airQualityService.js](../services/airQualityService.js)
+- [src/services/airQualityService.js](../src/services/airQualityService.js)
 - [docs/THIRD_PARTY_API.md](THIRD_PARTY_API.md)
 
 ---
@@ -126,11 +126,11 @@ Your component (Eco Sustainability Rating Engine) is one of the project's compon
 - ✅ References between collections
 
 **Models:**
-- [models/EcoRating.js](../models/EcoRating.js)
-- [models/RenterReview.js](../models/RenterReview.js)
+- [src/models/EcoRating.js](../src/models/EcoRating.js)
+- [src/models/RenterReview.js](../src/models/RenterReview.js)
 
 **Connection:**
-- [config/db.js](../config/db.js)
+- [src/config/db.js](../src/config/db.js)
 
 **Schema Examples:**
 ```javascript
@@ -196,10 +196,10 @@ Your component (Eco Sustainability Rating Engine) is one of the project's compon
 - ✅ 403 Forbidden for insufficient permissions
 
 **Files:**
-- [middleware/auth.js](../middleware/auth.js)
+- [src/middleware/auth.js](../src/middleware/auth.js)
 
 **Testing:**
-- [utils/generateTestTokens.js](../utils/generateTestTokens.js)
+- [src/utils/generateTestTokens.js](../src/utils/generateTestTokens.js)
 - Run: `npm run generate-tokens` to get test tokens
 
 ---
@@ -218,8 +218,8 @@ Your component (Eco Sustainability Rating Engine) is one of the project's compon
 - ✅ String length limits (review max 1000 chars)
 
 **Validation Files:**
-- [validators/ecoRatingValidators.js](../validators/ecoRatingValidators.js)
-- [validators/renterReviewValidators.js](../validators/renterReviewValidators.js)
+- [src/validators/ecoRatingValidators.js](../src/validators/ecoRatingValidators.js)
+- [src/validators/renterReviewValidators.js](../src/validators/renterReviewValidators.js)
 
 **Error Handling:**
 - ✅ Try-catch blocks in all controllers
@@ -262,16 +262,17 @@ Your component (Eco Sustainability Rating Engine) is one of the project's compon
 **Folder Structure:**
 ```
 server/
-├── config/          # Database connection
-├── controllers/     # Request handlers
-├── middleware/      # Auth, validation
-├── models/          # Mongoose schemas
-├── routes/          # API endpoints
-├── services/        # Business logic
-├── validators/      # Input validation
-├── utils/           # Helper functions
+├── src/             # Application source code
+│   ├── config/      # Database connection
+│   ├── controllers/ # Request handlers
+│   ├── middleware/  # Auth, validation
+│   ├── models/      # Mongoose schemas
+│   ├── routes/      # API endpoints
+│   ├── services/    # Business logic
+│   ├── validators/  # Input validation
+│   └── utils/       # Helper functions
 ├── docs/            # Documentation
-├── server.js        # Entry point
+├── src/server.js    # Entry point
 └── package.json     # Dependencies
 ```
 
@@ -359,7 +360,7 @@ server/
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
-| a. Express.js RESTful API | ✅ COMPLETE | server.js, routes/ |
+| a. Express.js RESTful API | ✅ COMPLETE | src/server.js, src/routes/ |
 | b. 4+ Functional Components | ✅ COMPLETE | Landlord ratings, Renter reviews, Hybrid view, API integration |
 | c.i. CRUD + HTTP Status Codes | ✅ COMPLETE | All routes, controllers |
 | c.ii. Third-Party API | ✅ COMPLETE | Open-Meteo Air Quality API (100% free, no key) |

@@ -2,7 +2,7 @@ import { getAirQualityScore } from "../services/airQualityService.js";
 
 /**
  * Quick test script to verify Open-Meteo Air Quality API integration
- * Run: node utils/testAirQualityAPI.js
+ * Run: node src/utils/testAirQualityAPI.js
  */
 
 console.log("🧪 Testing Open-Meteo Air Quality API Integration\n");

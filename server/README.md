@@ -53,35 +53,36 @@ This creates JWT tokens for testing different user roles (landlord, renter, admi
 
 ```
 server/
-├── config/
-│   └── db.js                    # MongoDB connection
-├── controllers/
-│   ├── ecoRatingController.js   # Eco-rating endpoints
-│   └── renterReviewController.js # Review endpoints
-├── middleware/
-│   └── auth.js                  # JWT authentication & authorization
-├── models/
-│   ├── EcoRating.js             # Landlord eco-rating schema
-│   └── RenterReview.js          # Renter review schema
-├── routes/
-│   ├── ecoRatingRoutes.js       # Eco-rating routes
-│   └── renterReviewRoutes.js    # Review routes
-├── services/
-│   ├── ecoRatingService.js      # Eco-rating business logic
-│   ├── renterReviewService.js   # Review business logic
-│   └── airQualityService.js     # OpenWeatherMap API integration
-├── validators/
-│   ├── ecoRatingValidators.js   # Eco-rating validation
-│   └── renterReviewValidators.js # Review validation
-├── utils/
-│   └── generateTestTokens.js    # Test token generator
+├── src/
+│   ├── config/
+│   │   └── db.js                    # MongoDB connection
+│   ├── controllers/
+│   │   ├── ecoRatingController.js   # Eco-rating endpoints
+│   │   └── renterReviewController.js # Review endpoints
+│   ├── middleware/
+│   │   └── auth.js                  # JWT authentication & authorization
+│   ├── models/
+│   │   ├── EcoRating.js             # Landlord eco-rating schema
+│   │   └── RenterReview.js          # Renter review schema
+│   ├── routes/
+│   │   ├── ecoRatingRoutes.js       # Eco-rating routes
+│   │   └── renterReviewRoutes.js    # Review routes
+│   ├── services/
+│   │   ├── ecoRatingService.js      # Eco-rating business logic
+│   │   ├── renterReviewService.js   # Review business logic
+│   │   └── airQualityService.js     # OpenWeatherMap API integration
+│   ├── validators/
+│   │   ├── ecoRatingValidators.js   # Eco-rating validation
+│   │   └── renterReviewValidators.js # Review validation
+│   └── utils/
+│       └── generateTestTokens.js    # Test token generator
 ├── docs/
 │   ├── REQUIREMENTS_CHECKLIST.md # Assignment requirements met
 │   ├── HYBRID_SYSTEM.md          # System architecture & API docs
 │   ├── THIRD_PARTY_API.md        # OpenWeatherMap integration
 │   └── API_EXAMPLES.md           # Ready-to-use test cases
 ├── .env.example                  # Environment variables template
-├── server.js                     # Entry point
+├── src/server.js                 # Entry point
 └── package.json                  # Dependencies & scripts
 ```
 
