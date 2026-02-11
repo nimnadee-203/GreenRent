@@ -7,7 +7,11 @@ export const connectDB = async () => {
         mongoose.connection.on("connected", () => console.log
             ("Connected to MongoDB"))
 
-        await mongoose.connect(`${process.env.MONGODB_URI}/green-rent`)
+        const baseUri = (process.env.MONGODB_URI || "mongodb://localhost:27017")
+            .replace(/\/+$/, "");
+        const mongoUri = `${baseUri}/green-rent`;
+
+        await mongoose.connect(mongoUri)
 
 
     } catch (error) {
