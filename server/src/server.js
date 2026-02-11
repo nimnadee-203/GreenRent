@@ -16,9 +16,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Route middlewares
 app.use("/api/eco-ratings", ecoRatingRoutes);
 app.use("/api/renter-reviews", renterReviewRoutes);
-
 
 app.get("/", (req, res) => {
     res.send("GreenRent API is running...");
