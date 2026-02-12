@@ -7,18 +7,6 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^13.5.0",
-<<<<<<< HEAD
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-=======
     "axios": "^1.13.5",
     "lucide-react": "^0.563.0",
     "react": "^19.2.4",
@@ -32,7 +20,6 @@
     "start": "vite",
     "build": "vite build",
     "preview": "vite preview"
->>>>>>> feature/user-management
   },
   "eslintConfig": {
     "extends": [
@@ -51,8 +38,6 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-<<<<<<< HEAD
-=======
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
@@ -61,6 +46,5 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "vite": "^7.3.1"
->>>>>>> feature/user-management
   }
 }
