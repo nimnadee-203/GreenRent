@@ -2,9 +2,11 @@ import 'dotenv/config';
 import express from "express";
 import cors from "cors";
 import { connectDB } from "./config/db.js";
-import authRouter from "../src/routes/auth.routes.js"
-import userRouter from './routes/user.routes.js';
-import cookieParser from 'cookie-parser';
+import ecoRatingRoutes from "./routes/ecoRatingRoutes.js";
+import renterReviewRoutes from "./routes/renterReviewRoutes.js";
+import propertyRoutes from "./routes/propertyRoutes.js";
+
+dotenv.config();
 
 // Connect to Database
 await connectDB();
@@ -16,7 +18,11 @@ app.use(cors({ credentials: true, origin: 'http://localhost:5173' })); // Adjust
 app.use(express.json());
 app.use(cookieParser());
 
-//API endpoints
+// Route middlewares
+app.use("/api/eco-ratings", ecoRatingRoutes);
+app.use("/api/renter-reviews", renterReviewRoutes);
+app.use("/api/properties", propertyRoutes);
+
 app.get("/", (req, res) => {
     res.send("GreenRent API is running...");
 });

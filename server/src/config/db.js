@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-//Function to connect to MongoDB
+// Function to connect to MongoDB
 export const connectDB = async () => {
     try {
         if (!process.env.MONGODB_URI) {
@@ -22,4 +22,4 @@ export const connectDB = async () => {
         console.error("Failed to connect to MongoDB:", error.message);
         process.exit(1); // Exit if connection fails
     }
-}
+};
