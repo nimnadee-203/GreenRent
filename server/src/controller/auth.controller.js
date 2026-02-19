@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import userModel from '../models/userModel.js';
+import transporter from '../config/nodemailer.js';
+
 
 //register
 export const register = async (req, res) => {
@@ -44,6 +46,23 @@ export const register = async (req, res) => {
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
+
+        //sending welcome email
+        const mailOption = {
+            from: process.env.SENDER_EMAIL,
+            to: email,
+            subject: 'Welcome to the Green Rent',
+            text: `Welcome to the Green Rent. Your account has been created with email id: ${email}`
+        };
+
+        try {
+            console.log(`Attempting to send welcome email to: ${email}`);
+            const info = await transporter.sendMail(mailOption);
+            console.log('Email sent successfully:', info.messageId);
+        } catch (mailError) {
+            console.error('Error sending welcome email:', mailError);
+            // Optionally: don't fail registration if only email fails
+        }
 
         return res.status(201).json({
             success: true,
