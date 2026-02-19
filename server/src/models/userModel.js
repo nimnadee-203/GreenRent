@@ -32,6 +32,12 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
+    sellerApplication: {
+      businessName: String,
+      contactNumber: String,
+      reason: String,
+    },
+
     preferences: {
       location: String,
       budgetMin: Number,

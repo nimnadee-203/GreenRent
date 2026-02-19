@@ -159,3 +159,83 @@ export const logout = async (req, res) => {
         });
     }
 };
+
+
+//Become a seller
+export const requestSeller = async (req, res) => {
+    const { businessName, contactNumber, reason } = req.body;
+
+    if (!businessName || !contactNumber || !reason) {
+        return res.status(400).json({
+            success: false,
+            message: "All fields are required",
+        });
+    }
+
+    try {
+        const user = req.user;
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        if (user.role === "seller") {
+            return res.status(400).json({
+                success: false,
+                message: "You are already a seller",
+            });
+        }
+
+        user.sellerRequest = true;
+        user.sellerApplication = {
+            businessName,
+            contactNumber,
+            reason,
+        };
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Seller request submitted successfully",
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+
+//Approve seller
+export const approveSeller = async (req, res) => {
+    try {
+        const user = await userModel.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        user.role = "seller";
+        user.sellerRequest = false;
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Seller approved successfully",
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
