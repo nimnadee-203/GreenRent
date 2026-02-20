@@ -4,6 +4,8 @@ import cors from "cors";
 import { connectDB } from "./config/db.js";
 import ecoRatingRoutes from "./routes/ecoRatingRoutes.js";
 import renterReviewRoutes from "./routes/renterReviewRoutes.js";
+import propertyRoutes from "./routes/propertyRoutes.js";
+import bookingRoutes from "./routes/booking.routes.js";
 
 dotenv.config();
 
@@ -19,6 +21,8 @@ app.use(express.json());
 // Route middlewares
 app.use("/api/eco-ratings", ecoRatingRoutes);
 app.use("/api/renter-reviews", renterReviewRoutes);
+app.use("/api/properties", propertyRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 app.get("/", (req, res) => {
     res.send("GreenRent API is running...");
