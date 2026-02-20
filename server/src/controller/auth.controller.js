@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import userModel from '../models/userModel.js';
+import transporter from '../config/nodemailer.js';
+
 
 //register
 export const register = async (req, res) => {
@@ -44,6 +46,23 @@ export const register = async (req, res) => {
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
+
+        //sending welcome email
+        const mailOption = {
+            from: process.env.SENDER_EMAIL,
+            to: email,
+            subject: 'Welcome to the Green Rent',
+            text: `Welcome to the Green Rent. Your account has been created with email id: ${email}`
+        };
+
+        try {
+            console.log(`Attempting to send welcome email to: ${email}`);
+            const info = await transporter.sendMail(mailOption);
+            console.log('Email sent successfully:', info.messageId);
+        } catch (mailError) {
+            console.error('Error sending welcome email:', mailError);
+            // Optionally: don't fail registration if only email fails
+        }
 
         return res.status(201).json({
             success: true,
@@ -137,6 +156,86 @@ export const logout = async (req, res) => {
             success: false,
             message: 'Server error',
             error: error.message
+        });
+    }
+};
+
+
+//Become a seller
+export const requestSeller = async (req, res) => {
+    const { businessName, contactNumber, reason } = req.body;
+
+    if (!businessName || !contactNumber || !reason) {
+        return res.status(400).json({
+            success: false,
+            message: "All fields are required",
+        });
+    }
+
+    try {
+        const user = req.user;
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        if (user.role === "seller") {
+            return res.status(400).json({
+                success: false,
+                message: "You are already a seller",
+            });
+        }
+
+        user.sellerRequest = true;
+        user.sellerApplication = {
+            businessName,
+            contactNumber,
+            reason,
+        };
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Seller request submitted successfully",
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+
+//Approve seller
+export const approveSeller = async (req, res) => {
+    try {
+        const user = await userModel.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        user.role = "seller";
+        user.sellerRequest = false;
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Seller approved successfully",
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
         });
     }
 };

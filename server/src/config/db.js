@@ -3,18 +3,23 @@ import mongoose from "mongoose";
 // Function to connect to MongoDB
 export const connectDB = async () => {
     try {
-        mongoose.connection.on("connected", () => 
-            console.log("Connected to MongoDB")
-        );
+        if (!process.env.MONGODB_URI) {
+            console.error("MONGODB_URI is not defined in .env file");
+            return;
+        }
 
-        // Use environment variable or fallback to localhost
-        const baseUri = (process.env.MONGODB_URI || "mongodb://localhost:27017")
-            .replace(/\/+$/, "");
-        const mongoUri = `${baseUri}/green-rent`;
+        mongoose.connection.on("connected", () => {
+            console.log("Connected to MongoDB successfully");
+        });
 
-        await mongoose.connect(mongoUri);
+        mongoose.connection.on("error", (err) => {
+            console.error("MongoDB connection error:", err);
+        });
+
+        await mongoose.connect(`${process.env.MONGODB_URI}/green-rent`);
 
     } catch (error) {
-        console.log("Error connecting to MongoDB", error);
+        console.error("Failed to connect to MongoDB:", error.message);
+        process.exit(1); // Exit if connection fails
     }
 };
