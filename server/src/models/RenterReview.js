@@ -83,6 +83,48 @@ const renterReviewSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    verification: {
+      solarPanels: {
+        type: Boolean,
+        default: null,
+      },
+      ledLighting: {
+        type: Boolean,
+        default: null,
+      },
+      efficientAc: {
+        type: Boolean,
+        default: null,
+      },
+      waterSavingTaps: {
+        type: Boolean,
+        default: null,
+      },
+      rainwaterHarvesting: {
+        type: Boolean,
+        default: null,
+      },
+      waterMeter: {
+        type: Boolean,
+        default: null,
+      },
+      recyclingAvailable: {
+        type: Boolean,
+        default: null,
+      },
+      compostAvailable: {
+        type: Boolean,
+        default: null,
+      },
+      evCharging: {
+        type: Boolean,
+        default: null,
+      },
+      goodVentilationSunlight: {
+        type: Boolean,
+        default: null,
+      },
+    },
     verified: {
       type: Boolean,
       default: false,

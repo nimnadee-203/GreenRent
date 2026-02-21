@@ -16,6 +16,19 @@ const VALID_LIVING_DURATIONS = [
 
 const VALID_STATUSES = ["pending", "approved", "rejected"];
 
+const VERIFICATION_FIELDS = [
+  "solarPanels",
+  "ledLighting",
+  "efficientAc",
+  "waterSavingTaps",
+  "rainwaterHarvesting",
+  "waterMeter",
+  "recyclingAvailable",
+  "compostAvailable",
+  "evCharging",
+  "goodVentilationSunlight",
+];
+
 const isNumberBetween = (value, min, max) => {
   const numeric = Number(value);
   return Number.isFinite(numeric) && numeric >= min && numeric <= max;
@@ -45,6 +58,26 @@ const validateCriteria = (criteria, requireAll) => {
 
 const isValidMongoId = (id) => {
   return /^[0-9a-fA-F]{24}$/.test(id);
+};
+
+const validateVerification = (verification) => {
+  if (verification === undefined) {
+    return [];
+  }
+
+  if (!verification || typeof verification !== "object") {
+    return ["verification must be an object"];
+  }
+
+  const errors = [];
+
+  VERIFICATION_FIELDS.forEach((key) => {
+    if (verification[key] !== undefined && typeof verification[key] !== "boolean") {
+      errors.push(`verification.${key} must be a boolean`);
+    }
+  });
+
+  return errors;
 };
 
 export const validateRenterReviewCreate = (payload) => {
@@ -90,6 +123,9 @@ export const validateRenterReviewCreate = (payload) => {
     }
   }
 
+  // Validate verification (optional)
+  errors.push(...validateVerification(payload.verification));
+
   return errors;
 };
 
@@ -125,6 +161,9 @@ export const validateRenterReviewUpdate = (payload) => {
       errors.push("wouldRecommend must be a boolean");
     }
   }
+
+  // Validate verification (optional)
+  errors.push(...validateVerification(payload.verification));
 
   return errors;
 };
