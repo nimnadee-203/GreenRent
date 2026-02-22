@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Booking from "../models/booking.model.js";
 import Property from "../models/Property.js";
 
@@ -139,11 +140,16 @@ export const getAllBookings = async (filters = {}) => {
 
 /**
  * Get all bookings for a specific user
- * @param {string} userId - User ID
+ * Matches both string and ObjectId userId so count is correct for existing data
+ * @param {string} userId - User ID (e.g. "renter-001" or ObjectId string)
  * @returns {Promise<Array>} - Array of booking documents for the user
  */
 export const getUserBookings = async (userId) => {
-  return Booking.find({ userId })
+  const isObjectId = mongoose.Types.ObjectId.isValid(userId) && String(userId).length === 24;
+  const query = isObjectId
+    ? { $or: [ { userId }, { userId: new mongoose.Types.ObjectId(userId) } ] }
+    : { userId };
+  return Booking.find(query)
     .populate("apartmentId", "title location address price")
     .populate("approvedBy", "name email")
     .sort({ createdAt: -1 });

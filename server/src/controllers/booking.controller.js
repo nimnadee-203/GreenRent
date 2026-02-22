@@ -34,10 +34,14 @@ export const createBookingHandler = async (req, res) => {
       });
     }
 
-    // Add authenticated user ID if not provided
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required to create a booking" });
+    }
+    // Always use the authenticated user so "my bookings" matches (ignore body.userId)
     const bookingData = {
       ...req.body,
-      userId: req.body.userId || req.user?.id,
+      userId,
     };
 
     const booking = await createBooking(bookingData);
