@@ -1,12 +1,11 @@
-import userModel from "../models/userModel.js";
+import * as userService from "../services/userService.js";
+import * as recommendationService from "../services/recommendationService.js";
+import * as recommendationValidators from "../validators/recommendationValidators.js";
 
 export const getUserData = async (req, res) => {
   try {
-    const user = req.user;
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
+    const userId = req.user.id;
+    const user = await userService.getUserData(userId);
 
     return res.status(200).json({
       success: true,
@@ -14,27 +13,24 @@ export const getUserData = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role
-
       }
-    })
+    });
 
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message })
+    const statusCode = error.message === "User not found" ? 404 : 500;
+    return res.status(statusCode).json({ success: false, message: error.message });
   }
-}
-
-
+};
 
 export const updatePreferences = async (req, res) => {
-  try {
-    const userId = req.user.id; // from userAuth middleware
-    const preferences = req.body;
+  const errors = recommendationValidators.validatePreferences(req.body);
+  if (errors.length > 0) {
+    return res.status(400).json({ success: false, message: errors[0], errors });
+  }
 
-    const user = await userModel.findByIdAndUpdate(
-      userId,
-      { $set: { preferences } },
-      { new: true, runValidators: true }
-    ).select("-password");
+  try {
+    const userId = req.user.id;
+    const user = await recommendationService.updatePreferences(userId, req.body);
 
     return res.status(200).json({
       success: true,
@@ -42,7 +38,8 @@ export const updatePreferences = async (req, res) => {
       user,
     });
   } catch (error) {
-    return res.status(500).json({
+    const statusCode = error.message === "User not found" ? 404 : 500;
+    return res.status(statusCode).json({
       success: false,
       message: error.message,
     });
