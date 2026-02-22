@@ -1,13 +1,14 @@
 import 'dotenv/config';
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { connectDB } from "./config/db.js";
 import ecoRatingRoutes from "./routes/ecoRatingRoutes.js";
 import renterReviewRoutes from "./routes/renterReviewRoutes.js";
 import propertyRoutes from "./routes/propertyRoutes.js";
 import bookingRoutes from "./routes/booking.routes.js";
-
-dotenv.config();
+import authRouter from "./routes/auth.routes.js";
+import userRouter from "./routes/user.routes.js";
 
 // Connect to Database
 await connectDB();

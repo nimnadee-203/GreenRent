@@ -20,13 +20,14 @@ const isCheckoutAfterCheckin = (checkOutDate, { req }) => {
 
 // Validation rules for creating a booking
 export const validateCreateBooking = [
-  // userId validation
+  // userId optional (set from auth token for renter); if provided must be non-empty string
   body("userId")
-    .notEmpty()
-    .withMessage("userId is required")
+    .optional()
+    .isString()
+    .withMessage("userId must be a string")
     .custom((value) => {
-      if (!mongoose.Types.ObjectId.isValid(value)) {
-        throw new Error("userId must be a valid MongoDB ObjectId");
+      if (value !== undefined && value !== null && String(value).trim().length === 0) {
+        throw new Error("userId cannot be empty");
       }
       return true;
     }),
