@@ -25,7 +25,8 @@ export const register = async (req, res) => {
 
         return res.status(201).json({
             success: true,
-            message: 'User registered successfully'
+            message: 'User registered successfully',
+            token
         });
 
     } catch (error) {
@@ -53,7 +54,8 @@ export const login = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: 'Login successful'
+            message: 'Login successful',
+            token
         });
 
     } catch (error) {
