@@ -3,16 +3,20 @@ import mongoose from "mongoose";
 // Function to connect to MongoDB
 export const connectDB = async () => {
     try {
-        mongoose.connection.on("connected", () => 
-            console.log("Connected to MongoDB")
-        );
+        const mongoUri = process.env.MONGODB_URI || "mongodb://localhost:27017";
+        const databaseName = process.env.DB_NAME || "green-rent";
 
-        // Use environment variable or fallback to localhost
-        const baseUri = (process.env.MONGODB_URI || "mongodb://localhost:27017")
-            .replace(/\/+$/, "");
-        const mongoUri = `${baseUri}/green-rent`;
+        mongoose.connection.on("connected", () => {
+            console.log("Connected to MongoDB");
+        });
 
-        await mongoose.connect(mongoUri);
+        mongoose.connection.on("error", (err) => {
+            console.error("MongoDB connection error:", err);
+        });
+
+        await mongoose.connect(mongoUri, {
+            dbName: databaseName,
+        });
 
     } catch (error) {
         console.log("Error connecting to MongoDB", error);
