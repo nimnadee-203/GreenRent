@@ -10,6 +10,8 @@ import {
   deleteBooking,
   checkAvailability,
 } from "../services/booking.service.js";
+import { createCheckoutSession } from "../services/stripe.service.js";
+import Property from "../models/Property.js";
 import { validationResult } from "express-validator";
 import {
   validateCreateBooking,
@@ -51,7 +53,7 @@ export const createBookingHandler = async (req, res) => {
     });
   } catch (error) {
     console.error("Create booking error:", error);
-    
+
     // Handle specific error types
     if (error.message.includes("not available")) {
       return res.status(409).json({ message: error.message });
@@ -59,7 +61,7 @@ export const createBookingHandler = async (req, res) => {
     if (error.message.includes("not found")) {
       return res.status(404).json({ message: error.message });
     }
-    
+
     return res.status(500).json({ message: "Failed to create booking" });
   }
 };
@@ -71,7 +73,7 @@ export const createBookingHandler = async (req, res) => {
 export const getAllBookingsHandler = async (req, res) => {
   try {
     const filters = {};
-    
+
     // Optional filters
     if (req.query.status) {
       filters.status = req.query.status;
@@ -123,7 +125,7 @@ export const getMyBookingsHandler = async (req, res) => {
 export const getBookingByIdHandler = async (req, res) => {
   try {
     const booking = await getBookingById(req.params.id);
-    
+
     if (!booking) {
       return res.status(404).json({ message: "Booking not found" });
     }
@@ -131,11 +133,11 @@ export const getBookingByIdHandler = async (req, res) => {
     // Check if user has permission to view this booking
     const userId = req.user?.id;
     const userRole = req.user?.role;
-    
+
     // Users can only view their own bookings unless they're admin
     if (userRole !== "admin" && booking.userId?.toString() !== userId) {
-      return res.status(403).json({ 
-        message: "Access denied. You can only view your own bookings." 
+      return res.status(403).json({
+        message: "Access denied. You can only view your own bookings."
       });
     }
 
@@ -174,8 +176,8 @@ export const updateBookingHandler = async (req, res) => {
 
     // Users can only update their own bookings unless they're admin
     if (userRole !== "admin" && booking.userId?.toString() !== userId) {
-      return res.status(403).json({ 
-        message: "Access denied. You can only update your own bookings." 
+      return res.status(403).json({
+        message: "Access denied. You can only update your own bookings."
       });
     }
 
@@ -186,11 +188,11 @@ export const updateBookingHandler = async (req, res) => {
     });
   } catch (error) {
     console.error("Update booking error:", error);
-    
+
     if (error.message.includes("not available")) {
       return res.status(409).json({ message: error.message });
     }
-    
+
     return res.status(500).json({ message: "Failed to update booking" });
   }
 };
@@ -210,8 +212,8 @@ export const updateBookingStatusHandler = async (req, res) => {
 
     const validStatuses = ["pending", "confirmed", "cancelled", "completed"];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ 
-        message: `Status must be one of: ${validStatuses.join(", ")}` 
+      return res.status(400).json({
+        message: `Status must be one of: ${validStatuses.join(", ")}`
       });
     }
 
@@ -222,7 +224,7 @@ export const updateBookingStatusHandler = async (req, res) => {
 
     const approvedBy = req.user?.id;
     const updatedBooking = await updateBookingStatus(id, status, approvedBy);
-    
+
     return res.status(200).json({
       message: "Booking status updated successfully",
       booking: updatedBooking,
@@ -248,8 +250,8 @@ export const updatePaymentStatusHandler = async (req, res) => {
 
     const validPaymentStatuses = ["unpaid", "paid"];
     if (!validPaymentStatuses.includes(paymentStatus)) {
-      return res.status(400).json({ 
-        message: `Payment status must be one of: ${validPaymentStatuses.join(", ")}` 
+      return res.status(400).json({
+        message: `Payment status must be one of: ${validPaymentStatuses.join(", ")}`
       });
     }
 
@@ -263,13 +265,13 @@ export const updatePaymentStatusHandler = async (req, res) => {
 
     // Users can only update payment status for their own bookings unless they're admin
     if (userRole !== "admin" && booking.userId?.toString() !== userId) {
-      return res.status(403).json({ 
-        message: "Access denied. You can only update payment status for your own bookings." 
+      return res.status(403).json({
+        message: "Access denied. You can only update payment status for your own bookings."
       });
     }
 
     const updatedBooking = await updatePaymentStatus(id, paymentStatus);
-    
+
     return res.status(200).json({
       message: "Payment status updated successfully",
       booking: updatedBooking,
@@ -299,8 +301,8 @@ export const cancelBookingHandler = async (req, res) => {
 
     // Users can only cancel their own bookings unless they're admin
     if (userRole !== "admin" && booking.userId?.toString() !== userId) {
-      return res.status(403).json({ 
-        message: "Access denied. You can only cancel your own bookings." 
+      return res.status(403).json({
+        message: "Access denied. You can only cancel your own bookings."
       });
     }
 
@@ -313,7 +315,7 @@ export const cancelBookingHandler = async (req, res) => {
     }
 
     const cancelledBooking = await cancelBooking(id, cancellationReason);
-    
+
     return res.status(200).json({
       message: "Booking cancelled successfully",
       booking: cancelledBooking,
@@ -336,7 +338,7 @@ export const deleteBookingHandler = async (req, res) => {
     }
 
     await deleteBooking(req.params.id);
-    
+
     return res.status(200).json({ message: "Booking deleted successfully" });
   } catch (error) {
     console.error("Delete booking error:", error);
@@ -353,8 +355,8 @@ export const checkAvailabilityHandler = async (req, res) => {
     const { apartmentId, checkInDate, checkOutDate } = req.body;
 
     if (!apartmentId || !checkInDate || !checkOutDate) {
-      return res.status(400).json({ 
-        message: "apartmentId, checkInDate, and checkOutDate are required" 
+      return res.status(400).json({
+        message: "apartmentId, checkInDate, and checkOutDate are required"
       });
     }
 
@@ -373,5 +375,49 @@ export const checkAvailabilityHandler = async (req, res) => {
   } catch (error) {
     console.error("Check availability error:", error);
     return res.status(500).json({ message: "Failed to check availability" });
+  }
+};
+
+/**
+ * Create a Stripe Checkout Session for a booking
+ * POST /api/bookings/:id/payment-session
+ */
+export const createPaymentSessionHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    const booking = await getBookingById(id);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Ensure user owns the booking
+    if (booking.userId?.toString() !== userId && req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    if (booking.paymentStatus === "paid") {
+      return res.status(400).json({ message: "Booking is already paid" });
+    }
+
+    const property = await Property.findById(booking.apartmentId);
+    if (!property) {
+      return res.status(404).json({ message: "Property not found" });
+    }
+
+    const session = await createCheckoutSession(booking, property);
+
+    // Save session ID to booking
+    booking.stripeSessionId = session.id;
+    await booking.save();
+
+    return res.status(200).json({
+      url: session.url,
+      sessionId: session.id,
+    });
+  } catch (error) {
+    console.error("Create payment session error:", error);
+    return res.status(500).json({ message: "Failed to create payment session" });
   }
 };

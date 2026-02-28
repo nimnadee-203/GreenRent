@@ -9,6 +9,7 @@ import propertyRoutes from "./routes/propertyRoutes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import authRouter from "./routes/auth.routes.js";
 import userRouter from "./routes/user.routes.js";
+import webhookRoutes from "./routes/webhook.routes.js";
 
 // Connect to Database
 await connectDB();
@@ -16,7 +17,11 @@ await connectDB();
 const app = express();
 
 // Middlewares
-app.use(cors({ credentials: true, origin: 'http://localhost:5173' })); // Adjusted origin to common Vite port, ideally should be env var
+app.use(cors({ credentials: true, origin: 'http://localhost:5173' }));
+
+// Webhook route must come BEFORE express.json() to get raw body
+app.use("/api/webhooks", webhookRoutes);
+
 app.use(express.json());
 app.use(cookieParser());
 

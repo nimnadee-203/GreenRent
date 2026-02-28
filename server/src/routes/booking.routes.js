@@ -12,6 +12,7 @@ import {
   cancelBookingHandler,
   deleteBookingHandler,
   checkAvailabilityHandler,
+  createPaymentSessionHandler,
 } from "../controllers/booking.controller.js";
 
 const router = Router();
@@ -48,6 +49,7 @@ router.get("/:id", authenticate, getBookingByIdHandler);
 router.put("/:id", authenticate, updateBookingHandler);
 router.put("/:id/payment", authenticate, updatePaymentStatusHandler);
 router.put("/:id/cancel", authenticate, cancelBookingHandler);
+router.post("/:id/payment-session", authenticate, createPaymentSessionHandler);
 
 // Admin routes - Require admin role
 router.get("/", authenticate, authorize("admin"), getAllBookingsHandler);
