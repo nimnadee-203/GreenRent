@@ -101,12 +101,20 @@ export const updateRenterReview = async (reviewId, data, userId, userRole) => {
 
   // Recalculate score if criteria changed
   let totalScore = review.totalScore;
+  let updatedCriteria = review.criteria;
   if (data.criteria) {
-    const updatedCriteria = { ...review.criteria.toObject(), ...data.criteria };
+    updatedCriteria = { ...review.criteria.toObject(), ...data.criteria };
     totalScore = calculateReviewScore(updatedCriteria);
   }
 
-  Object.assign(review, data);
+  const updatedVerification = data.verification
+    ? { ...(review.verification?.toObject?.() || review.verification || {}), ...data.verification }
+    : review.verification;
+
+  Object.assign(review, data, {
+    criteria: updatedCriteria,
+    verification: updatedVerification,
+  });
   review.totalScore = totalScore;
 
   await review.save();

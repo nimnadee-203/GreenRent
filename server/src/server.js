@@ -1,8 +1,6 @@
 import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
-import cookieParser from "cookie-parser";
-
 import { connectDB } from "./config/db.js";
 
 import ecoRatingRoutes from "./routes/ecoRatingRoutes.js";
@@ -11,8 +9,9 @@ import renterReviewRoutes from "./routes/renterReviewRoutes.js";
 import authRouter from "./routes/auth.routes.js";
 import userRouter from "./routes/user.routes.js";
 import recommendationRouter from "./routes/recommendation.routes.js";
-
-dotenv.config();
+import bookingRoutes from "./routes/booking.routes.js";
+import authRouter from "./routes/auth.routes.js";
+import userRouter from "./routes/user.routes.js";
 
 // Connect to Database
 await connectDB();
@@ -34,7 +33,8 @@ app.use("/api/user", userRouter);
 app.use("/api/recommendations", recommendationRouter);
 app.use("/api/eco-ratings", ecoRatingRoutes);
 app.use("/api/renter-reviews", renterReviewRoutes);
-// app.use("/api/properties", propertyRoutes);
+app.use("/api/properties", propertyRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 app.get("/", (req, res) => {
   res.send("GreenRent API is running...");
