@@ -5,11 +5,12 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "generate-tokens": "node src/utils/generateTestTokens.js",
-    "test-air-quality": "node src/utils/testAirQualityAPI.js"
+    "test-air-quality": "node src/utils/testAirQualityAPI.js",
+    "seed-admin": "node src/utils/seedAdmin.js"
   },
   "author": "",
   "license": "ISC",
@@ -25,5 +26,9 @@
     "mongoose": "^9.1.6",
     "nodemailer": "^8.0.1",
     "nodemon": "^3.1.11"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0",
+    "supertest": "^7.2.2"
   }
 }
