@@ -2,19 +2,23 @@ import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import { connectDB } from "./config/db.js";
+import cookieParser from "cookie-parser";
 
 import ecoRatingRoutes from "./routes/ecoRatingRoutes.js";
 import renterReviewRoutes from "./routes/renterReviewRoutes.js";
-// import propertyRoutes from "./routes/propertyRoutes.js";
+import propertyRoutes from "./routes/propertyRoutes.backup.js";
 import authRouter from "./routes/auth.routes.js";
 import userRouter from "./routes/user.routes.js";
 import recommendationRouter from "./routes/recommendation.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
-import authRouter from "./routes/auth.routes.js";
-import userRouter from "./routes/user.routes.js";
+
+
+dotenv.config();
 
 // Connect to Database
 await connectDB();
+
+
 
 const app = express();
 

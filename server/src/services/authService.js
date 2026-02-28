@@ -41,7 +41,7 @@ export const loginUser = async (email, password) => {
         throw new Error('Invalid email or password');
     }
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id,user.role,user.email,user.name);
 
     return { user, token };
 };
@@ -77,9 +77,9 @@ export const approveUserAsSeller = async (userId) => {
 };
 
 // Helper functions
-export const generateToken = (userId) => {
+export const generateToken = (userId,role,email,name) => {
     return jwt.sign(
-        { id: userId },
+        { id: userId ,role:role,email:email,name:name},
         process.env.JWT_SECRET,
         { expiresIn: '7d' }
     );
