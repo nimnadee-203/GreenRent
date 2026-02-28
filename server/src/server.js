@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { connectDB } from "./config/db.js";
+import { seedAdmin } from "./utils/seedAdmin.js";
 import ecoRatingRoutes from "./routes/ecoRatingRoutes.js";
 import renterReviewRoutes from "./routes/renterReviewRoutes.js";
 import propertyRoutes from "./routes/propertyRoutes.js";
@@ -13,6 +14,9 @@ import webhookRoutes from "./routes/webhook.routes.js";
 
 // Connect to Database
 await connectDB();
+
+// Seed Default Admin
+await seedAdmin();
 
 const app = express();
 
