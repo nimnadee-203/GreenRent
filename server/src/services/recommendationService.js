@@ -1,5 +1,6 @@
 import Property from "../models/Property.js";
 import userModel from "../models/userModel.js";
+import { getWalkabilityScore } from "./walkabilityService.js";
 
 export const getRecommendations = async (userId) => {
     const user = await userModel.findById(userId);
@@ -26,29 +27,50 @@ export const getRecommendations = async (userId) => {
 
     const properties = await Property.find(query).populate("ecoRatingId");
 
-    // Calculate smart score
-    const recommended = properties.map((property) => {
+    // Calculate smart score with LIVE Walkability Data
+    const recommended = await Promise.all(properties.map(async (property) => {
+        // Fetch Live Mobility Score (Nearby Parks, Transit, Shops)
+        const lat = property.location.coordinates.lat;
+        const lng = property.location.coordinates.lng;
+        const mobilityData = await getWalkabilityScore(lat, lng);
+        const walkabilityScore = mobilityData.score;
+
         const ecoScore = property.ecoRatingId?.totalScore || 0;
         const reviewScore = (property.ecoRatingId?.renterReviewStats?.averageScore || 0) * 10;
         const priceScore = Math.max(0, (1 - property.price / prefs.budgetMax) * 100);
 
-        let ecoWeight = 0.4;
-        if (prefs.ecoPriority === "high") ecoWeight = 0.6;
-        if (prefs.ecoPriority === "low") ecoWeight = 0.2;
+        // Adjust weights based on user eco-priority
+        let ecoWeight = 0.3;
+        let walkWeight = 0.2; // Your unique factor
 
-        const reviewWeight = 0.3;
-        const priceWeight = 1 - (ecoWeight + reviewWeight);
+        if (prefs.ecoPriority === "high") {
+            ecoWeight = 0.4;
+            walkWeight = 0.3;
+        } else if (prefs.ecoPriority === "low") {
+            ecoWeight = 0.15;
+            walkWeight = 0.05;
+        }
+
+        const reviewWeight = 0.25;
+        const priceWeight = 1 - (ecoWeight + walkWeight + reviewWeight);
 
         const smartScore =
             ecoScore * ecoWeight +
+            walkabilityScore * 10 * walkWeight +
             reviewScore * reviewWeight +
             priceScore * priceWeight;
 
         return {
             ...property.toObject(),
             smartScore: Math.round(smartScore * 10) / 10,
+            mobility: {
+                score: walkabilityScore,
+                label: mobilityData.label,
+                amenitiesFound: mobilityData.amenityCount,
+                description: "Proximity to parks, bus stops, and essential shops"
+            }
         };
-    });
+    }));
 
     // Sort by smartScore
     return recommended.sort((a, b) => b.smartScore - a.smartScore);

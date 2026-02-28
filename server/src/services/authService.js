@@ -11,11 +11,13 @@ export const registerUser = async (name, email, password) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
 
     const user = await userModel.create({
         name,
         email,
-        password: hashedPassword
+        password: hashedPassword,
+        avatar
     });
 
     const token = generateToken(user._id);

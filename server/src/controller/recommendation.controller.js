@@ -1,4 +1,5 @@
 import * as recommendationService from "../services/recommendationService.js";
+import { getWalkabilityScore } from "../services/walkabilityService.js";
 
 export const getRecommendations = async (req, res) => {
   try {
@@ -20,6 +21,33 @@ export const getRecommendations = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+/**
+ * NEW: Standalone Mobility Check for Viva Demonstration
+ */
+export const getMobilityHandler = async (req, res) => {
+  try {
+    const { lat, lon } = req.query;
+
+    if (!lat || !lon) {
+      return res.status(400).json({
+        message: "Latitude (lat) and Longitude (lon) are required."
+      });
+    }
+
+    const mobilityData = await getWalkabilityScore(Number(lat), Number(lon));
+
+    return res.status(200).json({
+      success: true,
+      location: { lat, lon },
+      ...mobilityData
+    });
+
+  } catch (error) {
+    console.error("Mobility handler error:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 

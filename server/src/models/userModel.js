@@ -37,31 +37,34 @@ const userSchema = new mongoose.Schema(
       contactNumber: String,
       reason: String,
     },
-
+    avatar: {
+      type: String,
+      default: "",
+    },
     preferences: {
-        location: {
-          type: String,
-          default: ""
-        },
-        budgetMin: {
-          type: Number,
-          default: 0
-        },
-        budgetMax: {
-          type: Number,
-          default: 1000000
-        },
-        ecoPriority: {
-          type: String,
-          enum: ["low", "medium", "high"],
-          default: "medium"
-        },
-        propertyType: {
-          type: String,
-          enum: ["apartment", "house", "studio", "townhouse", "any"],
-          default: "any"
-        }
-  },
+      location: {
+        type: String,
+        default: ""
+      },
+      budgetMin: {
+        type: Number,
+        default: 0
+      },
+      budgetMax: {
+        type: Number,
+        default: 1000000
+      },
+      ecoPriority: {
+        type: String,
+        enum: ["low", "medium", "high"],
+        default: "medium"
+      },
+      propertyType: {
+        type: String,
+        enum: ["apartment", "house", "studio", "townhouse", "any"],
+        default: "any"
+      }
+    },
   },
   { timestamps: true }
 );
