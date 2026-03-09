@@ -1,10 +1,75 @@
 import Property from "../models/Property.js";
+import { geocodeAddress } from "./openStreetMapService.js";
+
+/**
+ * Helper to geocode an address if coordinates are missing or if the address changed.
+ * Returns the updated location object or throws if geocoding fails.
+ */
+const geocodeIfNeeded = async (data, existingLocation = null) => {
+  const location = data?.location;
+  if (!location || !location.address) {
+    return data;
+  }
+
+  const addressChanged = existingLocation && existingLocation.address !== location.address;
+  const coordinatesMissing = !location.coordinates || (location.coordinates.lat === null && location.coordinates.lng === null);
+
+  if (addressChanged || coordinatesMissing) {
+    const geo = await geocodeAddress(location.address);
+    if (!geo) {
+      throw new Error("GEOCODING_FAILED");
+    }
+    return {
+      ...data,
+      location: {
+        ...location,
+        coordinates: {
+          lat: geo.lat,
+          lng: geo.lng,
+        },
+      },
+    };
+  }
+
+  return data;
+};
+
+/**
+ * Ensure latitude and longitude are always present as nullable fields.
+ * If coordinates are missing, they are initialized as { lat: null, lng: null }.
+ */
+const withNullableCoordinates = (data) => {
+  const location = data?.location;
+  if (!location) {
+    return data;
+  }
+
+  if (!location.coordinates) {
+    return {
+      ...data,
+      location: {
+        ...location,
+        coordinates: {
+          lat: null,
+          lng: null,
+        },
+      },
+    };
+  }
+
+  return data;
+};
 
 /**
  * Create a new property listing
  */
 export const createProperty = async (data) => {
-  const property = await Property.create(data);
+  // First ensure structure is correct
+  let payload = withNullableCoordinates(data);
+  // Then attempt geocoding
+  payload = await geocodeIfNeeded(payload);
+  
+  const property = await Property.create(payload);
   return property;
 };
 
@@ -56,9 +121,15 @@ export const getPropertyById = async (id) => {
  * Update a property by ID
  */
 export const updateProperty = async (id, data) => {
+  const existing = await Property.findById(id);
+  if (!existing) return null;
+
+  let payload = withNullableCoordinates(data);
+  payload = await geocodeIfNeeded(payload, existing.location);
+
   const property = await Property.findByIdAndUpdate(
     id,
-    { $set: data },
+    { $set: payload },
     { new: true, runValidators: true }
   );
   return property;

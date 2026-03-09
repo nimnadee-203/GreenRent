@@ -19,6 +19,7 @@ export const connectDB = async () => {
             console.error("MongoDB connection error:", err);
         });
 
+        await mongoose.connect(process.env.MONGODB_URI);
     await mongoose.connect(mongoUri, {
         dbName: databaseName,
     });
