@@ -8,6 +8,9 @@ export const connectDB = async () => {
             return;
         }
 
+        const mongoUri = process.env.MONGODB_URI;
+        const databaseName = process.env.DB_NAME || "green-rent";
+
         mongoose.connection.on("connected", () => {
             console.log("Connected to MongoDB successfully");
         });
@@ -17,6 +20,9 @@ export const connectDB = async () => {
         });
 
         await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(mongoUri, {
+        dbName: databaseName,
+    });
 
     } catch (error) {
         console.error("Failed to connect to MongoDB:", error.message);
