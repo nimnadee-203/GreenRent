@@ -21,13 +21,13 @@ const propertySchema = new mongoose.Schema(
       coordinates: {
         lat: {
           type: Number,
-          required: true,
+          default: null,
           min: -90,
           max: 90,
         },
         lng: {
           type: Number,
-          required: true,
+          default: null,
           min: -180,
           max: 180,
         },

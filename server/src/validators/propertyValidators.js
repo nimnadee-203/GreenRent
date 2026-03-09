@@ -20,15 +20,17 @@ export const validatePropertyCreate = (data) => {
         if (!data.location.address || typeof data.location.address !== "string") {
             errors.push("Location address is required");
         }
-        if (!data.location.coordinates || typeof data.location.coordinates !== "object") {
-            errors.push("Location coordinates are required");
-        } else {
-            const { lat, lng } = data.location.coordinates;
-            if (!isNumber(lat) || lat < -90 || lat > 90) {
-                errors.push("Latitude must be a number between -90 and 90");
-            }
-            if (!isNumber(lng) || lng < -180 || lng > 180) {
-                errors.push("Longitude must be a number between -180 and 180");
+        if (data.location.coordinates !== undefined) {
+            if (typeof data.location.coordinates !== "object") {
+                errors.push("Location coordinates must be an object");
+            } else {
+                const { lat, lng } = data.location.coordinates;
+                if (lat !== undefined && lat !== null && (!isNumber(lat) || lat < -90 || lat > 90)) {
+                    errors.push("Latitude must be a number between -90 and 90");
+                }
+                if (lng !== undefined && lng !== null && (!isNumber(lng) || lng < -180 || lng > 180)) {
+                    errors.push("Longitude must be a number between -180 and 180");
+                }
             }
         }
     }
@@ -75,10 +77,10 @@ export const validatePropertyUpdate = (data) => {
                     errors.push("Location coordinates must be an object");
                 } else {
                     const { lat, lng } = data.location.coordinates;
-                    if (lat !== undefined && (!isNumber(lat) || lat < -90 || lat > 90)) {
+                    if (lat !== undefined && lat !== null && (!isNumber(lat) || lat < -90 || lat > 90)) {
                         errors.push("Latitude must be a number between -90 and 90");
                     }
-                    if (lng !== undefined && (!isNumber(lng) || lng < -180 || lng > 180)) {
+                    if (lng !== undefined && lng !== null && (!isNumber(lng) || lng < -180 || lng > 180)) {
                         errors.push("Longitude must be a number between -180 and 180");
                     }
                 }

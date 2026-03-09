@@ -25,6 +25,12 @@ export const createPropertyHandler = async (req, res) => {
     const property = await createProperty(propertyData);
     return res.status(201).json(property);
   } catch (error) {
+    if (error?.message === "GEOCODING_FAILED") {
+      return res.status(400).json({
+        message:
+          "Unable to locate the address via OpenStreetMap. Please check the address or provide coordinates.",
+      });
+    }
     console.error("Create property error:", error);
     return res.status(500).json({ message: "Failed to create property" });
   }
@@ -103,6 +109,12 @@ export const updatePropertyHandler = async (req, res) => {
     const property = await updateProperty(req.params.id, req.body);
     return res.status(200).json(property);
   } catch (error) {
+    if (error?.message === "GEOCODING_FAILED") {
+      return res.status(400).json({
+        message:
+          "Unable to locate the address via OpenStreetMap. Please check the address or provide coordinates.",
+      });
+    }
     console.error("Update property error:", error);
     return res.status(500).json({ message: "Failed to update property" });
   }
