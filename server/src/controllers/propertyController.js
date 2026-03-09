@@ -140,3 +140,19 @@ export const deletePropertyHandler = async (req, res) => {
     return res.status(500).json({ message: "Failed to delete property" });
   }
 };
+ export const deleteAllPropertiesHandler = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Only admin can delete all properties" });
+    }
+
+    const result = await Property.deleteMany({});
+    return res.status(200).json({
+      message: "All properties deleted",
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    console.error("Delete all properties error:", error);
+    return res.status(500).json({ message: "Failed to delete properties" });
+  }
+};

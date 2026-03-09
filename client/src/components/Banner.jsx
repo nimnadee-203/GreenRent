@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 export default function Banner() {
   return (
@@ -24,9 +25,12 @@ export default function Banner() {
           Find stays, chefs, and adventures around the world
         </p>
 
-        <button className="mt-6 bg-white text-black px-6 py-3 rounded-full font-semibold hover:scale-105 transition">
-          Explore Now
-        </button>
+        <Link
+          to="/properties"
+          className="inline-block mt-6 bg-white text-black px-6 py-3 rounded-full font-semibold hover:scale-105 transition"
+        >
+          Explore Properties
+        </Link>
       </div>
 
     </div>
