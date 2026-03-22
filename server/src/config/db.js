@@ -10,7 +10,6 @@ export const connectDB = async () => {
             return;
         }
 
-        const mongoUri = process.env.MONGODB_URI;
         const databaseName = process.env.DB_NAME || "green-rent";
 
         mongoose.connection.on("connected", () => {
@@ -21,14 +20,9 @@ export const connectDB = async () => {
             console.error("MongoDB connection error:", err);
         });
 
-<<<<<<< Updated upstream
-        await mongoose.connect(process.env.MONGODB_URI);
-    await mongoose.connect(mongoUri, {
-        dbName: databaseName,
-    });
-=======
-        await mongoose.connect(mongoUri);
->>>>>>> Stashed changes
+        await mongoose.connect(mongoUri, {
+            dbName: databaseName,
+        });
 
     } catch (error) {
         const message = error?.message || "Unknown MongoDB error";

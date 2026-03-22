@@ -10,28 +10,18 @@ export const getUserData = async (req, res) => {
     return res.status(200).json({
       success: true,
       userData: {
+        id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        sellerRequest: user.sellerRequest,
       }
     });
-
-<<<<<<< Updated upstream
   } catch (error) {
     const statusCode = error.message === "User not found" ? 404 : 500;
     return res.status(statusCode).json({ success: false, message: error.message });
   }
 };
-=======
-        return res.status(200).json({
-            success: true,
-            userData: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                sellerRequest: user.sellerRequest,
->>>>>>> Stashed changes
 
 export const updatePreferences = async (req, res) => {
   const errors = recommendationValidators.validatePreferences(req.body);

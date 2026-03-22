@@ -92,14 +92,10 @@ export const logout = async (req, res) => {
 
 //Become a seller
 export const requestSeller = async (req, res) => {
-<<<<<<< Updated upstream
     const errors = authValidators.validateSellerRequest(req.body);
     if (errors.length > 0) {
         return res.status(400).json({ success: false, message: errors[0], errors });
     }
-=======
-    const { businessName, contactNumber, reason } = req.body;
->>>>>>> Stashed changes
 
     try {
         const user = req.user;
@@ -107,29 +103,7 @@ export const requestSeller = async (req, res) => {
             return res.status(404).json({ success: false, message: "User not found" });
         }
 
-<<<<<<< Updated upstream
         await authService.processSellerRequest(user, req.body);
-=======
-        if (user.role === "seller") {
-            return res.status(400).json({
-                success: false,
-                message: "You are already a seller",
-            });
-        }
-
-        user.role = "seller";
-        user.sellerRequest = false;
-
-        if (businessName || contactNumber || reason) {
-            user.sellerApplication = {
-                businessName,
-                contactNumber,
-                reason,
-            };
-        }
-
-        await user.save();
->>>>>>> Stashed changes
 
         return res.status(200).json({
             success: true,
