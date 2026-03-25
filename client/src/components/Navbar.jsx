@@ -1,39 +1,52 @@
 import React from "react";
-import { Globe, Menu } from "lucide-react";
+import { Leaf, Menu } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
-import logo from "../assets/logo1.png";
 
 const navClassName = ({ isActive }) =>
-    `cursor-pointer pb-1 ${isActive ? "border-b-2 border-[#007B78] text-[#007B78]" : "hover:text-[#007B78]"}`;
+    `text-base font-medium transition-colors ${
+        isActive ? "text-emerald-600" : "text-slate-600 hover:text-emerald-600"
+    }`;
 
 const Navbar = () => {
     return (
-        <nav className="flex items-center justify-between px-8 py-4 shadow-sm bg-white">
-
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-[#007B78]">
-                <img src={logo} alt="GreenRent logo" className="h-10 w-10 object-contain" />
-                <span>GreenRent</span>
-            </Link>
-
-            {/* Center Links */}
-            <div className="hidden md:flex gap-8 text-gray-600 font-medium">
-                
-                <NavLink to="/" className={navClassName} end>Home</NavLink>
-                <NavLink to="/properties" className={navClassName}>Properties</NavLink>
-                <NavLink to="/add-apartment" className={navClassName}>Add Apartment</NavLink>
-                <NavLink to="/my-listings" className={navClassName}>My Listings</NavLink>
-            </div>
-
-            {/* Right Side */}
-            <div className="flex items-center gap-4">
-                <Link to="/login" className="hidden md:block cursor-pointer font-medium hover:text-black">
-                    Login
+        <header className="nav-ambient sticky top-0 z-50 border-b border-white/30 backdrop-blur-xl">
+            <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <Link to="/" className="flex items-center gap-2">
+                    <div className="bg-emerald-600 p-1.5 rounded-lg">
+                        <Leaf className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="text-2xl leading-none font-bold text-slate-900">GreenRent</span>
                 </Link>
-                <Globe size={20} className="cursor-pointer" />
-                <Menu size={24} className="cursor-pointer" />
-            </div>
-        </nav>
+
+                <div className="hidden md:flex items-center gap-8">
+                    <NavLink to="/" className={navClassName} end>
+                        Home
+                    </NavLink>
+                    <NavLink to="/properties" className={navClassName}>
+                        Apartments
+                    </NavLink>
+                    <NavLink to="/auxiliary" className={navClassName}>
+                        Auxiliary
+                    </NavLink>
+                    <NavLink to="/about" className={navClassName}>
+                        About
+                    </NavLink>
+                </div>
+
+                <div className="hidden md:flex items-center gap-3">
+                    <Link to="/login" className="text-base font-medium text-slate-700 hover:text-slate-900 transition-colors">
+                        Log in
+                    </Link>
+                    <button className="h-10 px-5 rounded-lg bg-emerald-600 text-white text-base font-semibold hover:bg-emerald-700 transition-colors">
+                        Sign up
+                    </button>
+                </div>
+
+                <button className="md:hidden p-2 text-slate-600">
+                    <Menu className="w-6 h-6" />
+                </button>
+            </nav>
+        </header>
     );
 };
 
