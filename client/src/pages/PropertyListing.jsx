@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+// Forced HMR update 
+import { Link } from "react-router-dom";
 import axios from "axios";
 import {
   Bath,
@@ -37,9 +39,9 @@ const ITEMS_PER_PAGE = 6;
 
 const formatPrice = (value) => {
   if (typeof value !== "number") return "N/A";
-  return new Intl.NumberFormat("en-IN", {
+  return new Intl.NumberFormat("en-LK", {
     style: "currency",
-    currency: "INR",
+    currency: "LKR",
     maximumFractionDigits: 0,
   }).format(value);
 };
@@ -295,22 +297,25 @@ export default function PropertyListing() {
                 const bathrooms = property.bathrooms ?? property.baths ?? 1;
 
                 return (
-                  <article
+                  <Link
+                    to={`/properties/${property._id}`}
                     key={property._id}
-                    className="group h-full rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md hover:border-emerald-200"
+                    className="block group h-full rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md hover:border-emerald-200"
                   >
-                    <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
-                      <img
-                        src={primaryImage}
-                        alt={property.title}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        loading="lazy"
-                      />
+                    <article className="h-full flex flex-col">
+                      <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
+                        <img
+                          src={primaryImage}
+                          alt={property.title}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          loading="lazy"
+                        />
 
-                      <button
-                        type="button"
-                        className="absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-sm text-slate-400 hover:text-red-500 hover:bg-white transition-colors"
-                      >
+                        <button
+                          type="button"
+                          className="absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-sm text-slate-400 hover:text-red-500 hover:bg-white transition-colors z-10"
+                          onClick={(e) => { e.preventDefault(); /* Prevent Link navigation */ }}
+                        >
                         <Heart className="w-5 h-5" />
                       </button>
 
@@ -342,11 +347,12 @@ export default function PropertyListing() {
                       </div>
 
                       <div className="mt-4 pt-3 border-t border-slate-100 flex items-baseline">
-                        <span className="text-xl font-bold text-slate-900">${Number(property.price || 0)}</span>
+                        <span className="text-xl font-bold text-slate-900">Rs {Number(property.price || 0).toLocaleString('en-LK')}</span>
                         <span className="text-slate-500 text-xs ml-1">/month</span>
                       </div>
                     </div>
                   </article>
+                </Link>
                 );
               })}
             </div>

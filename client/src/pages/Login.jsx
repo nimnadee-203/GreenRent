@@ -111,7 +111,7 @@ export default function Login() {
         setSuccess("Login successful.");
       }
 
-      navigate("/properties");
+      navigate("/");
     } catch (authError) {
       setError(normalizeFirebaseError(authError?.message));
     } finally {
@@ -133,7 +133,7 @@ export default function Login() {
     try {
       await signInWithPopup(auth, googleProvider);
       setSuccess("Google login successful for browsing. Use Email Login for Add Apartment/My Listings.");
-      navigate("/properties");
+      navigate("/");
     } catch (authError) {
       setError(normalizeFirebaseError(authError?.message));
     } finally {

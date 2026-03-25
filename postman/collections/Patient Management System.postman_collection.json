@@ -1,0 +1,211 @@
+{
+  "info": {
+    "_postman_id": "e7cd523c-eb2b-44ab-b287-1875088160be",
+    "name": "Patient Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Patient",
+      "id": "eed16f6b-f72c-4ecb-b58b-243919379465",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"patientId\": \"P001\",\n  \"name\": \"Sam Perera\",\n  \"nic\": \"990011223V\",\n  \"age\": 24,\n  \"address\": \"12 Lake Road\",\n  \"previousCaseHistory\": \"Diabetes\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/patients",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Patients",
+      "id": "4102b908-691b-472a-8aeb-4c8ad9bdb7ed",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/patients",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Address",
+      "id": "65725933-5a31-4bc5-aa42-8575aa0966ef",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"address\": \"45 Hill Street\",\n  \"reason\": \"Moved home\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/patients/P001/address",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "P001",
+            "address"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Ages",
+      "id": "5b218d21-3b20-4b87-a9ac-ce49baf0ed73",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/patients/update-ages",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "update-ages"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Appointment",
+      "id": "e1c88c2b-3104-4b86-8f14-3eb1a442145f",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"patientId\": \"P001\",\n  \"date\": \"2026-02-25\",\n  \"time\": \"10:30\",\n  \"doctorName\": \"Dr Silva\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/appointments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "appointments"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Doctor Availability",
+      "id": "c71494df-41f4-400c-94d5-a1591fd3160c",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/appointments/availability?doctorName=Dr Silva&date=2026-02-25&time=10:30",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "appointments",
+            "availability"
+          ],
+          "query": [
+            {
+              "key": "doctorName",
+              "value": "Dr Silva"
+            },
+            {
+              "key": "date",
+              "value": "2026-02-25"
+            },
+            {
+              "key": "time",
+              "value": "10:30"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Cancel Appointment",
+      "id": "91e31f62-1a40-466e-a87d-7a5d7babe308",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/appointments/{{appointmentId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "appointments",
+            "{{appointmentId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Appointments",
+      "id": "485e8fd7-449d-4ccc-ad8a-cf09f89d7eb1",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/appointments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "appointments"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "id": "4d968700-32d0-4780-b457-25440cf21aa1",
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "id": "eae51db3-3eee-4d5e-a92c-ebaf73bb0d14",
+      "key": "appointmentId",
+      "value": ""
+    }
+  ]
+}
