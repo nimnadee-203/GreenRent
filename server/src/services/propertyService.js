@@ -89,6 +89,19 @@ export const listProperties = async (options = {}) => {
 
   const query = { ...filter };
 
+  // Filter hidden listings for public (where ownerId is missing)
+  if (!filter.ownerId && !filter._id) {
+    const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const validityOr = [
+      { ecoRatingId: { $ne: null } },
+      { ecoRatingId: null, ecoRatingClearedAt: null, createdAt: { $gte: fortyEightHoursAgo } },
+      { ecoRatingId: null, ecoRatingClearedAt: { $ne: null }, ecoRatingClearedAt: { $gte: oneHourAgo } }
+    ];
+    query.$and = query.$and || [];
+    query.$and.push({ $or: validityOr });
+  }
+
   if (search && search.trim()) {
     const term = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     query.$or = [

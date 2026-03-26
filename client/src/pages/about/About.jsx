@@ -1,5 +1,5 @@
 import React from 'react';
-import Navbar from '../components/Home/Navbar';
+import Navbar from '../../components/Home/Navbar';
 import { Leaf, Users, ShieldCheck, Globe, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 

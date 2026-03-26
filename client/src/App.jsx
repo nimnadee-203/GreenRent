@@ -1,13 +1,13 @@
 import { Route, Routes } from 'react-router-dom';
 // Forced HMR update
-import Home from './pages/Home';
-import About from './pages/About';
-import Dashboard from './pages/Dashboard';
-import PropertyListing from './pages/PropertyListing';
-import PropertyDetails from './components/PropertyListing/PropertyDetails';
-import Login from './pages/Login';
-import AddApartment from './pages/AddApartment';
-import MyListings from './pages/MyListings';
+import Home from './pages/home/Home';
+import About from './pages/about/About';
+import Dashboard from './pages/dashboard/Dashboard';
+import PropertyListing from './pages/property/PropertyListing';
+import PropertyDetails from './pages/property/PropertyDetails';
+import Login from './pages/auth/Login';
+import AddApartment from './pages/eco-rating/AddApartment';
+import MyListings from './pages/eco-rating/MyListings';
 
 function App() {
   return (

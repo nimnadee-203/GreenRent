@@ -22,8 +22,8 @@ import {
   ChevronRight,
   X
 } from "lucide-react";
-import Navbar from "../Home/Navbar";
-import Footer from "../Home/Footer";
+import Navbar from "../../components/Home/Navbar";
+import Footer from "../../components/Home/Footer";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 

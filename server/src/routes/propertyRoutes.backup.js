@@ -8,6 +8,7 @@ import {
     updatePropertyHandler,
     deletePropertyHandler,
     deleteAllPropertiesHandler,
+    clearEcoRatingHandler,
 } from "../controllers/propertyController.js";
 
 const router = Router();
@@ -39,6 +40,13 @@ router.post("/", userAuth, isSeller, createPropertyHandler);
  * @access  Protected (Admin)
  */
 router.delete("/delete-all", userAuth, deleteAllPropertiesHandler);
+
+/**
+ * @route   PUT /api/properties/:id/clear-eco-rating
+ * @desc    Clear a property's eco rating
+ * @access  Protected (Owner/Admin)
+ */
+router.put("/:id/clear-eco-rating", userAuth, clearEcoRatingHandler);
 
 /**
  * @route   PUT /api/properties/:id
