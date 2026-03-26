@@ -1,0 +1,29 @@
+{
+  "info": {
+    "_postman_id": "58c4d491-288d-4f9d-b5f7-af5eceb60df6",
+    "name": "Y2S2 Project",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "http://Localhost:5000/users",
+      "id": "99ed0d26-1e29-4eb9-8806-41fc4e44d072",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://Localhost:5000/users",
+          "protocol": "http",
+          "host": [
+            "Localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "users"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
