@@ -8,8 +8,8 @@ import {
 } from "firebase/auth";
 import { Eye, EyeOff, Mail, Lock, UserRound } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import { auth, googleProvider, hasFirebaseConfig } from "../config/firebase";
+import Navbar from "../../components/Navbar";
+import { auth, googleProvider, hasFirebaseConfig } from "../../config/firebase";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 

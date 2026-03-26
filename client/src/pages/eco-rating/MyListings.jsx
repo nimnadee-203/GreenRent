@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
-import Navbar from "../components/Navbar";
+import Navbar from "../../components/Navbar";
 import { Leaf, Clock, AlertCircle, Edit2, Trash2, Eye, Ban, CheckCircle2, ChevronRight, Sun, Zap, Wind, Droplets, Recycle, BatteryCharging, MapPin, X } from "lucide-react";
 import { formatDistanceToNow, isPast, addHours } from "date-fns";
 
