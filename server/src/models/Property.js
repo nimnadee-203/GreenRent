@@ -64,6 +64,10 @@ const propertySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "EcoRating",
     },
+    ecoRatingClearedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

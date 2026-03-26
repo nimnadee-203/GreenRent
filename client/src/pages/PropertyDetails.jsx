@@ -236,8 +236,15 @@ const PropertyDetails = () => {
                     <div className="mt-4 flex items-end gap-2">
                       <span className="text-5xl font-black">{ecoRating.totalScore}</span>
                       <span className="text-emerald-100 font-medium mb-1.5">/ 100</span>
-                    </div>
-                    <div className="my-6 grid grid-cols-2 gap-4">
+                    </div>                      {typeof ecoRating.airQualityScore === 'number' && (
+                        <div className="mt-4 flex items-center gap-2 text-sm text-emerald-50 bg-emerald-800/40 p-2 rounded-lg backdrop-blur-sm w-fit border border-emerald-500/30">
+                           <span className="font-semibold">Air Quality (AQI):</span>
+                           <span className="bg-emerald-500 px-2 py-0.5 rounded text-white font-bold">{ecoRating.airQualityScore} / 10</span>
+                           {ecoRating.externalSignals?.airQuality?.source && (
+                              <span className="text-[10px] opacity-70 ml-1">via {ecoRating.externalSignals.airQuality.source}</span>
+                           )}
+                        </div>
+                      )}                    <div className="my-6 grid grid-cols-2 gap-4">
                       {ecoRating.criteria && Object.entries(ecoRating.criteria).slice(0, 4).map(([k, v]) => (
                         <div key={k} className="bg-white/10 rounded-lg p-2.5 backdrop-blur-sm">
                           <p className="text-[10px] text-emerald-100 uppercase tracking-wider mb-1">{k.replace(/([A-Z])/g, ' $1').trim()}</p>

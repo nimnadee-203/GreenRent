@@ -150,12 +150,17 @@ export default function PropertyListing() {
   const toEcoScore = (property) => {
     const score =
       property.ecoScore ??
+      property.ecoRatingId?.totalScore ??
       property.ecoRating?.overallScore ??
       property.ecoRating?.score ??
       0;
     const normalized = Number(score);
     if (Number.isNaN(normalized)) return 0;
     return Math.max(0, Math.min(100, Math.round(normalized)));
+  };
+
+  const toAirQuality = (property) => {
+    return property.ecoRatingId?.airQualityScore ?? null;
   };
 
   const ecoBadgeClass = (score) => {
@@ -292,8 +297,7 @@ export default function PropertyListing() {
               {pagedProperties.map((property) => {
                 const primaryImage = property.images?.[0] || FALLBACK_IMAGE;
                 const location = toLocationLabel(property);
-                const ecoScore = toEcoScore(property);
-                const bedrooms = property.bedrooms ?? property.beds ?? 1;
+                const ecoScore = toEcoScore(property);                  const airQuality = toAirQuality(property);                const bedrooms = property.bedrooms ?? property.beds ?? 1;
                 const bathrooms = property.bathrooms ?? property.baths ?? 1;
 
                 return (
@@ -319,11 +323,17 @@ export default function PropertyListing() {
                         <Heart className="w-5 h-5" />
                       </button>
 
-                      <div className="absolute bottom-3 left-3">
-                        <div className={`inline-flex items-center border rounded-full px-2.5 py-1 text-sm ${ecoBadgeClass(ecoScore)}`}>
-                          <Leaf className="w-4 h-4 mr-1.5" />
-                          <span className="font-bold">{ecoScore}</span>
-                        </div>
+                        <div className="absolute bottom-3 left-3 flex items-center gap-2 flex-wrap">
+                          <div className={`inline-flex items-center border rounded-full px-2.5 py-1 text-sm ${ecoBadgeClass(ecoScore)}`}>
+                            <Leaf className="w-4 h-4 mr-1.5" />
+                            <span className="font-bold">{ecoScore}</span>
+                          </div>
+                          {airQuality !== null && (
+                            <div className="inline-flex items-center border rounded-full px-2.5 py-1 text-sm bg-sky-50 text-sky-700 border-sky-200" title="Air Quality Score">
+                              <span className="font-bold mr-1">{airQuality}</span>
+                              <span className="text-[10px] uppercase font-semibold">/ 10 AQ</span>
+                            </div>
+                          )}
                       </div>
                     </div>
 

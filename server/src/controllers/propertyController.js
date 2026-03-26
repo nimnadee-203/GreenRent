@@ -156,3 +156,40 @@ export const deletePropertyHandler = async (req, res) => {
     return res.status(500).json({ message: "Failed to delete properties" });
   }
 };
+export const clearEcoRatingHandler = async (req, res) => { 
+  try { 
+    const { default: Property } = await import('../models/Property.js'); 
+    const property = await Property.findById(req.params.id); 
+    if (!property) return res.status(404).json({ message: 'Not found' }); 
+    const requestUserId = req.user?.id || req.user?._id;
+    const isOwner = property.ownerId && requestUserId && String(property.ownerId) === String(requestUserId); 
+    if (!isOwner && req.user.role !== 'admin') return res.status(403).json({ message: 'Forbidden' }); 
+
+    if (property.ecoRatingId) { 
+      const { default: EcoRating } = await import('../models/EcoRating.js'); 
+      const ecoRatingId = property.ecoRatingId?._id || property.ecoRatingId;
+
+      try {
+        await EcoRating.findByIdAndDelete(ecoRatingId);
+      } catch (deleteError) {
+        console.warn('Failed to delete linked EcoRating, continuing to clear property reference:', deleteError?.message || deleteError);
+      }
+    } 
+
+    const updatedProperty = await Property.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          ecoRatingId: null,
+          ecoRatingClearedAt: new Date(),
+        },
+      },
+      { new: true }
+    );
+
+    return res.status(200).json(updatedProperty); 
+  } catch (e) { 
+    console.error(e); 
+    res.status(500).json({ message: e?.message || 'Error clearing eco rating' }); 
+  } 
+};

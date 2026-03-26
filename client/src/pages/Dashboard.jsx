@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { LayoutDashboard, Home, PlusCircle, Star, TrendingUp, Bell, Clock, ArrowRight, Leaf, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Home, PlusCircle, Star, TrendingUp, Bell, Clock, ArrowRight, Leaf, ShieldAlert, X } from 'lucide-react';
 import axios from 'axios';
 
 export default function Dashboard() {
   const { currentUser, backendUser, fetchBackendUser } = useAuth();
   const [requestStatus, setRequestStatus] = useState('');
+  const [showGuideModal, setShowGuideModal] = useState(false);
 
   const userName = currentUser?.displayName || currentUser?.email?.split('@')[0] || "Guest";
   const isLandlord = backendUser?.role === 'seller' || backendUser?.role === 'admin';
@@ -44,7 +45,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-50 font-sans">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <main className="w-full px-4 sm:px-6 lg:px-10 xl:px-12 2xl:px-16 py-10">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 pb-8 border-b border-slate-200">
           <div>
@@ -164,9 +165,15 @@ export default function Dashboard() {
                     ? "Provide verified sensor data for your properties to unlock the 'Certified Green' badge and rank higher in search results."
                     : "Use our tailored filters to discover apartments rated highly for low emissions, great air quality, and noise reduction."}
                 </p>
-                <Link to="/properties" className="block w-full text-center py-3 bg-white text-emerald-700 font-bold rounded-xl shadow-md hover:bg-emerald-50 transition">
-                  {isLandlord ? "Learn How to Upgrade" : "Browse Properties"}
-                </Link>
+                {isLandlord ? (
+                  <button onClick={() => setShowGuideModal(true)} className="block w-full text-center py-3 bg-white text-emerald-700 font-bold rounded-xl shadow-md hover:bg-emerald-50 transition">
+                    Learn How to Upgrade
+                  </button>
+                ) : (
+                  <Link to="/properties" className="block w-full text-center py-3 bg-white text-emerald-700 font-bold rounded-xl shadow-md hover:bg-emerald-50 transition">
+                    Browse Properties
+                  </Link>
+                )}
               </div>
               {/* Decorative backgrounds */}
               <div className="absolute top-0 right-0 -mr-8 -mt-8 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
@@ -191,6 +198,73 @@ export default function Dashboard() {
 
         </div>
       </main>
+
+      {/* Landlord Guide Modal */}
+      {showGuideModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-2xl my-auto overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center p-6 sm:p-8 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                  <Leaf className="w-5 h-5" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900">How to Update Eco-Ratings</h2>
+              </div>
+              <button onClick={() => setShowGuideModal(false)} className="w-10 h-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-full text-slate-500 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 sm:p-8 space-y-6">
+               <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                 <h4 className="font-bold text-amber-800 flex items-center mb-1"><Clock className="w-4 h-4 mr-2" /> Important Deadlines</h4>
+                 <ul className="list-disc pl-5 text-sm text-amber-700 space-y-1 mt-2">
+                   <li><strong>New Listings:</strong> You have <strong>48 hours</strong> from creation to add an Eco-Rating.</li>
+                   <li><strong>Cleared Ratings:</strong> If you clear an existing rating, you have <strong>1 hour</strong> to submit a new one.</li>
+                   <li>Failing to meet these deadlines will cause your listing to be <strong>hidden from public view</strong>.</li>
+                 </ul>
+               </div>
+
+               <div className="space-y-4">
+                 <div className="flex gap-4">
+                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold">1</div>
+                   <div>
+                     <h4 className="font-bold text-slate-900">Navigate to My Listings</h4>
+                     <p className="text-sm text-slate-600 mt-1">Go to your dashboard and click "Manage Listings" or use the top navigation to visit the My Listings page.</p>
+                   </div>
+                 </div>
+                 <div className="flex gap-4">
+                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold">2</div>
+                   <div>
+                     <h4 className="font-bold text-slate-900">Add or Edit Rating</h4>
+                     <p className="text-sm text-slate-600 mt-1">Locate your property. Click the <strong>"Add Rating"</strong> or <strong>"Edit Rating"</strong> button depending on its current status.</p>
+                   </div>
+                 </div>
+                 <div className="flex gap-4">
+                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold">3</div>
+                   <div>
+                     <h4 className="font-bold text-slate-900">Select Green Features</h4>
+                     <p className="text-sm text-slate-600 mt-1">Check off all applicable green amenities like Solar Panels, LED Lighting, Water Meters, and select your Energy Rating (EPC).</p>
+                   </div>
+                 </div>
+                 <div className="flex gap-4">
+                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold">4</div>
+                   <div>
+                     <h4 className="font-bold text-slate-900">Clear & Renew (Optional)</h4>
+                     <p className="text-sm text-slate-600 mt-1">If your property has undergone renovations, you can use the <strong>"Clear Rating"</strong> button. Remember, you must submit the new rating within 1 hour!</p>
+                   </div>
+                 </div>
+               </div>
+            </div>
+
+            <div className="bg-slate-50 p-6 border-t border-slate-100 flex justify-end">
+               <Link to="/my-listings" className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white hover:bg-emerald-700 shadow-md">
+                 Go to My Listings
+               </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

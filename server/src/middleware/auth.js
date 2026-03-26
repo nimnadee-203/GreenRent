@@ -6,18 +6,18 @@ import jwt from "jsonwebtoken";
  */
 export const authenticate = (req, res, next) => {
   try {
-    // Get token from header
-    const authHeader = req.headers.authorization;
+    // Get token from header or cookie
+    let token = req.cookies?.token;
     
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ 
-        message: "Access denied. No token provided." 
-      });
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+      token = req.headers.authorization.substring(7);
     }
 
-    const token = authHeader.substring(7); // Remove "Bearer " prefix
-
-    // Verify token
+    if (!token) {
+      return res.status(401).json({
+        message: "Access denied. No token provided."
+      });
+    }
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
     
     // Attach user info to request
