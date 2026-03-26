@@ -9,17 +9,17 @@ import {
   Leaf,
   MapPin,
   RefreshCw,
-  Search,
-  SlidersHorizontal,
-  X,
 } from "lucide-react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import Navbar from "../components/Home/Navbar";
+import Footer from "../components/Home/Footer";
+import PropertyFilterBar from "../components/PropertyListing/PropertyFilterBar";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const DEFAULT_FILTERS = {
   search: "",
+  checkInDate: "",
+  checkOutDate: "",
   propertyType: "",
   availabilityStatus: "",
   minPrice: "",
@@ -56,10 +56,7 @@ export default function PropertyListing() {
   const [properties, setProperties] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-
-  const totalVisible = properties.length;
 
   const requestParams = useMemo(() => {
     const params = {
@@ -74,7 +71,15 @@ export default function PropertyListing() {
     if (filters.maxPrice) params.maxPrice = Number(filters.maxPrice);
 
     return params;
-  }, [filters]);
+  }, [
+    filters.search,
+    filters.propertyType,
+    filters.availabilityStatus,
+    filters.minPrice,
+    filters.maxPrice,
+    filters.sortBy,
+    filters.sortOrder,
+  ]);
 
   const fetchProperties = async () => {
     setIsLoading(true);
@@ -109,6 +114,15 @@ export default function PropertyListing() {
     setCurrentPage(1);
   };
 
+  const updateCheckOutDate = (event) => {
+    setFilters((previous) => ({
+      ...previous,
+      checkOutDate: event.target.value,
+    }));
+    setCurrentPage(1);
+  };
+
+
   const resetFilters = () => {
     setFilters(DEFAULT_FILTERS);
     setCurrentPage(1);
@@ -117,6 +131,8 @@ export default function PropertyListing() {
   const activeFilters = useMemo(() => {
     const labels = [];
     if (filters.search.trim()) labels.push(`Search: ${filters.search.trim()}`);
+    if (filters.checkInDate) labels.push(`Check in: ${filters.checkInDate}`);
+    if (filters.checkOutDate) labels.push(`Check out: ${filters.checkOutDate}`);
     if (filters.propertyType) labels.push(`Type: ${capitalize(filters.propertyType)}`);
     if (filters.minPrice) labels.push(`Min: ${formatPrice(Number(filters.minPrice))}`);
     if (filters.maxPrice) labels.push(`Max: ${formatPrice(Number(filters.maxPrice))}`);
@@ -125,18 +141,47 @@ export default function PropertyListing() {
 
   const removeFilterChip = (label) => {
     if (label.startsWith("Search:")) setFilters((prev) => ({ ...prev, search: "" }));
+    if (label.startsWith("Check in:")) setFilters((prev) => ({ ...prev, checkInDate: "" }));
+    if (label.startsWith("Check out:")) {
+      setFilters((prev) => ({ ...prev, checkOutDate: "" }));
+    }
     if (label.startsWith("Type:")) setFilters((prev) => ({ ...prev, propertyType: "" }));
     if (label.startsWith("Min:")) setFilters((prev) => ({ ...prev, minPrice: "" }));
     if (label.startsWith("Max:")) setFilters((prev) => ({ ...prev, maxPrice: "" }));
     setCurrentPage(1);
   };
 
-  const totalPages = Math.max(1, Math.ceil(properties.length / ITEMS_PER_PAGE));
+  const filteredProperties = useMemo(() => {
+    if (!filters.checkInDate && !filters.checkOutDate) return properties;
+
+    const checkInDate = filters.checkInDate ? new Date(filters.checkInDate) : null;
+    const checkOutDate = filters.checkOutDate ? new Date(filters.checkOutDate) : null;
+
+    if (checkInDate && Number.isNaN(checkInDate.getTime())) return properties;
+    if (checkOutDate && Number.isNaN(checkOutDate.getTime())) return properties;
+
+    if (checkInDate) checkInDate.setHours(0, 0, 0, 0);
+    if (checkOutDate) checkOutDate.setHours(23, 59, 59, 999);
+
+    return properties.filter((property) => {
+      if (!property.createdAt) return false;
+      const createdDate = new Date(property.createdAt);
+      if (Number.isNaN(createdDate.getTime())) return false;
+
+      if (checkInDate && createdDate < checkInDate) return false;
+      if (checkOutDate && createdDate > checkOutDate) return false;
+      return true;
+    });
+  }, [properties, filters.checkInDate, filters.checkOutDate]);
+
+  const totalVisible = filteredProperties.length;
+
+  const totalPages = Math.max(1, Math.ceil(filteredProperties.length / ITEMS_PER_PAGE));
 
   const pagedProperties = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return properties.slice(start, start + ITEMS_PER_PAGE);
-  }, [properties, currentPage]);
+    return filteredProperties.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredProperties, currentPage]);
 
   const toLocationLabel = (property) => {
     if (typeof property.location === "string") return property.location;
@@ -169,64 +214,15 @@ export default function PropertyListing() {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
 
-      <div className="sticky top-16 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-md">
-        <div className="w-full px-4 md:px-8 xl:px-12 py-4">
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                value={filters.search}
-                onChange={updateFilter("search")}
-                type="text"
-                placeholder="Search by city, neighborhood, or zip..."
-                className="h-12 w-full rounded-lg border border-slate-200 bg-white pl-11 pr-3 text-base text-slate-900 outline-none transition focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowFilters((previous) => !previous)}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              <SlidersHorizontal className="w-5 h-5" />
-              Filters
-            </button>
-          </div>
-
-          {activeFilters.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-4">
-              {activeFilters.map((filter) => (
-                <span
-                  key={filter}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-sm font-medium text-slate-700 border border-slate-200"
-                >
-                  {filter}
-                  <button
-                    onClick={() => removeFilterChip(filter)}
-                    className="text-slate-400 hover:text-slate-600"
-                    type="button"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </span>
-              ))}
-              <button
-                onClick={resetFilters}
-                className="text-sm text-emerald-600 font-medium hover:text-emerald-700 ml-1"
-                type="button"
-              >
-                Clear all
-              </button>
-            </div>
-          )}
-
-          {showFilters && (
-            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-              <FilterFields filters={filters} updateFilter={updateFilter} compact />
-            </div>
-          )}
-        </div>
-      </div>
+      <PropertyFilterBar
+        filters={filters}
+        updateFilter={updateFilter}
+        updateCheckOutDate={updateCheckOutDate}
+        typeOptions={TYPE_OPTIONS}
+        activeFilters={activeFilters}
+        removeFilterChip={removeFilterChip}
+        resetFilters={resetFilters}
+      />
 
       <main className="w-full px-4 md:px-8 xl:px-12 py-8">
         <div className="flex justify-between items-center mb-6">
@@ -272,7 +268,7 @@ export default function PropertyListing() {
           </div>
         )}
 
-        {!isLoading && !error && properties.length === 0 && (
+        {!isLoading && !error && filteredProperties.length === 0 && (
           <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
             <p className="text-lg font-semibold text-slate-800">No apartments matched your filters.</p>
             <p className="mt-2 text-sm text-slate-500">Try broadening your search or clear all filters.</p>
@@ -286,7 +282,7 @@ export default function PropertyListing() {
           </div>
         )}
 
-        {!isLoading && !error && properties.length > 0 && (
+        {!isLoading && !error && filteredProperties.length > 0 && (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
               {pagedProperties.map((property) => {
@@ -406,102 +402,6 @@ export default function PropertyListing() {
       </main>
 
       <Footer />
-    </div>
-  );
-}
-
-function FilterFields({ filters, updateFilter, compact = false }) {
-  const inputClassName =
-    "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
-
-  return (
-    <div className="space-y-4">
-      <label className="block">
-        <p className="mb-1 text-sm font-medium text-slate-700">Search</p>
-        <div className="relative">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            value={filters.search}
-            onChange={updateFilter("search")}
-            type="text"
-            placeholder="Location, title, keywords"
-            className={`${inputClassName} pl-9`}
-          />
-        </div>
-      </label>
-
-      <label className="block">
-        <p className="mb-1 text-sm font-medium text-slate-700">Property Type</p>
-        <select value={filters.propertyType} onChange={updateFilter("propertyType")} className={inputClassName}>
-          <option value="">All Types</option>
-          {TYPE_OPTIONS.map((type) => (
-            <option key={type} value={type}>
-              {capitalize(type)}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="block">
-        <p className="mb-1 text-sm font-medium text-slate-700">Availability</p>
-        <select
-          value={filters.availabilityStatus}
-          onChange={updateFilter("availabilityStatus")}
-          className={inputClassName}
-        >
-          <option value="">All</option>
-          {AVAILABILITY_OPTIONS.map((status) => (
-            <option key={status} value={status}>
-              {capitalize(status)}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <div className="grid grid-cols-2 gap-2">
-        <label className="block">
-          <p className="mb-1 text-sm font-medium text-slate-700">Min Price</p>
-          <input
-            value={filters.minPrice}
-            onChange={updateFilter("minPrice")}
-            type="number"
-            min="0"
-            placeholder="0"
-            className={inputClassName}
-          />
-        </label>
-
-        <label className="block">
-          <p className="mb-1 text-sm font-medium text-slate-700">Max Price</p>
-          <input
-            value={filters.maxPrice}
-            onChange={updateFilter("maxPrice")}
-            type="number"
-            min="0"
-            placeholder="50000"
-            className={inputClassName}
-          />
-        </label>
-      </div>
-
-      <div className={`grid gap-2 ${compact ? "grid-cols-1" : "grid-cols-2"}`}>
-        <label className="block">
-          <p className="mb-1 text-sm font-medium text-slate-700">Sort By</p>
-          <select value={filters.sortBy} onChange={updateFilter("sortBy")} className={inputClassName}>
-            <option value="createdAt">Newest</option>
-            <option value="price">Price</option>
-            <option value="title">Name</option>
-          </select>
-        </label>
-
-        <label className="block">
-          <p className="mb-1 text-sm font-medium text-slate-700">Order</p>
-          <select value={filters.sortOrder} onChange={updateFilter("sortOrder")} className={inputClassName}>
-            <option value="desc">Descending</option>
-            <option value="asc">Ascending</option>
-          </select>
-        </label>
-      </div>
     </div>
   );
 }
