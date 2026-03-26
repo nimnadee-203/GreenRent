@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Navbar from '../components/Navbar';
+import Navbar from '../components/Home/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { LayoutDashboard, Home, PlusCircle, Star, TrendingUp, Bell, Clock, ArrowRight, Leaf, ShieldAlert } from 'lucide-react';

@@ -4,7 +4,7 @@ import Home from './pages/Home';
 import About from './pages/About';
 import Dashboard from './pages/Dashboard';
 import PropertyListing from './pages/PropertyListing';
-import PropertyDetails from './pages/PropertyDetails';
+import PropertyDetails from './components/PropertyListing/PropertyDetails';
 import Login from './pages/Login';
 import AddApartment from './pages/AddApartment';
 import MyListings from './pages/MyListings';

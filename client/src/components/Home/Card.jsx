@@ -1,6 +1,6 @@
 import React from "react";
 import { Heart } from "lucide-react";
-import { servicesData } from "../assets/assets";
+import { servicesData } from "../../assets/assets";
 
 export default function Card() {
   return (

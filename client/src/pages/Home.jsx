@@ -7,8 +7,8 @@ import {
   Star,
   Leaf,
 } from 'lucide-react';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import Navbar from '../components/Home/Navbar';
+import Footer from '../components/Home/Footer';
 
 export default function Home() {
   return (
