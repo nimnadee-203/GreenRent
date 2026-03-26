@@ -2,7 +2,7 @@ import React, { Fragment } from "react";
 import { Leaf, Menu as MenuIcon, User, LogOut, LayoutDashboard, Home } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Menu, Transition } from '@headlessui/react';
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 
 const navClassName = ({ isActive }) =>
     `text-base font-medium transition-colors ${
