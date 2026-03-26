@@ -21,3 +21,11 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# local temp/helper artifacts
+/build_check.log
+/edit-btn.js
+/patch.js
+/patch2.js
+/update.js
+/tmp.json
