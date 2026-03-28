@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import {
   ArrowLeft,
@@ -30,6 +30,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000
 
 const PropertyDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [property, setProperty] = useState(null);
   const [ecoRating, setEcoRating] = useState(null);
   const [reviewsData, setReviewsData] = useState({ reviews: [], summary: null });
@@ -45,6 +46,15 @@ const PropertyDetails = () => {
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
+
+  const handleBookNow = () => {
+    if (!property || property.availabilityStatus !== 'available') {
+      alert('This property is not currently available for booking.');
+      return;
+    }
+    setShowAvailabilityModal(false);
+    navigate(`/booking/${id}`);
+  };
 
   useEffect(() => {
     const fetchData = async () => {

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../middleware/auth.js";
-import { validationResult } from "express-validator";
+
 import {
   createBookingHandler,
   getAllBookingsHandler,
@@ -17,41 +17,59 @@ import {
 const router = Router();
 
 /**
- * ROUTE ACCESS EXPLANATION:
- * 
- * USER ROUTES (Authenticated users):
- * - POST /api/bookings - Create a booking (any authenticated user)
- * - GET /api/bookings/my - Get own bookings (any authenticated user)
- * - GET /api/bookings/:id - Get own booking by ID (users can only view their own)
- * - PUT /api/bookings/:id - Update own booking (users can only update their own)
- * - PUT /api/bookings/:id/payment - Update payment status for own booking
- * - PUT /api/bookings/:id/cancel - Cancel own booking
- * - POST /api/bookings/check-availability - Check availability (public or authenticated)
- * 
- * ADMIN ROUTES (Admin only):
- * - GET /api/bookings - Get all bookings (admin only)
- * - GET /api/bookings/:id - Get any booking by ID (admin can view all)
- * - PUT /api/bookings/:id - Update any booking (admin can update all)
- * - PUT /api/bookings/:id/status - Update booking status (admin/landlord)
- * - PUT /api/bookings/:id/payment - Update payment status for any booking (admin)
- * - PUT /api/bookings/:id/cancel - Cancel any booking (admin)
- * - DELETE /api/bookings/:id - Delete booking permanently (admin only)
+ * =========================================
+ * PUBLIC ROUTES
+ * =========================================
  */
 
-// Public route - Check availability (no auth required)
+// Check apartment availability (No authentication required)
 router.post("/check-availability", checkAvailabilityHandler);
 
-// User routes - Require authentication
+
+/**
+ * =========================================
+ * USER ROUTES (Authenticated Users)
+ * =========================================
+ */
+
+// Create booking
 router.post("/", authenticate, createBookingHandler);
+
+// Get logged-in user's bookings
 router.get("/my", authenticate, getMyBookingsHandler);
+
+// Get single booking by ID (user can only view their own booking)
 router.get("/:id", authenticate, getBookingByIdHandler);
+
+// Update own booking
 router.put("/:id", authenticate, updateBookingHandler);
+
+// Update payment status (for own booking)
 router.put("/:id/payment", authenticate, updatePaymentStatusHandler);
+
+// Cancel booking
 router.put("/:id/cancel", authenticate, cancelBookingHandler);
 
-// Admin routes - Require admin role
+
+/**
+ * =========================================
+ * ADMIN ROUTES
+ * =========================================
+ */
+
+// Get all bookings (Admin only)
 router.get("/", authenticate, authorize("admin"), getAllBookingsHandler);
-router.put("/:id/status", authenticate, authorize("admin", "landlord"), updateBookingStatusHandler);
+
+// Update booking status (Admin or Landlord)
+router.put(
+  "/:id/status",
+  authenticate,
+  authorize("admin", "landlord"),
+  updateBookingStatusHandler
+);
+
+// Delete booking permanently (Admin only)
 router.delete("/:id", authenticate, authorize("admin"), deleteBookingHandler);
+
 
 export default router;
