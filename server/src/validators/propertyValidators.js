@@ -39,6 +39,22 @@ export const validatePropertyCreate = (data) => {
         errors.push("Price must be a positive number");
     }
 
+    if (data.area !== undefined && data.area !== null && (!isNumber(data.area) || data.area < 0)) {
+        errors.push("Area must be a positive number");
+    }
+
+    if (data.bedrooms !== undefined && data.bedrooms !== null && (!isNumber(data.bedrooms) || data.bedrooms < 0)) {
+        errors.push("Bedrooms must be a positive number");
+    }
+
+    if (data.bathrooms !== undefined && data.bathrooms !== null && (!isNumber(data.bathrooms) || data.bathrooms < 0)) {
+        errors.push("Bathrooms must be a positive number");
+    }
+
+    if (data.parking !== undefined && typeof data.parking !== "boolean") {
+        errors.push("Parking must be a boolean");
+    }
+
     if (!PROPERTY_TYPES.includes(data.propertyType)) {
         errors.push(`Property type must be one of: ${PROPERTY_TYPES.join(", ")}`);
     }
@@ -90,6 +106,22 @@ export const validatePropertyUpdate = (data) => {
 
     if (data.price !== undefined && (!isNumber(data.price) || data.price < 0)) {
         errors.push("Price must be a positive number");
+    }
+
+    if (data.area !== undefined && data.area !== null && (!isNumber(data.area) || data.area < 0)) {
+        errors.push("Area must be a positive number");
+    }
+
+    if (data.bedrooms !== undefined && data.bedrooms !== null && (!isNumber(data.bedrooms) || data.bedrooms < 0)) {
+        errors.push("Bedrooms must be a positive number");
+    }
+
+    if (data.bathrooms !== undefined && data.bathrooms !== null && (!isNumber(data.bathrooms) || data.bathrooms < 0)) {
+        errors.push("Bathrooms must be a positive number");
+    }
+
+    if (data.parking !== undefined && typeof data.parking !== "boolean") {
+        errors.push("Parking must be a boolean");
     }
 
     if (data.propertyType !== undefined && !PROPERTY_TYPES.includes(data.propertyType)) {

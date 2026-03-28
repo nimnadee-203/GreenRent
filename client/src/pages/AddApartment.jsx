@@ -10,7 +10,11 @@ const INITIAL_FORM = {
   address: "",
   price: "",
   propertyType: "apartment",
-  imageUrl: "",
+  imageUrls: [""],
+  coverImageIndex: 0,
+  bedrooms: "",
+  bathrooms: "",
+  parking: false,
   solarPower: false,
   rainwaterHarvesting: false,
   energyEfficientAppliances: false,
@@ -46,6 +50,48 @@ export default function AddApartment() {
     setForm((previous) => ({ ...previous, [field]: value }));
   };
 
+  const onImageUrlChange = (index) => (event) => {
+    const { value } = event.target;
+    setForm((previous) => ({
+      ...previous,
+      imageUrls: previous.imageUrls.map((url, i) => (i === index ? value : url)),
+    }));
+  };
+
+  const addImageField = () => {
+    setForm((previous) => ({
+      ...previous,
+      imageUrls: [...previous.imageUrls, ""],
+    }));
+  };
+
+  const removeImageField = (index) => {
+    setForm((previous) => {
+      if (previous.imageUrls.length === 1) {
+        return {
+          ...previous,
+          imageUrls: [""],
+          coverImageIndex: 0,
+        };
+      }
+
+      const nextImageUrls = previous.imageUrls.filter((_, i) => i !== index);
+      let nextCoverIndex = previous.coverImageIndex;
+
+      if (index === previous.coverImageIndex) {
+        nextCoverIndex = 0;
+      } else if (index < previous.coverImageIndex) {
+        nextCoverIndex = previous.coverImageIndex - 1;
+      }
+
+      return {
+        ...previous,
+        imageUrls: nextImageUrls,
+        coverImageIndex: Math.max(0, Math.min(nextCoverIndex, nextImageUrls.length - 1)),
+      };
+    });
+  };
+
   const handleBecomeSeller = async () => {
     setError("");
     setSuccess("");
@@ -74,6 +120,15 @@ export default function AddApartment() {
     setSuccess("");
     setIsSubmitting(true);
 
+    const cleanedImages = form.imageUrls.map((url) => url.trim()).filter(Boolean);
+    const safeCoverIndex = Math.min(form.coverImageIndex, Math.max(0, cleanedImages.length - 1));
+    const orderedImages = cleanedImages.length
+      ? [
+          cleanedImages[safeCoverIndex],
+          ...cleanedImages.filter((_, index) => index !== safeCoverIndex),
+        ]
+      : [];
+
     const payload = {
       title: form.title,
       description: form.description,
@@ -87,7 +142,7 @@ export default function AddApartment() {
         rainwaterHarvesting: form.rainwaterHarvesting,
         energyEfficientAppliances: form.energyEfficientAppliances,
       },
-      images: form.imageUrl ? [form.imageUrl] : [],
+      images: orderedImages,
     };
 
     try {
@@ -177,12 +232,55 @@ export default function AddApartment() {
               </select>
             </label>
 
-            <Input
-              label="Image URL (optional)"
-              value={form.imageUrl}
-              onChange={onFieldChange("imageUrl")}
-              placeholder="https://..."
-            />
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Input label="Bedrooms" value={form.bedrooms} onChange={onFieldChange("bedrooms")} type="number" min="0" placeholder="e.g., 2" />
+              <Input label="Bathrooms" value={form.bathrooms} onChange={onFieldChange("bathrooms")} type="number" min="0" step="0.5" placeholder="e.g., 1" />
+              <Checkbox label="Parking Available" checked={form.parking} onChange={onFieldChange("parking")} />
+            </div>
+
+            <div className="rounded-xl border border-slate-200 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-medium text-slate-700">Property Images</p>
+                <button
+                  type="button"
+                  onClick={addImageField}
+                  className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                >
+                  Add image
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {form.imageUrls.map((url, index) => (
+                  <div key={`img-${index}`} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={url}
+                        onChange={onImageUrlChange(index)}
+                        placeholder={`Image URL ${index + 1}`}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImageField(index)}
+                        className="rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-100"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+                      <input
+                        type="radio"
+                        name="cover-image"
+                        checked={form.coverImageIndex === index}
+                        onChange={() => setForm((previous) => ({ ...previous, coverImageIndex: index }))}
+                      />
+                      Set as cover image
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             <div>
               <p className="mb-2 text-sm font-medium text-slate-700">Eco Features</p>

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import Navbar from "../../components/Home/Navbar";
-import { Leaf, Clock, AlertCircle, Edit2, Trash2, Eye, Ban, CheckCircle2, ChevronRight, Sun, Zap, Wind, Droplets, Recycle, BatteryCharging, MapPin, X } from "lucide-react";
+import { Leaf, Clock, AlertCircle, Edit2, Trash2, Eye, Ban, CheckCircle2, ChevronRight, Sun, Zap, Wind, Droplets, Recycle, BatteryCharging, MapPin, X, Home, Banknote, Image as ImageIcon, Trash2 as TrashIcon } from "lucide-react";
 import { formatDistanceToNow, isPast, addHours } from "date-fns";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
@@ -26,7 +26,7 @@ export default function MyListings() {
   
   // Modals
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
-  const [updateForm, setUpdateForm] = useState({ title: '', description: '', price: '', address: '' });
+  const [updateForm, setUpdateForm] = useState({ title: '', description: '', price: '', address: '', bedrooms: '', bathrooms: '', parking: false, area: '', imageFiles: [], coverImageIndex: 0 });
   const [ecoModalOpen, setEcoModalOpen] = useState(false);
   const [activeProperty, setActiveProperty] = useState(null);
   const [ecoForm, setEcoForm] = useState(INITIAL_ECO_FORM);
@@ -93,32 +93,129 @@ export default function MyListings() {
       title: property.title || '',
       description: property.description || '',
       price: property.price || '',
-      address: property.location?.address || ''
+      address: property.location?.address || '',
+      bedrooms: property.bedrooms || '',
+      bathrooms: property.bathrooms || '',
+      parking: property.parking || false,
+      area: property.area || '',
+      imageFiles: [],
+      coverImageIndex: 0
     });
     setUpdateModalOpen(true);
+  };
+
+  const compressImage = async (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          if (width > 800) {
+            height = Math.round((height * 800) / width);
+            width = 800;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          resolve(compressedDataUrl);
+        };
+        img.onerror = () => reject(new Error(`Failed to load image: ${file.name}`));
+      };
+      reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+    });
   };
 
   const submitUpdateDetails = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      const existingImages = Array.isArray(activeProperty?.images)
+        ? activeProperty.images.filter((img) => typeof img === 'string' && img.trim().length > 0)
+        : [];
+
+      const compressedImages = updateForm.imageFiles.length > 0
+        ? await Promise.all(updateForm.imageFiles.map(compressImage))
+        : existingImages;
+      
       const payload = {
         title: updateForm.title,
         description: updateForm.description,
         price: Number(updateForm.price),
-        location: { address: updateForm.address }
+        location: { address: updateForm.address },
+        images: compressedImages,
+        parking: Boolean(updateForm.parking),
       };
+
+      // Only add optional fields if they have values
+      if (updateForm.bedrooms) payload.bedrooms = Number(updateForm.bedrooms);
+      if (updateForm.bathrooms) payload.bathrooms = Number(updateForm.bathrooms);
+      if (updateForm.area) payload.area = Number(updateForm.area);
       await axios.put(`${API_BASE_URL}/api/properties/${activeProperty._id}`, payload, { withCredentials: true });
       setUpdateModalOpen(false);
       fetchData();
     } catch (err) {
-      alert("Failed to update property details.");
+      const errors = err?.response?.data?.errors;
+      const message = err?.response?.data?.message;
+      const status = err?.response?.status;
+      const details = Array.isArray(errors) && errors.length ? errors.join(" | ") : message;
+
+      if (details) {
+        alert(details);
+      } else if (status === 413) {
+        alert("Image payload is too large. Try fewer/smaller images.");
+      } else {
+        alert("Failed to update property details.");
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const onUpdateFieldChange = (field) => (event) => setUpdateForm((prev) => ({ ...prev, [field]: event.target.value }));
+  const onUpdateFieldChange = (field) => (event) => setUpdateForm((prev) => ({ ...prev, [field]: event.target.type === 'checkbox' ? event.target.checked : event.target.value }));
+
+  const onUpdateImageFilesChange = (event) => {
+    const selectedFiles = Array.from(event.target.files || []);
+    if (!selectedFiles.length) return;
+
+    const MAX_FILE_SIZE = 2 * 1024 * 1024;
+    const oversizedFiles = selectedFiles.filter((f) => f.size > MAX_FILE_SIZE);
+
+    if (oversizedFiles.length) {
+      alert(`Some images are too large (max 2MB per file). Please select smaller images.`);
+      event.target.value = '';
+      return;
+    }
+
+    setUpdateForm((prev) => ({
+      ...prev,
+      imageFiles: [...prev.imageFiles, ...selectedFiles],
+    }));
+    event.target.value = '';
+  };
+
+  const removeSelectedUpdateImage = (index) => {
+    setUpdateForm((prev) => {
+      const nextImageFiles = prev.imageFiles.filter((_, i) => i !== index);
+      let nextCoverIndex = prev.coverImageIndex;
+      if (index === prev.coverImageIndex) {
+        nextCoverIndex = 0;
+      } else if (index < prev.coverImageIndex) {
+        nextCoverIndex = prev.coverImageIndex - 1;
+      }
+      return {
+        ...prev,
+        imageFiles: nextImageFiles,
+        coverImageIndex: Math.max(0, Math.min(nextCoverIndex, nextImageFiles.length - 1)),
+      };
+    });
+  };
 
   const openEcoModal = (property) => {
     setActiveProperty(property);
@@ -376,26 +473,69 @@ export default function MyListings() {
               <div className="p-8 overflow-y-auto flex-1 space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Title</label>
-                  <input type="text" value={updateForm.title} onChange={(e) => setUpdateForm({ ...updateForm, title: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" required />
+                  <input type="text" value={updateForm.title} onChange={onUpdateFieldChange('title')} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" required />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Description</label>
-                  <textarea value={updateForm.description} onChange={(e) => setUpdateForm({ ...updateForm, description: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 min-h-[120px]" required />
+                  <textarea value={updateForm.description} onChange={onUpdateFieldChange('description')} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 min-h-[120px]" required />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">Price (Rent)</label>
-                    <input type="number" value={updateForm.price} onChange={(e) => setUpdateForm({ ...updateForm, price: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" required />
+                    <input type="number" value={updateForm.price} onChange={onUpdateFieldChange('price')} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Area (sq.ft)</label>
+                    <input type="number" value={updateForm.area} onChange={onUpdateFieldChange('area')} placeholder="e.g., 1200" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">Address</label>
-                    <input type="text" value={updateForm.address} onChange={(e) => setUpdateForm({ ...updateForm, address: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" required />
+                    <input type="text" value={updateForm.address} onChange={onUpdateFieldChange('address')} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" required />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Bedrooms</label>
+                    <input type="number" min="0" value={updateForm.bedrooms} onChange={onUpdateFieldChange('bedrooms')} placeholder="e.g., 2" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Bathrooms</label>
+                    <input type="number" min="0" step="0.5" value={updateForm.bathrooms} onChange={onUpdateFieldChange('bathrooms')} placeholder="e.g., 1" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" />
+                  </div>
+                  <label className="flex items-end gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                    <input type="checkbox" checked={updateForm.parking} onChange={onUpdateFieldChange('parking')} className="w-4 h-4 text-emerald-600 rounded cursor-pointer" />
+                    <span className="text-sm font-medium text-slate-700">Parking</span>
+                  </label>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="flex items-center text-sm font-semibold text-slate-700"><ImageIcon className="w-4 h-4 mr-2 text-slate-400" />Property Images</label>
+                    <label className="cursor-pointer inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">
+                      Add images
+                      <input type="file" accept="image/*" multiple className="hidden" onChange={onUpdateImageFilesChange} />
+                    </label>
+                  </div>
+                  <div className="space-y-3 max-h-[200px] overflow-y-auto">
+                    {updateForm.imageFiles.length === 0 && <p className="text-xs text-slate-500">No new images selected. Existing images will be kept.</p>}
+                    {updateForm.imageFiles.map((file, index) => (
+                      <div key={`image-${index}`} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                            <p className="font-medium truncate">{file.name}</p>
+                            <p className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          </div>
+                          <button type="button" onClick={() => removeSelectedUpdateImage(index)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-100">
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
               <div className="px-8 py-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 flex-shrink-0">
                 <button type="button" onClick={() => setUpdateModalOpen(false)} className="rounded-xl px-6 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-200">Cancel</button>
-                <button type="submit" className="rounded-xl bg-emerald-600 px-8 py-3 text-sm font-bold text-white hover:bg-emerald-700">Update Property</button>
+                <button type="submit" disabled={isSubmitting} className="rounded-xl bg-emerald-600 px-8 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70">{isSubmitting ? 'Saving...' : 'Update Property'}</button>
               </div>
             </form>
           </div>

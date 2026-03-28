@@ -38,6 +38,25 @@ const propertySchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    area: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+    bedrooms: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+    bathrooms: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+    parking: {
+      type: Boolean,
+      default: false,
+    },
     propertyType: {
       type: String,
       required: true,

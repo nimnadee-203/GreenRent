@@ -2,11 +2,23 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Home/Navbar';
-import { Home, MapPin, AlignLeft, Image as ImageIcon, Banknote, Leaf, CheckCircle2, ChevronRight, Sun, Zap, Wind, Droplets, Recycle, BatteryCharging, Loader2, ArrowLeft } from 'lucide-react';
+import { Home, MapPin, AlignLeft, Image as ImageIcon, Banknote, Leaf, CheckCircle2, Sun, Zap, Wind, Droplets, Recycle, BatteryCharging, Loader2, ArrowLeft, Trash2 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
-const INITIAL_FORM = { title: '', description: '', address: '', price: '', propertyType: 'apartment', imageUrl: '' };
+const INITIAL_FORM = {
+  title: '',
+  description: '',
+  address: '',
+  price: '',
+  area: '',
+  propertyType: 'apartment',
+  imageFiles: [],
+  coverImageIndex: 0,
+  bedrooms: '',
+  bathrooms: '',
+  parking: false,
+};
 const INITIAL_ECO_FORM = { latitude: '', longitude: '', energyRating: 'C', solarPanels: false, ledLighting: false, efficientAc: false, waterSavingTaps: false, rainwaterHarvesting: false, waterMeter: false, recyclingAvailable: false, compostAvailable: false, transportDistance: '1-3 km', evCharging: false, goodVentilationSunlight: false };
 
 export default function AddApartment() {
@@ -36,8 +48,104 @@ export default function AddApartment() {
 
   useEffect(() => { fetchUser(); }, []);
 
-  const onFieldChange = (field) => (event) => setForm((prev) => ({ ...prev, [field]: event.target.value }));
+  const onFieldChange = (field) => (event) =>
+    setForm((prev) => ({
+      ...prev,
+      [field]: event.target.type === 'checkbox' ? event.target.checked : event.target.value,
+    }));
   const onEcoFieldChange = (field) => (event) => setEcoForm((prev) => ({ ...prev, [field]: event.target.type === 'checkbox' ? event.target.checked : event.target.value }));
+
+  const onImageFilesChange = (event) => {
+    const selectedFiles = Array.from(event.target.files || []);
+    if (!selectedFiles.length) return;
+
+    const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB per file
+    const oversizedFiles = selectedFiles.filter((f) => f.size > MAX_FILE_SIZE);
+
+    if (oversizedFiles.length) {
+      setError(
+        `Some images are too large (max 2MB per file). Please select smaller images. Oversized: ${oversizedFiles.map((f) => f.name).join(", ")}`
+      );
+      event.target.value = '';
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      imageFiles: [...prev.imageFiles, ...selectedFiles],
+    }));
+
+    event.target.value = '';
+  };
+
+  const removeSelectedImage = (index) => {
+    setForm((prev) => {
+      if (prev.imageFiles.length === 1) {
+        return {
+          ...prev,
+          imageFiles: [],
+          coverImageIndex: 0,
+        };
+      }
+
+      const nextImageFiles = prev.imageFiles.filter((_, i) => i !== index);
+      let nextCoverIndex = prev.coverImageIndex;
+      if (index === prev.coverImageIndex) {
+        nextCoverIndex = 0;
+      } else if (index < prev.coverImageIndex) {
+        nextCoverIndex = prev.coverImageIndex - 1;
+      }
+
+      return {
+        ...prev,
+        imageFiles: nextImageFiles,
+        coverImageIndex: Math.max(0, Math.min(nextCoverIndex, nextImageFiles.length - 1)),
+      };
+    });
+  };
+
+  const fileToDataUrl = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  /**
+   * Compress an image file using Canvas API
+   * Returns a data URL with the compressed image
+   */
+  const compressImage = async (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          // Resize to max 800px width, maintain aspect ratio
+          let width = img.width;
+          let height = img.height;
+          if (width > 800) {
+            height = Math.round((height * 800) / width);
+            width = 800;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          // Compress to JPEG with 0.7 quality
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          resolve(compressedDataUrl);
+        };
+        img.onerror = () => reject(new Error(`Failed to load image: ${file.name}`));
+      };
+      reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+    });
+  };
 
   const handleBecomeSeller = async () => {
     setError(''); setSuccess(''); setIsUpgrading(true);
@@ -54,19 +162,64 @@ export default function AddApartment() {
 
   const handleStage1Submit = async (event) => {
     event.preventDefault(); setError(''); setSuccess(''); setIsSubmitting(true);
-    const payload = { title: form.title, description: form.description, location: { address: form.address }, price: Number(form.price), propertyType: form.propertyType, ecoFeatures: {}, images: form.imageUrl ? [form.imageUrl] : [] };
+
     try {
+      // Compress and convert images to base64
+      let compressedImages = [];
+      if (form.imageFiles.length > 0) {
+        setError('Processing images...'); // Show progress
+        compressedImages = await Promise.all(
+          form.imageFiles.map((file) => compressImage(file))
+        );
+        setError(''); // Clear progress message
+      }
+
+      const payload = {
+        title: form.title,
+        description: form.description,
+        location: { address: form.address },
+        price: Number(form.price),
+        propertyType: form.propertyType,
+        ecoFeatures: {},
+        images: compressedImages,
+      };
+
+      // Only add optional fields if they have values
+      if (form.bedrooms) payload.bedrooms = Number(form.bedrooms);
+      if (form.bathrooms) payload.bathrooms = Number(form.bathrooms);
+      if (form.area) payload.area = Number(form.area);
+      if (form.parking) payload.parking = form.parking;
+      
       const response = await axios.post(`${API_BASE_URL}/api/properties`, payload, { withCredentials: true });
       setCreatedPropertyId(response.data._id);
-      if (response.data.location?.coordinates?.lat) {
-        setEcoForm(prev => ({ ...prev, latitude: response.data.location.coordinates.lat || prev.latitude, longitude: response.data.location.coordinates.lng || prev.longitude }));
+      
+      // Check if address was successfully geocoded
+      const hasCoordinates = response.data.location?.coordinates?.lat && response.data.location?.coordinates?.lng;
+      
+      if (hasCoordinates) {
+        setEcoForm(prev => ({ 
+          ...prev, 
+          latitude: response.data.location.coordinates.lat || prev.latitude, 
+          longitude: response.data.location.coordinates.lng || prev.longitude 
+        }));
+        setSuccess('Apartment listed successfully! Let\'s build its Eco-Profile.');
+      } else {
+        // Address couldn't be geocoded, but property was created
+        setSuccess('Apartment listed successfully! The address couldn\'t be located on the map yet, but your property has been created. You can view it on the map once the address is verified.');
       }
-      setSuccess('Apartment listed successfully! Let\'s build its Eco-Profile.');
+      
       setStage(2);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (submitError) {
+      console.error('Submit error details:', {
+        status: submitError?.response?.status,
+        message: submitError?.response?.data?.message,
+        errors: submitError?.response?.data?.errors,
+        fullError: submitError,
+      });
       const serverErrors = submitError?.response?.data?.errors;
-      setError(Array.isArray(serverErrors) && serverErrors.length ? serverErrors.join(' | ') : (submitError?.response?.data?.message || 'Failed to create apartment.'));
+      const errorMsg = submitError?.response?.data?.message || 'Failed to create apartment.';
+      setError(Array.isArray(serverErrors) && serverErrors.length ? serverErrors.join(' | ') : errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -132,14 +285,62 @@ export default function AddApartment() {
                     <div className="space-y-6">
                       <InputWithIcon icon={Home} label="Property Title" value={form.title} onChange={onFieldChange('title')} required />
                       <InputWithIcon icon={MapPin} label="Address" value={form.address} onChange={onFieldChange('address')} required />
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-3 gap-4">
                         <InputWithIcon icon={Banknote} label="Monthly Rent (LKR)" value={form.price} onChange={onFieldChange('price')} type="number" min="0" required />
+                        <InputWithIcon icon={Home} label="Area (sq.ft)" value={form.area} onChange={onFieldChange('area')} type="number" min="0" placeholder="e.g., 1200" />
                         <div className="flex flex-col">
                           <label className="mb-1.5 block text-sm font-semibold text-slate-700">Property Type</label>
                           <select value={form.propertyType} onChange={onFieldChange('propertyType')} className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-4 pr-10 py-3 text-sm focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
-                            <option value="apartment">Apartment</option><option value="house">House</option><option value="studio">Studio</option>
+                            <option value="apartment">Apartment</option>
+                            <option value="house">House</option>
+                            <option value="studio">Studio</option>
+                            <option value="townhouse">Townhouse</option>
+                            <option value="other">Other</option>
                           </select>
                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="flex flex-col">
+                          <label className="mb-1.5 flex items-center text-sm font-semibold text-slate-700">
+                            <Home className="w-4 h-4 mr-2 text-slate-400" />
+                            Bedrooms
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={form.bedrooms}
+                            onChange={onFieldChange('bedrooms')}
+                            placeholder="e.g., 2"
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
+                          />
+                        </div>
+
+                        <div className="flex flex-col">
+                          <label className="mb-1.5 flex items-center text-sm font-semibold text-slate-700">
+                            <Home className="w-4 h-4 mr-2 text-slate-400" />
+                            Bathrooms
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={form.bathrooms}
+                            onChange={onFieldChange('bathrooms')}
+                            placeholder="e.g., 1"
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
+                          />
+                        </div>
+
+                        <label className="flex items-end gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={form.parking}
+                            onChange={onFieldChange('parking')}
+                            className="w-4 h-4 text-emerald-600 rounded cursor-pointer"
+                          />
+                          <span className="text-sm font-medium text-slate-700">Parking</span>
+                        </label>
                       </div>
                     </div>
                     <div className="space-y-6">
@@ -147,7 +348,56 @@ export default function AddApartment() {
                         <label className="mb-1.5 flex items-center text-sm font-semibold text-slate-700"><AlignLeft className="w-4 h-4 mr-2 text-slate-400" />Description</label>
                         <textarea value={form.description} onChange={onFieldChange('description')} required className="w-full flex-1 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 min-h-[120px] resize-none" />
                       </div>
-                      <InputWithIcon icon={ImageIcon} label="Cover Image URL" value={form.imageUrl} onChange={onFieldChange('imageUrl')} />
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <label className="flex items-center text-sm font-semibold text-slate-700"><ImageIcon className="w-4 h-4 mr-2 text-slate-400" />Property Images</label>
+                          <label className="cursor-pointer inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">
+                            Browse images
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              className="hidden"
+                              onChange={onImageFilesChange}
+                            />
+                          </label>
+                        </div>
+
+                        <div className="space-y-3">
+                          {form.imageFiles.length === 0 && (
+                            <p className="text-xs text-slate-500">No images selected yet.</p>
+                          )}
+
+                          {form.imageFiles.map((file, index) => (
+                            <div key={`image-${index}`} className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                                  <p className="font-medium truncate">{file.name}</p>
+                                  <p className="text-xs text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeSelectedImage(index)}
+                                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-100"
+                                  aria-label={`Remove image ${index + 1}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                              <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+                                <input
+                                  type="radio"
+                                  name="cover-image"
+                                  checked={form.coverImageIndex === index}
+                                  onChange={() => setForm((prev) => ({ ...prev, coverImageIndex: index }))}
+                                  className="text-emerald-600"
+                                />
+                                Set as cover image
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">

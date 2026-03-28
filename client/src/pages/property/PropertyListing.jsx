@@ -9,6 +9,7 @@ import {
   Leaf,
   MapPin,
   RefreshCw,
+  Maximize2,
 } from "lucide-react";
 import Navbar from "../../components/Home/Navbar";
 import Footer from "../../components/Home/Footer";
@@ -18,8 +19,6 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000
 
 const DEFAULT_FILTERS = {
   search: "",
-  checkInDate: "",
-  checkOutDate: "",
   propertyType: "",
   availabilityStatus: "",
   minPrice: "",
@@ -35,7 +34,7 @@ const AVAILABILITY_OPTIONS = ["available", "rented", "archived"];
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1200&q=80";
 
-const ITEMS_PER_PAGE = 6;
+const ITEMS_PER_PAGE = 10;
 
 const formatPrice = (value) => {
   if (typeof value !== "number") return "N/A";
@@ -114,15 +113,6 @@ export default function PropertyListing() {
     setCurrentPage(1);
   };
 
-  const updateCheckOutDate = (event) => {
-    setFilters((previous) => ({
-      ...previous,
-      checkOutDate: event.target.value,
-    }));
-    setCurrentPage(1);
-  };
-
-
   const resetFilters = () => {
     setFilters(DEFAULT_FILTERS);
     setCurrentPage(1);
@@ -131,8 +121,6 @@ export default function PropertyListing() {
   const activeFilters = useMemo(() => {
     const labels = [];
     if (filters.search.trim()) labels.push(`Search: ${filters.search.trim()}`);
-    if (filters.checkInDate) labels.push(`Check in: ${filters.checkInDate}`);
-    if (filters.checkOutDate) labels.push(`Check out: ${filters.checkOutDate}`);
     if (filters.propertyType) labels.push(`Type: ${capitalize(filters.propertyType)}`);
     if (filters.minPrice) labels.push(`Min: ${formatPrice(Number(filters.minPrice))}`);
     if (filters.maxPrice) labels.push(`Max: ${formatPrice(Number(filters.maxPrice))}`);
@@ -141,38 +129,13 @@ export default function PropertyListing() {
 
   const removeFilterChip = (label) => {
     if (label.startsWith("Search:")) setFilters((prev) => ({ ...prev, search: "" }));
-    if (label.startsWith("Check in:")) setFilters((prev) => ({ ...prev, checkInDate: "" }));
-    if (label.startsWith("Check out:")) {
-      setFilters((prev) => ({ ...prev, checkOutDate: "" }));
-    }
     if (label.startsWith("Type:")) setFilters((prev) => ({ ...prev, propertyType: "" }));
     if (label.startsWith("Min:")) setFilters((prev) => ({ ...prev, minPrice: "" }));
     if (label.startsWith("Max:")) setFilters((prev) => ({ ...prev, maxPrice: "" }));
     setCurrentPage(1);
   };
 
-  const filteredProperties = useMemo(() => {
-    if (!filters.checkInDate && !filters.checkOutDate) return properties;
-
-    const checkInDate = filters.checkInDate ? new Date(filters.checkInDate) : null;
-    const checkOutDate = filters.checkOutDate ? new Date(filters.checkOutDate) : null;
-
-    if (checkInDate && Number.isNaN(checkInDate.getTime())) return properties;
-    if (checkOutDate && Number.isNaN(checkOutDate.getTime())) return properties;
-
-    if (checkInDate) checkInDate.setHours(0, 0, 0, 0);
-    if (checkOutDate) checkOutDate.setHours(23, 59, 59, 999);
-
-    return properties.filter((property) => {
-      if (!property.createdAt) return false;
-      const createdDate = new Date(property.createdAt);
-      if (Number.isNaN(createdDate.getTime())) return false;
-
-      if (checkInDate && createdDate < checkInDate) return false;
-      if (checkOutDate && createdDate > checkOutDate) return false;
-      return true;
-    });
-  }, [properties, filters.checkInDate, filters.checkOutDate]);
+  const filteredProperties = useMemo(() => properties, [properties]);
 
   const totalVisible = filteredProperties.length;
 
@@ -222,7 +185,6 @@ export default function PropertyListing() {
       <PropertyFilterBar
         filters={filters}
         updateFilter={updateFilter}
-        updateCheckOutDate={updateCheckOutDate}
         typeOptions={TYPE_OPTIONS}
         activeFilters={activeFilters}
         removeFilterChip={removeFilterChip}
@@ -245,7 +207,7 @@ export default function PropertyListing() {
 
         {isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {Array.from({ length: 6 }).map((_, index) => (
+            {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
               <div key={index} className="animate-pulse rounded-xl border border-slate-200 bg-white overflow-hidden">
                 <div className="aspect-[16/10] bg-slate-200" />
                 <div className="p-4 space-y-2.5">
@@ -341,7 +303,7 @@ export default function PropertyListing() {
                         <span className="truncate">{location}</span>
                       </div>
 
-                      <div className="flex items-center gap-3 mt-3 text-xs text-slate-600">
+                      <div className="flex items-center gap-3 mt-3 text-xs text-slate-600 flex-wrap">
                         <div className="flex items-center">
                           <Bed className="w-4 h-4 mr-1.5 text-slate-400" />
                           <span>{bedrooms} Beds</span>
@@ -350,6 +312,12 @@ export default function PropertyListing() {
                           <Bath className="w-4 h-4 mr-1.5 text-slate-400" />
                           <span>{bathrooms} Baths</span>
                         </div>
+                        {property.area && (
+                          <div className="flex items-center">
+                            <Maximize2 className="w-4 h-4 mr-1.5 text-slate-400" />
+                            <span>{Number(property.area).toLocaleString('en-LK')} sq.ft</span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="mt-4 pt-3 border-t border-slate-100 flex items-baseline">
