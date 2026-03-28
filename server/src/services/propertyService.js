@@ -3,7 +3,7 @@ import { geocodeAddress } from "./openStreetMapService.js";
 
 /**
  * Helper to geocode an address if coordinates are missing or if the address changed.
- * Returns the updated location object or throws if geocoding fails.
+ * Returns the updated location object. Geocoding failures are non-blocking (coordinates remain null).
  */
 const geocodeIfNeeded = async (data, existingLocation = null) => {
   const location = data?.location;
@@ -15,20 +15,29 @@ const geocodeIfNeeded = async (data, existingLocation = null) => {
   const coordinatesMissing = !location.coordinates || (location.coordinates.lat === null && location.coordinates.lng === null);
 
   if (addressChanged || coordinatesMissing) {
-    const geo = await geocodeAddress(location.address);
-    if (!geo) {
-      throw new Error("GEOCODING_FAILED");
+    try {
+      const geo = await geocodeAddress(location.address);
+      if (geo) {
+        // Geocoding succeeded, update coordinates
+        return {
+          ...data,
+          location: {
+            ...location,
+            coordinates: {
+              lat: geo.lat,
+              lng: geo.lng,
+            },
+          },
+        };
+      }
+    } catch (error) {
+      // Geocoding failed, log but don't throw - allow property creation with null coordinates
+      console.warn(`Geocoding failed for address: ${location.address}`, error.message);
     }
-    return {
-      ...data,
-      location: {
-        ...location,
-        coordinates: {
-          lat: geo.lat,
-          lng: geo.lng,
-        },
-      },
-    };
+    
+    // Return data as-is with null coordinates (or existing coordinates if they were provided)
+    // Client-side map will attempt to geocode when displaying
+    return data;
   }
 
   return data;

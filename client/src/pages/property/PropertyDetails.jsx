@@ -11,6 +11,7 @@ import {
   Star,
   CheckCircle2,
   XCircle,
+  AlertCircle,
   Wind,
   Zap,
   Droplets,
@@ -37,6 +38,13 @@ const PropertyDetails = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [mapCoords, setMapCoords] = useState(null);
+  const [mapLoading, setMapLoading] = useState(false);
+  const [mapError, setMapError] = useState("");
+  const [showDatePickerModal, setShowDatePickerModal] = useState(false);
+  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const [checkInDate, setCheckInDate] = useState("");
+  const [checkOutDate, setCheckOutDate] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -71,6 +79,95 @@ const PropertyDetails = () => {
     };
     fetchData();
   }, [id]);
+
+  useEffect(() => {
+    const loadMapCoordinates = async () => {
+      if (!property) return;
+
+      const lat = property.location?.coordinates?.lat;
+      const lng = property.location?.coordinates?.lng;
+
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        setMapCoords({ lat, lng });
+        setMapError("");
+        return;
+      }
+
+      const address = property.location?.address;
+      if (!address) {
+        setMapCoords(null);
+        setMapError("No location address available for this listing.");
+        return;
+      }
+
+      setMapLoading(true);
+      setMapError("");
+
+      try {
+        const response = await axios.get("https://nominatim.openstreetmap.org/search", {
+          params: {
+            q: address,
+            format: "json",
+            limit: 1,
+          },
+          headers: {
+            "User-Agent": "GreenRent/1.0",
+          },
+        });
+
+        const result = Array.isArray(response.data) ? response.data[0] : null;
+        const geoLat = result ? parseFloat(result.lat) : NaN;
+        const geoLng = result ? parseFloat(result.lon) : NaN;
+
+        if (Number.isFinite(geoLat) && Number.isFinite(geoLng)) {
+          setMapCoords({ lat: geoLat, lng: geoLng });
+        } else {
+          setMapCoords(null);
+          setMapError("Could not locate this address on OpenStreetMap.");
+        }
+      } catch (geoErr) {
+        setMapCoords(null);
+        setMapError("Failed to load map location right now.");
+      } finally {
+        setMapLoading(false);
+      }
+    };
+
+    loadMapCoordinates();
+  }, [property]);
+
+  const toEmbedMapUrl = (lat, lng) => {
+    const delta = 0.01;
+    const left = lng - delta;
+    const right = lng + delta;
+    const top = lat + delta;
+    const bottom = lat - delta;
+    const bbox = encodeURIComponent(`${left},${bottom},${right},${top}`);
+    const marker = encodeURIComponent(`${lat},${lng}`);
+
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${marker}`;
+  };
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const handleCheckAvailabilityClick = (event) => {
+    event.stopPropagation();
+    setShowDatePickerModal(true);
+  };
+
+  const handleContinueToAvailability = () => {
+    if (!checkInDate || !checkOutDate) return;
+    if (new Date(checkOutDate) <= new Date(checkInDate)) return;
+
+    setShowDatePickerModal(false);
+    setShowAvailabilityModal(true);
+  };
+
+  const closeDatePickerModal = () => {
+    setShowDatePickerModal(false);
+    setCheckInDate("");
+    setCheckOutDate("");
+  };
 
   if (loading) {
     return (
@@ -146,7 +243,7 @@ const PropertyDetails = () => {
             </>
           )}
 
-          <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end">
+          <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end gap-4">
             <div className="text-white">
               <span className="inline-block px-3 py-1 bg-emerald-500/90 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider mb-3">
                 {property.propertyType || "Apartment"}
@@ -157,9 +254,18 @@ const PropertyDetails = () => {
                 <span className="text-sm md:text-base">{property.location?.address || "Address not provided"}</span>
               </div>
             </div>
-            <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 shadow-lg text-slate-900 text-center min-w-[120px]">
-              <p className="text-xs font-semibold text-slate-500 uppercase">Monthly Rent</p>
+            <div className="flex flex-col gap-3 flex-shrink-0">
+              <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 shadow-lg text-slate-900 text-center min-w-[140px]">
+                <p className="text-xs font-semibold text-slate-500 uppercase">Monthly Rent</p>
                 <p className="text-2xl md:text-3xl font-bold text-emerald-600">Rs {Number(property.price).toLocaleString('en-LK')}</p>
+              </div>
+              <button
+                onClick={handleCheckAvailabilityClick}
+                className="bg-white/90 backdrop-blur-md rounded-xl px-4 py-3 shadow-lg text-slate-900 font-semibold hover:bg-white transition-all flex items-center justify-center gap-2 min-w-[140px] whitespace-nowrap"
+              >
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                Check Availability
+              </button>
             </div>
           </div>
         </div>
@@ -180,7 +286,7 @@ const PropertyDetails = () => {
               </div>
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg"><Maximize className="w-5 h-5"/></div>
-                <div><p className="text-xs text-slate-500 font-medium">Area</p><p className="font-semibold text-slate-900">{property.area ?? "N/A"} sqft</p></div>
+                <div><p className="text-xs text-slate-500 font-medium">Area</p><p className="font-semibold text-slate-900">{property.area ? Number(property.area).toLocaleString('en-LK') + ' sq.ft' : 'N/A'}</p></div>
               </div>
             </div>
 
@@ -190,6 +296,50 @@ const PropertyDetails = () => {
               <p className="text-slate-600 leading-relaxed whitespace-pre-line">
                 {property.description}
               </p>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
+                <MapPin className="w-5 h-5 mr-2 text-emerald-600" />
+                Location Map
+              </h2>
+              <p className="text-sm text-slate-500 mb-4">{property.location?.address || "Address not provided"}</p>
+
+              {mapLoading && (
+                <div className="h-[320px] rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center">
+                  <div className="flex items-center gap-2 text-slate-500 text-sm">
+                    <div className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-emerald-600 animate-spin" />
+                    Loading map...
+                  </div>
+                </div>
+              )}
+
+              {!mapLoading && mapCoords && (
+                <div>
+                  <div className="h-[320px] rounded-xl overflow-hidden border border-slate-200">
+                    <iframe
+                      title="Property location map"
+                      src={toEmbedMapUrl(mapCoords.lat, mapCoords.lng)}
+                      className="w-full h-full"
+                      loading="lazy"
+                    />
+                  </div>
+                  <a
+                    href={`https://www.openstreetmap.org/?mlat=${mapCoords.lat}&mlon=${mapCoords.lng}#map=16/${mapCoords.lat}/${mapCoords.lng}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex mt-3 text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+                  >
+                    Open in OpenStreetMap
+                  </a>
+                </div>
+              )}
+
+              {!mapLoading && !mapCoords && (
+                <div className="h-[320px] rounded-xl border border-amber-200 bg-amber-50 flex items-center justify-center px-4 text-center">
+                  <p className="text-sm text-amber-800">{mapError || "Map is unavailable for this property location."}</p>
+                </div>
+              )}
             </div>
 
             {/* Eco Features directly on property model */}
@@ -435,6 +585,134 @@ const PropertyDetails = () => {
             window.location.reload();
           }}
         />
+      )}
+
+      {/* Date Picker Modal */}
+      {showDatePickerModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-slate-900">Select Dates</h2>
+              <button
+                onClick={closeDatePickerModal}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-8 space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Check-in Date</label>
+                <input
+                  type="date"
+                  min={today}
+                  value={checkInDate}
+                  onChange={(e) => setCheckInDate(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Check-out Date</label>
+                <input
+                  type="date"
+                  min={checkInDate || today}
+                  value={checkOutDate}
+                  onChange={(e) => setCheckOutDate(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              {checkInDate && checkOutDate && new Date(checkOutDate) <= new Date(checkInDate) && (
+                <p className="text-sm text-red-600">Check-out date must be after check-in date.</p>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeDatePickerModal}
+                  className="w-1/2 bg-slate-100 text-slate-700 font-semibold py-3 rounded-xl hover:bg-slate-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleContinueToAvailability}
+                  disabled={!checkInDate || !checkOutDate || new Date(checkOutDate) <= new Date(checkInDate)}
+                  className="w-1/2 bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Availability Modal */}
+      {showAvailabilityModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-slate-900">Availability Status</h2>
+              <button
+                onClick={() => setShowAvailabilityModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="flex items-start gap-4">
+                <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+                  property.availabilityStatus === 'available' ? 'bg-emerald-50' : 
+                  property.availabilityStatus === 'rented' ? 'bg-amber-50' : 
+                  'bg-red-50'
+                }`}>
+                  {property.availabilityStatus === 'available' && <CheckCircle2 className="w-6 h-6 text-emerald-600" />}
+                  {property.availabilityStatus === 'rented' && <AlertCircle className="w-6 h-6 text-amber-600" />}
+                  {property.availabilityStatus === 'archived' && <XCircle className="w-6 h-6 text-red-600" />}
+                </div>
+                <div>
+                  <p className="text-sm text-slate-600 font-medium">Current Status</p>
+                  <p className={`text-xl font-bold mt-1 ${
+                    property.availabilityStatus === 'available' ? 'text-emerald-700' : 
+                    property.availabilityStatus === 'rented' ? 'text-amber-700' : 
+                    'text-red-700'
+                  }`}>
+                    {property.availabilityStatus === 'available' && 'Available for Rent'}
+                    {property.availabilityStatus === 'rented' && 'Currently Rented'}
+                    {property.availabilityStatus === 'archived' && 'Archived'}
+                  </p>
+                </div>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600">
+                <p>
+                  {property.availabilityStatus === 'available' && 'This property is currently available for rent. Contact the landlord to inquire or schedule a viewing.'}
+                  {property.availabilityStatus === 'rented' && 'This property has been rented out. Check back later for updates or explore other properties.'}
+                  {property.availabilityStatus === 'archived' && 'This property is no longer available for rent and has been archived.'}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  if (property.availabilityStatus !== 'available') {
+                    alert('This property is not currently available for reservation.');
+                    return;
+                  }
+                  alert(`Reservation requested from ${checkInDate} to ${checkOutDate}.`);
+                }}
+                className="w-full bg-white text-emerald-700 border border-emerald-600 font-semibold py-3 rounded-xl hover:bg-emerald-50 transition"
+              >
+                Reserve
+              </button>
+              <button
+                onClick={() => setShowAvailabilityModal(false)}
+                className="w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
