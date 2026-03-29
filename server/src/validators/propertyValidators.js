@@ -1,5 +1,6 @@
 const PROPERTY_TYPES = ["apartment", "house", "studio", "townhouse", "other"];
 const AVAILABILITY_STATUSES = ["available", "rented", "archived"];
+const STAY_TYPES = ["long", "short", "both"];
 
 const isNumber = (value) => typeof value === "number" && !isNaN(value);
 
@@ -37,6 +38,19 @@ export const validatePropertyCreate = (data) => {
 
     if (!isNumber(data.price) || data.price < 0) {
         errors.push("Price must be a positive number");
+    }
+
+    if (data.stayType !== undefined && !STAY_TYPES.includes(data.stayType)) {
+        errors.push(`Stay type must be one of: ${STAY_TYPES.join(", ")}`);
+    }
+
+    const createStayType = data.stayType || "long";
+    if ((createStayType === "long" || createStayType === "both") && (!isNumber(data.monthlyPrice) || data.monthlyPrice < 0)) {
+        errors.push("Monthly price must be a positive number for long stay listings");
+    }
+
+    if ((createStayType === "short" || createStayType === "both") && (!isNumber(data.dailyPrice) || data.dailyPrice < 0)) {
+        errors.push("Daily price must be a positive number for short stay listings");
     }
 
     if (data.area !== undefined && data.area !== null && (!isNumber(data.area) || data.area < 0)) {
@@ -106,6 +120,18 @@ export const validatePropertyUpdate = (data) => {
 
     if (data.price !== undefined && (!isNumber(data.price) || data.price < 0)) {
         errors.push("Price must be a positive number");
+    }
+
+    if (data.stayType !== undefined && !STAY_TYPES.includes(data.stayType)) {
+        errors.push(`Stay type must be one of: ${STAY_TYPES.join(", ")}`);
+    }
+
+    if (data.monthlyPrice !== undefined && data.monthlyPrice !== null && (!isNumber(data.monthlyPrice) || data.monthlyPrice < 0)) {
+        errors.push("Monthly price must be a positive number");
+    }
+
+    if (data.dailyPrice !== undefined && data.dailyPrice !== null && (!isNumber(data.dailyPrice) || data.dailyPrice < 0)) {
+        errors.push("Daily price must be a positive number");
     }
 
     if (data.area !== undefined && data.area !== null && (!isNumber(data.area) || data.area < 0)) {

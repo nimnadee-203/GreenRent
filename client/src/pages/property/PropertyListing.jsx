@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 // Forced HMR update 
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
   Bath,
@@ -51,11 +51,13 @@ const capitalize = (value) => {
 };
 
 export default function PropertyListing() {
+  const navigate = useNavigate();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [properties, setProperties] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [wishlistingIds, setWishlistingIds] = useState([]);
 
   const requestParams = useMemo(() => {
     const params = {
@@ -116,6 +118,24 @@ export default function PropertyListing() {
   const resetFilters = () => {
     setFilters(DEFAULT_FILTERS);
     setCurrentPage(1);
+  };
+
+  const handleAddToWishlist = async (event, propertyId) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (wishlistingIds.includes(propertyId)) return;
+
+    try {
+      setWishlistingIds((prev) => [...prev, propertyId]);
+      await axios.post(`${API_BASE_URL}/api/user/wishlist/${propertyId}`, {}, { withCredentials: true });
+      navigate("/wishlist");
+    } catch (err) {
+      const message = err?.response?.data?.message || "Please login to add items to wishlist.";
+      alert(message);
+    } finally {
+      setWishlistingIds((prev) => prev.filter((id) => id !== propertyId));
+    }
   };
 
   const activeFilters = useMemo(() => {
@@ -275,8 +295,9 @@ export default function PropertyListing() {
 
                         <button
                           type="button"
-                          className="absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-sm text-slate-400 hover:text-red-500 hover:bg-white transition-colors z-10"
-                          onClick={(e) => { e.preventDefault(); /* Prevent Link navigation */ }}
+                          disabled={wishlistingIds.includes(property._id)}
+                          className="absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-sm text-slate-400 hover:text-red-500 hover:bg-white transition-colors z-10 disabled:opacity-60 disabled:cursor-not-allowed"
+                          onClick={(e) => handleAddToWishlist(e, property._id)}
                         >
                         <Heart className="w-5 h-5" />
                       </button>

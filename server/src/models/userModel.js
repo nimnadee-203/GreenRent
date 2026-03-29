@@ -65,6 +65,10 @@ const userSchema = new mongoose.Schema(
         default: "any"
       }
     },
+    wishlist: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Property" }],
+      default: [],
+    },
   },
   { timestamps: true }
 );
