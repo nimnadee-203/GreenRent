@@ -6,6 +6,7 @@ import Dashboard from './pages/dashboard/Dashboard';
 import PropertyListing from './pages/property/PropertyListing';
 import PropertyDetails from './pages/property/PropertyDetails';
 import PropertyMap from './pages/property/PropertyMap';
+import Wishlist from './pages/property/Wishlist';
 import Login from './pages/auth/Login';
 import AddApartment from './pages/eco-rating/AddApartment';
 import MyListings from './pages/eco-rating/MyListings';
@@ -20,6 +21,7 @@ function App() {
         <Route path='/properties' element={<PropertyListing />} />
         <Route path='/properties/map' element={<PropertyMap />} />
         <Route path='/properties/:id' element={<PropertyDetails />} />
+        <Route path='/wishlist' element={<Wishlist />} />
         <Route path='/login' element={<Login />} />
         <Route path='/add-apartment' element={<AddApartment />} />
         <Route path='/my-listings' element={<MyListings />} />

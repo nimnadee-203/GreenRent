@@ -38,6 +38,21 @@ const propertySchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    stayType: {
+      type: String,
+      enum: ["long", "short", "both"],
+      default: "long",
+    },
+    monthlyPrice: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+    dailyPrice: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
     area: {
       type: Number,
       default: null,

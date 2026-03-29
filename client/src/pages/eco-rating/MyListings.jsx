@@ -26,7 +26,21 @@ export default function MyListings() {
   
   // Modals
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
-  const [updateForm, setUpdateForm] = useState({ title: '', description: '', price: '', address: '', bedrooms: '', bathrooms: '', parking: false, area: '', imageFiles: [], coverImageIndex: 0 });
+  const [updateForm, setUpdateForm] = useState({
+    title: '',
+    description: '',
+    price: '',
+    stayType: 'long',
+    monthlyPrice: '',
+    dailyPrice: '',
+    address: '',
+    bedrooms: '',
+    bathrooms: '',
+    parking: false,
+    area: '',
+    imageFiles: [],
+    coverImageIndex: 0
+  });
   const [ecoModalOpen, setEcoModalOpen] = useState(false);
   const [activeProperty, setActiveProperty] = useState(null);
   const [ecoForm, setEcoForm] = useState(INITIAL_ECO_FORM);
@@ -88,11 +102,15 @@ export default function MyListings() {
   };
 
   const openUpdateModal = (property) => {
+    const initialStayType = property.stayType || 'long';
     setActiveProperty(property);
     setUpdateForm({
       title: property.title || '',
       description: property.description || '',
       price: property.price || '',
+      stayType: initialStayType,
+      monthlyPrice: property.monthlyPrice ?? ((initialStayType === 'long' || initialStayType === 'both') ? (property.price || '') : ''),
+      dailyPrice: property.dailyPrice ?? ((initialStayType === 'short' || initialStayType === 'both') ? (property.price || '') : ''),
       address: property.location?.address || '',
       bedrooms: property.bedrooms || '',
       bathrooms: property.bathrooms || '',
@@ -136,6 +154,16 @@ export default function MyListings() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      if ((updateForm.stayType === 'long' || updateForm.stayType === 'both') && (!updateForm.monthlyPrice || Number(updateForm.monthlyPrice) < 0)) {
+        alert('Please enter a valid monthly price for long stay.');
+        return;
+      }
+
+      if ((updateForm.stayType === 'short' || updateForm.stayType === 'both') && (!updateForm.dailyPrice || Number(updateForm.dailyPrice) < 0)) {
+        alert('Please enter a valid daily price for short stay.');
+        return;
+      }
+
       const existingImages = Array.isArray(activeProperty?.images)
         ? activeProperty.images.filter((img) => typeof img === 'string' && img.trim().length > 0)
         : [];
@@ -147,7 +175,10 @@ export default function MyListings() {
       const payload = {
         title: updateForm.title,
         description: updateForm.description,
-        price: Number(updateForm.price),
+        price: updateForm.stayType === 'short' ? Number(updateForm.dailyPrice) : Number(updateForm.monthlyPrice),
+        stayType: updateForm.stayType,
+        monthlyPrice: (updateForm.stayType === 'long' || updateForm.stayType === 'both') ? Number(updateForm.monthlyPrice) : null,
+        dailyPrice: (updateForm.stayType === 'short' || updateForm.stayType === 'both') ? Number(updateForm.dailyPrice) : null,
         location: { address: updateForm.address },
         images: compressedImages,
         parking: Boolean(updateForm.parking),
@@ -479,11 +510,27 @@ export default function MyListings() {
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Description</label>
                   <textarea value={updateForm.description} onChange={onUpdateFieldChange('description')} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 min-h-[120px]" required />
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Price (Rent)</label>
-                    <input type="number" value={updateForm.price} onChange={onUpdateFieldChange('price')} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" required />
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Stay Type</label>
+                    <select value={updateForm.stayType} onChange={onUpdateFieldChange('stayType')} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 bg-white">
+                      <option value="long">Long Stay</option>
+                      <option value="short">Short Stay</option>
+                      <option value="both">Both</option>
+                    </select>
                   </div>
+                  {(updateForm.stayType === 'long' || updateForm.stayType === 'both') && (
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">Monthly Price (LKR)</label>
+                      <input type="number" min="0" value={updateForm.monthlyPrice} onChange={onUpdateFieldChange('monthlyPrice')} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" required />
+                    </div>
+                  )}
+                  {(updateForm.stayType === 'short' || updateForm.stayType === 'both') && (
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">Daily Price (LKR)</label>
+                      <input type="number" min="0" value={updateForm.dailyPrice} onChange={onUpdateFieldChange('dailyPrice')} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" required />
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">Area (sq.ft)</label>
                     <input type="number" value={updateForm.area} onChange={onUpdateFieldChange('area')} placeholder="e.g., 1200" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" />
