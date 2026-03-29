@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import {
   ArrowLeft,
@@ -31,6 +31,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000
 
 const PropertyDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [property, setProperty] = useState(null);
   const [ecoRating, setEcoRating] = useState(null);
   const [reviewsData, setReviewsData] = useState({ reviews: [], summary: null });
@@ -54,6 +55,32 @@ const PropertyDetails = () => {
   const [toYear, setToYear] = useState("");
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+
+  const handleBookNow = () => {
+    if (!property || property.availabilityStatus !== 'available') {
+      alert('This property is not currently available for booking.');
+      return;
+    }
+
+    if (stayType === "short") {
+      if (!checkInDate || !checkOutDate || new Date(checkOutDate) <= new Date(checkInDate)) {
+        alert('Please select valid check-in and check-out dates.');
+        return;
+      }
+      alert(`Reservation requested from ${checkInDate} to ${checkOutDate}.`);
+    } else {
+      if (!fromMonth || !fromYear || !toMonth || !toYear) {
+        alert('Please select valid month and year range for long stay.');
+        return;
+      }
+      alert(`Reservation requested from ${fromMonth} ${fromYear} to ${toMonth} ${toYear}.`);
+    }
+
+    setShowAvailabilityModal(false);
+    navigate(`/booking/${id}`, {
+      state: { checkInDate, checkOutDate }
+    });
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -938,20 +965,10 @@ const PropertyDetails = () => {
                 </p>
               </div>
               <button
-                onClick={() => {
-                  if (property.availabilityStatus !== 'available') {
-                    alert('This property is not currently available for reservation.');
-                    return;
-                  }
-                  if (stayType === "short") {
-                    alert(`Reservation requested from ${checkInDate} to ${checkOutDate}.`);
-                  } else {
-                    alert(`Reservation requested from ${fromMonth} ${fromYear} to ${toMonth} ${toYear}.`);
-                  }
-                }}
+                onClick={handleBookNow}
                 className="w-full bg-white text-emerald-700 border border-emerald-600 font-semibold py-3 rounded-xl hover:bg-emerald-50 transition"
               >
-                Reserve
+                Book Now
               </button>
               <button
                 onClick={() => setShowAvailabilityModal(false)}

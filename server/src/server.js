@@ -23,9 +23,22 @@ await connectDB();
 const app = express();
 
 // Middlewares
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  process.env.CLIENT_URL,
+].filter(Boolean);
+
 app.use(cors({
   credentials: true,
-  origin: "http://localhost:5173"
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // allow non-browser clients (Postman)
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS policy: Origin not allowed"));
+    }
+  }
 }));
 
 app.use(express.json({ limit: "15mb" }));

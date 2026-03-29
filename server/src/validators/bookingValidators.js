@@ -1,12 +1,17 @@
 import { body, validationResult } from "express-validator";
 import mongoose from "mongoose";
 
-// Helper function to check if a date is in the past
+// Helper function to check if a date is today or in the future
 const isNotPastDate = (date) => {
   if (!date) return false;
+  
   const inputDate = new Date(date);
   const today = new Date();
+
+  // Set both dates to start of the day (00:00:00) to ignore time
+  inputDate.setHours(0, 0, 0, 0);
   today.setHours(0, 0, 0, 0);
+
   return inputDate >= today;
 };
 
