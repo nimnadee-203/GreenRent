@@ -7,6 +7,8 @@ import PropertyListing from './pages/property/PropertyListing';
 import PropertyDetails from './pages/property/PropertyDetails';
 import PropertyMap from './pages/property/PropertyMap';
 import Wishlist from './pages/property/Wishlist';
+import BookingPage from './pages/property/BookingPage';
+import PaymentPage from './pages/property/PaymentPage';
 import Login from './pages/auth/Login';
 import AddApartment from './pages/eco-rating/AddApartment';
 import MyListings from './pages/eco-rating/MyListings';
@@ -22,6 +24,8 @@ function App() {
         <Route path='/properties/map' element={<PropertyMap />} />
         <Route path='/properties/:id' element={<PropertyDetails />} />
         <Route path='/wishlist' element={<Wishlist />} />
+        <Route path='/booking/:id' element={<BookingPage />} />
+        <Route path='/payment/:id' element={<PaymentPage />} />
         <Route path='/login' element={<Login />} />
         <Route path='/add-apartment' element={<AddApartment />} />
         <Route path='/my-listings' element={<MyListings />} />

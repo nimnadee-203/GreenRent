@@ -2,10 +2,12 @@ import * as authService from '../services/authService.js';
 import * as authValidators from '../validators/authValidators.js';
 
 // Helper for cookie options
+// In local dev we set sameSite:'none', secure:false with origin support for different ports.
+// In production we set secure:true and sameSite:'none' for cross-site usage from app host.
 const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+    sameSite: 'none',
     maxAge: 7 * 24 * 60 * 60 * 1000
 };
 
