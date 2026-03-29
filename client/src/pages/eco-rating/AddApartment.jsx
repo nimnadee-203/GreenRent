@@ -11,6 +11,9 @@ const INITIAL_FORM = {
   description: '',
   address: '',
   price: '',
+  stayType: 'long',
+  monthlyPrice: '',
+  dailyPrice: '',
   area: '',
   propertyType: 'apartment',
   imageFiles: [],
@@ -164,6 +167,16 @@ export default function AddApartment() {
     event.preventDefault(); setError(''); setSuccess(''); setIsSubmitting(true);
 
     try {
+      if ((form.stayType === 'long' || form.stayType === 'both') && (!form.monthlyPrice || Number(form.monthlyPrice) < 0)) {
+        setError('Please enter a valid monthly price for long stay.');
+        return;
+      }
+
+      if ((form.stayType === 'short' || form.stayType === 'both') && (!form.dailyPrice || Number(form.dailyPrice) < 0)) {
+        setError('Please enter a valid daily price for short stay.');
+        return;
+      }
+
       // Compress and convert images to base64
       let compressedImages = [];
       if (form.imageFiles.length > 0) {
@@ -178,11 +191,24 @@ export default function AddApartment() {
         title: form.title,
         description: form.description,
         location: { address: form.address },
-        price: Number(form.price),
+        // Keep legacy price for existing screens (fallback display value)
+        price:
+          form.stayType === 'short'
+            ? Number(form.dailyPrice)
+            : Number(form.monthlyPrice),
+        stayType: form.stayType,
         propertyType: form.propertyType,
         ecoFeatures: {},
         images: compressedImages,
       };
+
+      if (form.stayType === 'long' || form.stayType === 'both') {
+        payload.monthlyPrice = Number(form.monthlyPrice);
+      }
+
+      if (form.stayType === 'short' || form.stayType === 'both') {
+        payload.dailyPrice = Number(form.dailyPrice);
+      }
 
       // Only add optional fields if they have values
       if (form.bedrooms) payload.bedrooms = Number(form.bedrooms);
@@ -285,8 +311,46 @@ export default function AddApartment() {
                     <div className="space-y-6">
                       <InputWithIcon icon={Home} label="Property Title" value={form.title} onChange={onFieldChange('title')} required />
                       <InputWithIcon icon={MapPin} label="Address" value={form.address} onChange={onFieldChange('address')} required />
-                      <div className="grid grid-cols-3 gap-4">
-                        <InputWithIcon icon={Banknote} label="Monthly Rent (LKR)" value={form.price} onChange={onFieldChange('price')} type="number" min="0" required />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex flex-col">
+                          <label className="mb-1.5 block text-sm font-semibold text-slate-700">Stay Type</label>
+                          <select
+                            value={form.stayType}
+                            onChange={onFieldChange('stayType')}
+                            className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-4 pr-10 py-3 text-sm focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
+                          >
+                            <option value="long">Long Stay</option>
+                            <option value="short">Short Stay</option>
+                            <option value="both">Both</option>
+                          </select>
+                        </div>
+
+                        {(form.stayType === 'long' || form.stayType === 'both') && (
+                          <InputWithIcon
+                            icon={Banknote}
+                            label="Monthly Price (LKR)"
+                            value={form.monthlyPrice}
+                            onChange={onFieldChange('monthlyPrice')}
+                            type="number"
+                            min="0"
+                            required
+                          />
+                        )}
+
+                        {(form.stayType === 'short' || form.stayType === 'both') && (
+                          <InputWithIcon
+                            icon={Banknote}
+                            label="Daily Price (LKR)"
+                            value={form.dailyPrice}
+                            onChange={onFieldChange('dailyPrice')}
+                            type="number"
+                            min="0"
+                            required
+                          />
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
                         <InputWithIcon icon={Home} label="Area (sq.ft)" value={form.area} onChange={onFieldChange('area')} type="number" min="0" placeholder="e.g., 1200" />
                         <div className="flex flex-col">
                           <label className="mb-1.5 block text-sm font-semibold text-slate-700">Property Type</label>

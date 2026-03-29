@@ -21,7 +21,8 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  Heart
 } from "lucide-react";
 import Navbar from "../../components/Home/Navbar";
 import Footer from "../../components/Home/Footer";
@@ -41,10 +42,18 @@ const PropertyDetails = () => {
   const [mapCoords, setMapCoords] = useState(null);
   const [mapLoading, setMapLoading] = useState(false);
   const [mapError, setMapError] = useState("");
+  const [showStayTypeModal, setShowStayTypeModal] = useState(false);
   const [showDatePickerModal, setShowDatePickerModal] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const [stayType, setStayType] = useState(""); // "long" or "short"
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
+  const [fromMonth, setFromMonth] = useState("");
+  const [fromYear, setFromYear] = useState("");
+  const [toMonth, setToMonth] = useState("");
+  const [toYear, setToYear] = useState("");
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -136,6 +145,23 @@ const PropertyDetails = () => {
     loadMapCoordinates();
   }, [property]);
 
+  useEffect(() => {
+    const checkWishlistStatus = async () => {
+      if (!id) return;
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/user/wishlist/check/${id}`, {
+          withCredentials: true,
+        });
+        setIsWishlisted(Boolean(response.data?.isWishlisted));
+      } catch (wishlistError) {
+        // Unauthenticated users can still browse, so fail silently.
+        setIsWishlisted(false);
+      }
+    };
+
+    checkWishlistStatus();
+  }, [id]);
+
   const toEmbedMapUrl = (lat, lng) => {
     const delta = 0.01;
     const left = lng - delta;
@@ -152,12 +178,47 @@ const PropertyDetails = () => {
 
   const handleCheckAvailabilityClick = (event) => {
     event.stopPropagation();
+    setShowStayTypeModal(true);
+  };
+
+  const handleWishlistToggle = async (event) => {
+    event.stopPropagation();
+    if (wishlistLoading) return;
+
+    try {
+      setWishlistLoading(true);
+      if (isWishlisted) {
+        await axios.delete(`${API_BASE_URL}/api/user/wishlist/${id}`, {
+          withCredentials: true,
+        });
+        setIsWishlisted(false);
+      } else {
+        await axios.post(`${API_BASE_URL}/api/user/wishlist/${id}`, {}, {
+          withCredentials: true,
+        });
+        setIsWishlisted(true);
+      }
+    } catch (wishlistError) {
+      const message = wishlistError?.response?.data?.message;
+      alert(message || "Please login to use wishlist.");
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
+
+  const handleSelectStayType = (type) => {
+    setStayType(type);
+    setShowStayTypeModal(false);
     setShowDatePickerModal(true);
   };
 
   const handleContinueToAvailability = () => {
-    if (!checkInDate || !checkOutDate) return;
-    if (new Date(checkOutDate) <= new Date(checkInDate)) return;
+    if (stayType === "short") {
+      if (!checkInDate || !checkOutDate) return;
+      if (new Date(checkOutDate) <= new Date(checkInDate)) return;
+    } else if (stayType === "long") {
+      if (!fromMonth || !fromYear || !toMonth || !toYear) return;
+    }
 
     setShowDatePickerModal(false);
     setShowAvailabilityModal(true);
@@ -167,6 +228,11 @@ const PropertyDetails = () => {
     setShowDatePickerModal(false);
     setCheckInDate("");
     setCheckOutDate("");
+    setFromMonth("");
+    setFromYear("");
+    setToMonth("");
+    setToYear("");
+    setStayType("");
   };
 
   if (loading) {
@@ -194,6 +260,9 @@ const PropertyDetails = () => {
       : ["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"];
 
   const primaryImage = images[currentImageIndex];
+  const propertyStayType = property.stayType || "long";
+  const hasMonthlyPrice = property.monthlyPrice !== null && property.monthlyPrice !== undefined;
+  const hasDailyPrice = property.dailyPrice !== null && property.dailyPrice !== undefined;
 
   const handlePrevImage = (e) => {
     e.stopPropagation();
@@ -256,8 +325,32 @@ const PropertyDetails = () => {
             </div>
             <div className="flex flex-col gap-3 flex-shrink-0">
               <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 shadow-lg text-slate-900 text-center min-w-[140px]">
-                <p className="text-xs font-semibold text-slate-500 uppercase">Monthly Rent</p>
-                <p className="text-2xl md:text-3xl font-bold text-emerald-600">Rs {Number(property.price).toLocaleString('en-LK')}</p>
+                {propertyStayType === "both" ? (
+                  <>
+                    <p className="text-[10px] font-semibold text-slate-500 uppercase">Long Stay (Monthly)</p>
+                    <p className="text-xl md:text-2xl font-bold text-emerald-600 mb-2">
+                      Rs {Number(hasMonthlyPrice ? property.monthlyPrice : property.price).toLocaleString("en-LK")}
+                    </p>
+                    <p className="text-[10px] font-semibold text-slate-500 uppercase">Short Stay (Daily)</p>
+                    <p className="text-lg md:text-xl font-bold text-emerald-700">
+                      Rs {Number(hasDailyPrice ? property.dailyPrice : property.price).toLocaleString("en-LK")}
+                    </p>
+                  </>
+                ) : propertyStayType === "short" ? (
+                  <>
+                    <p className="text-xs font-semibold text-slate-500 uppercase">Daily Rent</p>
+                    <p className="text-2xl md:text-3xl font-bold text-emerald-600">
+                      Rs {Number(hasDailyPrice ? property.dailyPrice : property.price).toLocaleString("en-LK")}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs font-semibold text-slate-500 uppercase">Monthly Rent</p>
+                    <p className="text-2xl md:text-3xl font-bold text-emerald-600">
+                      Rs {Number(hasMonthlyPrice ? property.monthlyPrice : property.price).toLocaleString("en-LK")}
+                    </p>
+                  </>
+                )}
               </div>
               <button
                 onClick={handleCheckAvailabilityClick}
@@ -265,6 +358,18 @@ const PropertyDetails = () => {
               >
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                 Check Availability
+              </button>
+              <button
+                onClick={handleWishlistToggle}
+                disabled={wishlistLoading}
+                className={`backdrop-blur-md rounded-xl px-4 py-3 shadow-lg font-semibold transition-all flex items-center justify-center gap-2 min-w-[140px] whitespace-nowrap ${
+                  isWishlisted
+                    ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+                    : "bg-white/90 text-slate-900 hover:bg-white"
+                } ${wishlistLoading ? "opacity-70 cursor-not-allowed" : ""}`}
+              >
+                <Heart className={`w-5 h-5 ${isWishlisted ? "fill-rose-500 text-rose-500" : "text-rose-500"}`} />
+                {wishlistLoading ? "Saving..." : isWishlisted ? "Wishlisted" : "Add to Wishlist"}
               </button>
             </div>
           </div>
@@ -587,12 +692,57 @@ const PropertyDetails = () => {
         />
       )}
 
+      {/* Stay Type Selection Modal */}
+      {showStayTypeModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-slate-900">Select Your Stay Type</h2>
+              <button
+                onClick={() => setShowStayTypeModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-8 space-y-4">
+              <p className="text-slate-600 text-sm mb-6">How long are you planning to stay?</p>
+              
+              <button
+                onClick={() => handleSelectStayType("short")}
+                className="w-full p-6 border-2 border-slate-200 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50 transition-all text-left group"
+              >
+                <p className="text-lg font-bold text-slate-900 group-hover:text-emerald-700">Short Stay</p>
+                <p className="text-sm text-slate-600 mt-2">Less than 3 months</p>
+              </button>
+
+              <button
+                onClick={() => handleSelectStayType("long")}
+                className="w-full p-6 border-2 border-slate-200 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50 transition-all text-left group"
+              >
+                <p className="text-lg font-bold text-slate-900 group-hover:text-emerald-700">Long Stay</p>
+                <p className="text-sm text-slate-600 mt-2">3 months or more</p>
+              </button>
+
+              <button
+                onClick={() => setShowStayTypeModal(false)}
+                className="w-full bg-slate-100 text-slate-700 font-semibold py-3 rounded-xl hover:bg-slate-200 transition mt-6"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Date Picker Modal */}
       {showDatePickerModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-slate-900">Select Dates</h2>
+              <h2 className="text-2xl font-bold text-slate-900">
+                {stayType === "short" ? "Select Dates" : "Select Months"}
+              </h2>
               <button
                 onClick={closeDatePickerModal}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition"
@@ -601,29 +751,121 @@ const PropertyDetails = () => {
               </button>
             </div>
             <div className="p-8 space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Check-in Date</label>
-                <input
-                  type="date"
-                  min={today}
-                  value={checkInDate}
-                  onChange={(e) => setCheckInDate(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Check-out Date</label>
-                <input
-                  type="date"
-                  min={checkInDate || today}
-                  value={checkOutDate}
-                  onChange={(e) => setCheckOutDate(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                />
-              </div>
+              {/* SHORT STAY - Date Picker */}
+              {stayType === "short" && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Check-in Date</label>
+                    <input
+                      type="date"
+                      min={today}
+                      value={checkInDate}
+                      onChange={(e) => setCheckInDate(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Check-out Date</label>
+                    <input
+                      type="date"
+                      min={checkInDate || today}
+                      value={checkOutDate}
+                      onChange={(e) => setCheckOutDate(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
+                    />
+                  </div>
 
-              {checkInDate && checkOutDate && new Date(checkOutDate) <= new Date(checkInDate) && (
-                <p className="text-sm text-red-600">Check-out date must be after check-in date.</p>
+                  {checkInDate && checkOutDate && new Date(checkOutDate) <= new Date(checkInDate) && (
+                    <p className="text-sm text-red-600">Check-out date must be after check-in date.</p>
+                  )}
+                </>
+              )}
+
+              {/* LONG STAY - Month Picker */}
+              {stayType === "long" && (
+                <>
+                  <div className="space-y-3">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">From Month</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-slate-500 mb-1 block">Month</label>
+                        <select
+                          value={fromMonth}
+                          onChange={(e) => setFromMonth(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
+                        >
+                          <option value="">Select</option>
+                          <option value="January">January</option>
+                          <option value="February">February</option>
+                          <option value="March">March</option>
+                          <option value="April">April</option>
+                          <option value="May">May</option>
+                          <option value="June">June</option>
+                          <option value="July">July</option>
+                          <option value="August">August</option>
+                          <option value="September">September</option>
+                          <option value="October">October</option>
+                          <option value="November">November</option>
+                          <option value="December">December</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500 mb-1 block">Year</label>
+                        <select
+                          value={fromYear}
+                          onChange={(e) => setFromYear(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
+                        >
+                          <option value="">Select</option>
+                          {[2025, 2026, 2027, 2028, 2029, 2030].map((year) => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">To Month</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-slate-500 mb-1 block">Month</label>
+                        <select
+                          value={toMonth}
+                          onChange={(e) => setToMonth(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
+                        >
+                          <option value="">Select</option>
+                          <option value="January">January</option>
+                          <option value="February">February</option>
+                          <option value="March">March</option>
+                          <option value="April">April</option>
+                          <option value="May">May</option>
+                          <option value="June">June</option>
+                          <option value="July">July</option>
+                          <option value="August">August</option>
+                          <option value="September">September</option>
+                          <option value="October">October</option>
+                          <option value="November">November</option>
+                          <option value="December">December</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500 mb-1 block">Year</label>
+                        <select
+                          value={toYear}
+                          onChange={(e) => setToYear(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
+                        >
+                          <option value="">Select</option>
+                          {[2025, 2026, 2027, 2028, 2029, 2030].map((year) => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
 
               <div className="flex gap-3 pt-2">
@@ -637,7 +879,10 @@ const PropertyDetails = () => {
                 <button
                   type="button"
                   onClick={handleContinueToAvailability}
-                  disabled={!checkInDate || !checkOutDate || new Date(checkOutDate) <= new Date(checkInDate)}
+                  disabled={stayType === "short" 
+                    ? !checkInDate || !checkOutDate || new Date(checkOutDate) <= new Date(checkInDate)
+                    : !fromMonth || !fromYear || !toMonth || !toYear
+                  }
                   className="w-1/2 bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
@@ -698,7 +943,11 @@ const PropertyDetails = () => {
                     alert('This property is not currently available for reservation.');
                     return;
                   }
-                  alert(`Reservation requested from ${checkInDate} to ${checkOutDate}.`);
+                  if (stayType === "short") {
+                    alert(`Reservation requested from ${checkInDate} to ${checkOutDate}.`);
+                  } else {
+                    alert(`Reservation requested from ${fromMonth} ${fromYear} to ${toMonth} ${toYear}.`);
+                  }
                 }}
                 className="w-full bg-white text-emerald-700 border border-emerald-600 font-semibold py-3 rounded-xl hover:bg-emerald-50 transition"
               >
