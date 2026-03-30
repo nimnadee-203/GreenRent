@@ -9,6 +9,7 @@ import {
   validatePropertyCreate,
   validatePropertyUpdate,
 } from "../validators/propertyValidators.js";
+import jwt from "jsonwebtoken";
 
 export const createPropertyHandler = async (req, res) => {
   try {
@@ -33,6 +34,28 @@ export const createPropertyHandler = async (req, res) => {
 export const listPropertiesHandler = async (req, res) => {
   try {
     const filter = {};
+    let includeHidden = false;
+
+    if (req.query.includeHidden === "true") {
+      let token = req.cookies?.token;
+      if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+        token = req.headers.authorization.split(" ")[1];
+      }
+
+      if (!token) {
+        return res.status(401).json({ message: "Authentication required for includeHidden" });
+      }
+
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded?.role !== "admin") {
+          return res.status(403).json({ message: "Only admin can view hidden listings" });
+        }
+        includeHidden = true;
+      } catch (error) {
+        return res.status(401).json({ message: "Invalid or expired token" });
+      }
+    }
 
     if (req.query.propertyType) {
       filter.propertyType = req.query.propertyType;
@@ -59,6 +82,7 @@ export const listPropertiesHandler = async (req, res) => {
       sortOrder: req.query.sortOrder || "desc",
       limit: req.query.limit ? Number(req.query.limit) : undefined,
       skip: req.query.skip ? Number(req.query.skip) : undefined,
+      includeHidden,
     };
 
     const properties = await listProperties(options);

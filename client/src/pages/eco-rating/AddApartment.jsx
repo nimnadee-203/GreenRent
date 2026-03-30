@@ -270,7 +270,7 @@ export default function AddApartment() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Navbar />
-      <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-12">
         {authLoading ? (
           <div className="flex justify-center items-center py-20"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
         ) : !user ? (
@@ -285,7 +285,7 @@ export default function AddApartment() {
            </div>
         ) : (
           <>
-            <div className="mb-10 relative">
+            <div className="mb-12 relative">
               <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <button
                   type="button"
@@ -298,7 +298,7 @@ export default function AddApartment() {
                   <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">List Your Property</h1>
                 </div>
               </div>
-              <div className="mt-8 flex items-center justify-center space-x-4">
+              <div className="mt-9 flex items-center justify-center space-x-5">
                  <Step number={1} title="Property Details" active={stage===1} completed={stage>1} />
                  <div className="w-12 h-px bg-slate-200 sm:w-24"></div>
                  <Step number={2} title="Eco-Profile" active={stage===2} completed={stage>2} />
@@ -306,12 +306,12 @@ export default function AddApartment() {
             </div>
             <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden transition-all">
               {stage === 1 ? (
-                <form onSubmit={handleStage1Submit} className="p-6 sm:p-10 space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-6">
+                <form onSubmit={handleStage1Submit} className="p-6 sm:p-10 lg:p-12 space-y-10">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+                    <div className="space-y-7 lg:col-span-7">
                       <InputWithIcon icon={Home} label="Property Title" value={form.title} onChange={onFieldChange('title')} required />
                       <InputWithIcon icon={MapPin} label="Address" value={form.address} onChange={onFieldChange('address')} required />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="flex flex-col">
                           <label className="mb-1.5 block text-sm font-semibold text-slate-700">Stay Type</label>
                           <select
@@ -350,7 +350,7 @@ export default function AddApartment() {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <InputWithIcon icon={Home} label="Area (sq.ft)" value={form.area} onChange={onFieldChange('area')} type="number" min="0" placeholder="e.g., 1200" />
                         <div className="flex flex-col">
                           <label className="mb-1.5 block text-sm font-semibold text-slate-700">Property Type</label>
@@ -364,7 +364,7 @@ export default function AddApartment() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div className="flex flex-col">
                           <label className="mb-1.5 flex items-center text-sm font-semibold text-slate-700">
                             <Home className="w-4 h-4 mr-2 text-slate-400" />
@@ -396,7 +396,7 @@ export default function AddApartment() {
                           />
                         </div>
 
-                        <label className="flex items-end gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                        <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer hover:bg-slate-100 transition-colors min-h-[50px]">
                           <input
                             type="checkbox"
                             checked={form.parking}
@@ -407,10 +407,10 @@ export default function AddApartment() {
                         </label>
                       </div>
                     </div>
-                    <div className="space-y-6">
-                      <div className="flex flex-col h-[calc(100%-6.5rem)]">
+                    <div className="space-y-6 lg:col-span-5">
+                      <div className="flex flex-col">
                         <label className="mb-1.5 flex items-center text-sm font-semibold text-slate-700"><AlignLeft className="w-4 h-4 mr-2 text-slate-400" />Description</label>
-                        <textarea value={form.description} onChange={onFieldChange('description')} required className="w-full flex-1 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 min-h-[120px] resize-none" />
+                        <textarea value={form.description} onChange={onFieldChange('description')} required className="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 min-h-[220px] resize-y" />
                       </div>
                       <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
                         <div className="flex items-center justify-between mb-3">
@@ -427,7 +427,7 @@ export default function AddApartment() {
                           </label>
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="space-y-3 max-h-[270px] overflow-y-auto pr-1">
                           {form.imageFiles.length === 0 && (
                             <p className="text-xs text-slate-500">No images selected yet.</p>
                           )}
@@ -464,7 +464,7 @@ export default function AddApartment() {
                       </div>
                     </div>
                   </div>
-                  <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="w-full sm:w-auto">
                       {error && <p className="text-sm font-medium text-red-600 bg-red-50 py-2 px-4 rounded-lg">{error}</p>}
                       {success && <p className="text-sm font-medium text-emerald-600 bg-emerald-50 py-2 px-4 rounded-lg">{success}</p>}
@@ -473,7 +473,7 @@ export default function AddApartment() {
                   </div>
                 </form>
               ) : (
-                <form onSubmit={handleStage2Submit} className="p-6 sm:p-10 space-y-10">
+                <form onSubmit={handleStage2Submit} className="p-6 sm:p-10 lg:p-12 space-y-10">
                   <div className="bg-emerald-50/50 rounded-2xl p-6 border border-emerald-100">
                     <div className="flex items-center mb-4 text-emerald-800"><MapPin className="w-5 h-5 mr-2" /><h3 className="font-semibold">Location Coordinates</h3></div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -539,8 +539,8 @@ function Step({ number, title, active, completed }) {
 function InputWithIcon({ icon: Icon, label, ...props }) {
   return (
     <div className="flex flex-col">
-      <label className="mb-1.5 flex items-center text-sm font-semibold text-slate-700"><Icon className="w-4 h-4 mr-2 text-slate-400" />{label}</label>
-      <input {...props} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 font-medium text-slate-800" />
+      <label className="mb-2 flex items-center text-sm font-semibold text-slate-700"><Icon className="w-4 h-4 mr-2 text-slate-400" />{label}</label>
+      <input {...props} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 font-medium text-slate-800" />
     </div>
   );
 }

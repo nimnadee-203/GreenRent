@@ -55,6 +55,55 @@ const PropertyDetails = () => {
   const [toYear, setToYear] = useState("");
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthIndex = now.getMonth();
+  const yearOptions = Array.from({ length: 6 }, (_, index) => currentYear + index);
+
+  const isAtLeastThreeMonths = (startDate, endDate) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+
+    const threshold = new Date(start);
+    threshold.setMonth(threshold.getMonth() + 3);
+    return end >= threshold;
+  };
+
+  const getLongStayMonthCount = (startMonth, startYear, endMonth, endYear) => {
+    const fromMonthIndex = monthNames.indexOf(startMonth);
+    const toMonthIndex = monthNames.indexOf(endMonth);
+    if (fromMonthIndex < 0 || toMonthIndex < 0) return 0;
+
+    const months = (parseInt(endYear, 10) - parseInt(startYear, 10)) * 12 + (toMonthIndex - fromMonthIndex) + 1;
+    return Number.isFinite(months) ? months : 0;
+  };
+
+  const isLongStayStartFromCurrentOrFuture = (startMonth, startYear) => {
+    const fromMonthIndex = monthNames.indexOf(startMonth);
+    const fromYearNumber = parseInt(startYear, 10);
+    if (fromMonthIndex < 0 || Number.isNaN(fromYearNumber)) return false;
+
+    const startTotal = fromYearNumber * 12 + fromMonthIndex;
+    const currentTotal = currentYear * 12 + currentMonthIndex;
+    return startTotal >= currentTotal;
+  };
+
+  const isLongStayRangeChronological = (startMonth, startYear, endMonth, endYear) => {
+    const fromMonthIndex = monthNames.indexOf(startMonth);
+    const toMonthIndex = monthNames.indexOf(endMonth);
+    const fromYearNumber = parseInt(startYear, 10);
+    const toYearNumber = parseInt(endYear, 10);
+
+    if (fromMonthIndex < 0 || toMonthIndex < 0 || Number.isNaN(fromYearNumber) || Number.isNaN(toYearNumber)) {
+      return false;
+    }
+
+    const startTotal = fromYearNumber * 12 + fromMonthIndex;
+    const endTotal = toYearNumber * 12 + toMonthIndex;
+    return endTotal >= startTotal;
+  };
 
   const handleBookNow = () => {
     if (!property || property.availabilityStatus !== 'available') {
@@ -67,8 +116,16 @@ const PropertyDetails = () => {
     let computedMonths = 0;
 
     if (stayType === "short") {
+      if (checkInDate && checkInDate < today) {
+        alert('Check-in date must be today or a future date.');
+        return;
+      }
       if (!checkInDate || !checkOutDate || new Date(checkOutDate) <= new Date(checkInDate)) {
         alert('Please select valid check-in and check-out dates.');
+        return;
+      }
+      if (isAtLeastThreeMonths(checkInDate, checkOutDate)) {
+        alert('Short stay must be less than 3 months. Please choose Long Stay for 3 months or more.');
         return;
       }
     } else if (stayType === "long") {
@@ -76,8 +133,17 @@ const PropertyDetails = () => {
         alert('Please select valid month and year range for long stay.');
         return;
       }
+
+      if (!isLongStayStartFromCurrentOrFuture(fromMonth, fromYear)) {
+        alert('Long stay start month must be current month or a future month.');
+        return;
+      }
+
+      if (!isLongStayRangeChronological(fromMonth, fromYear, toMonth, toYear)) {
+        alert('End month must be after start month.');
+        return;
+      }
       
-      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
       const fromMonthIndex = monthNames.indexOf(fromMonth);
       const toMonthIndex = monthNames.indexOf(toMonth);
       
@@ -86,10 +152,14 @@ const PropertyDetails = () => {
       const lastDay = new Date(parseInt(toYear), toMonthIndex + 1, 0).getDate();
       finalCheckOutDate = `${toYear}-${pad(toMonthIndex + 1)}-${pad(lastDay)}`;
       
-      computedMonths = (parseInt(toYear) - parseInt(fromYear)) * 12 + (toMonthIndex - fromMonthIndex) + 1;
+      computedMonths = getLongStayMonthCount(fromMonth, fromYear, toMonth, toYear);
       
       if (computedMonths <= 0) {
         alert('End month must be after start month.');
+        return;
+      }
+      if (computedMonths < 3) {
+        alert('Long stay must be at least 3 months.');
         return;
       }
     }
@@ -225,9 +295,16 @@ const PropertyDetails = () => {
   };
 
   const today = new Date().toISOString().split("T")[0];
+  const propertyStayType = property?.stayType || "long";
+  const availableStayTypes = propertyStayType === "both" ? ["short", "long"] : [propertyStayType];
 
   const handleCheckAvailabilityClick = (event) => {
     event.stopPropagation();
+    if (availableStayTypes.length === 1) {
+      handleSelectStayType(availableStayTypes[0]);
+      return;
+    }
+
     setShowStayTypeModal(true);
   };
 
@@ -257,6 +334,7 @@ const PropertyDetails = () => {
   };
 
   const handleSelectStayType = (type) => {
+    if (!availableStayTypes.includes(type)) return;
     setStayType(type);
     setShowStayTypeModal(false);
     setShowDatePickerModal(true);
@@ -265,9 +343,14 @@ const PropertyDetails = () => {
   const handleContinueToAvailability = () => {
     if (stayType === "short") {
       if (!checkInDate || !checkOutDate) return;
+      if (checkInDate < today) return;
       if (new Date(checkOutDate) <= new Date(checkInDate)) return;
+      if (isAtLeastThreeMonths(checkInDate, checkOutDate)) return;
     } else if (stayType === "long") {
       if (!fromMonth || !fromYear || !toMonth || !toYear) return;
+      if (!isLongStayStartFromCurrentOrFuture(fromMonth, fromYear)) return;
+      if (!isLongStayRangeChronological(fromMonth, fromYear, toMonth, toYear)) return;
+      if (getLongStayMonthCount(fromMonth, fromYear, toMonth, toYear) < 3) return;
     }
 
     setShowDatePickerModal(false);
@@ -310,7 +393,6 @@ const PropertyDetails = () => {
       : ["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"];
 
   const primaryImage = images[currentImageIndex];
-  const propertyStayType = property.stayType || "long";
   const hasMonthlyPrice = property.monthlyPrice !== null && property.monthlyPrice !== undefined;
   const hasDailyPrice = property.dailyPrice !== null && property.dailyPrice !== undefined;
 
@@ -580,7 +662,7 @@ const PropertyDetails = () => {
                     <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
                       <div className="text-center">
                         <p className="text-3xl font-bold text-slate-800">
-                          {reviewsData.summary ? Number(reviewsData.summary.averageScore).toFixed(1) : "-"}
+                          {reviewsData.summary ? Number(reviewsData.summary.averageTotalScore).toFixed(1) : "-"}
                         </p>
                         <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Avg Score</p>
                       </div>
@@ -758,21 +840,25 @@ const PropertyDetails = () => {
             <div className="p-8 space-y-4">
               <p className="text-slate-600 text-sm mb-6">How long are you planning to stay?</p>
               
-              <button
-                onClick={() => handleSelectStayType("short")}
-                className="w-full p-6 border-2 border-slate-200 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50 transition-all text-left group"
-              >
-                <p className="text-lg font-bold text-slate-900 group-hover:text-emerald-700">Short Stay</p>
-                <p className="text-sm text-slate-600 mt-2">Less than 3 months</p>
-              </button>
+              {availableStayTypes.includes("short") && (
+                <button
+                  onClick={() => handleSelectStayType("short")}
+                  className="w-full p-6 border-2 border-slate-200 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50 transition-all text-left group"
+                >
+                  <p className="text-lg font-bold text-slate-900 group-hover:text-emerald-700">Short Stay</p>
+                  <p className="text-sm text-slate-600 mt-2">Less than 3 months</p>
+                </button>
+              )}
 
-              <button
-                onClick={() => handleSelectStayType("long")}
-                className="w-full p-6 border-2 border-slate-200 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50 transition-all text-left group"
-              >
-                <p className="text-lg font-bold text-slate-900 group-hover:text-emerald-700">Long Stay</p>
-                <p className="text-sm text-slate-600 mt-2">3 months or more</p>
-              </button>
+              {availableStayTypes.includes("long") && (
+                <button
+                  onClick={() => handleSelectStayType("long")}
+                  className="w-full p-6 border-2 border-slate-200 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50 transition-all text-left group"
+                >
+                  <p className="text-lg font-bold text-slate-900 group-hover:text-emerald-700">Long Stay</p>
+                  <p className="text-sm text-slate-600 mt-2">3 months or more</p>
+                </button>
+              )}
 
               <button
                 onClick={() => setShowStayTypeModal(false)}
@@ -828,6 +914,9 @@ const PropertyDetails = () => {
                   {checkInDate && checkOutDate && new Date(checkOutDate) <= new Date(checkInDate) && (
                     <p className="text-sm text-red-600">Check-out date must be after check-in date.</p>
                   )}
+                  {checkInDate && checkOutDate && new Date(checkOutDate) > new Date(checkInDate) && isAtLeastThreeMonths(checkInDate, checkOutDate) && (
+                    <p className="text-sm text-red-600">Short stay cannot be 3 months or more. Please choose Long Stay.</p>
+                  )}
                 </>
               )}
 
@@ -845,18 +934,15 @@ const PropertyDetails = () => {
                           className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
                         >
                           <option value="">Select</option>
-                          <option value="January">January</option>
-                          <option value="February">February</option>
-                          <option value="March">March</option>
-                          <option value="April">April</option>
-                          <option value="May">May</option>
-                          <option value="June">June</option>
-                          <option value="July">July</option>
-                          <option value="August">August</option>
-                          <option value="September">September</option>
-                          <option value="October">October</option>
-                          <option value="November">November</option>
-                          <option value="December">December</option>
+                          {monthNames.map((month, monthIndex) => (
+                            <option
+                              key={month}
+                              value={month}
+                              disabled={fromYear === String(currentYear) && monthIndex < currentMonthIndex}
+                            >
+                              {month}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       <div>
@@ -867,7 +953,7 @@ const PropertyDetails = () => {
                           className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
                         >
                           <option value="">Select</option>
-                          {[2025, 2026, 2027, 2028, 2029, 2030].map((year) => (
+                          {yearOptions.map((year) => (
                             <option key={year} value={year}>{year}</option>
                           ))}
                         </select>
@@ -886,18 +972,18 @@ const PropertyDetails = () => {
                           className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
                         >
                           <option value="">Select</option>
-                          <option value="January">January</option>
-                          <option value="February">February</option>
-                          <option value="March">March</option>
-                          <option value="April">April</option>
-                          <option value="May">May</option>
-                          <option value="June">June</option>
-                          <option value="July">July</option>
-                          <option value="August">August</option>
-                          <option value="September">September</option>
-                          <option value="October">October</option>
-                          <option value="November">November</option>
-                          <option value="December">December</option>
+                          {monthNames.map((month, monthIndex) => (
+                            <option
+                              key={month}
+                              value={month}
+                              disabled={
+                                (toYear === String(currentYear) && monthIndex < currentMonthIndex) ||
+                                (fromMonth && fromYear && toYear === fromYear && monthIndex < monthNames.indexOf(fromMonth))
+                              }
+                            >
+                              {month}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       <div>
@@ -908,13 +994,22 @@ const PropertyDetails = () => {
                           className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
                         >
                           <option value="">Select</option>
-                          {[2025, 2026, 2027, 2028, 2029, 2030].map((year) => (
+                          {yearOptions.map((year) => (
                             <option key={year} value={year}>{year}</option>
                           ))}
                         </select>
                       </div>
                     </div>
                   </div>
+                  {fromMonth && fromYear && !isLongStayStartFromCurrentOrFuture(fromMonth, fromYear) && (
+                    <p className="text-sm text-red-600">Start month must be current month or later.</p>
+                  )}
+                  {fromMonth && fromYear && toMonth && toYear && !isLongStayRangeChronological(fromMonth, fromYear, toMonth, toYear) && (
+                    <p className="text-sm text-red-600">End month must be after start month.</p>
+                  )}
+                  {fromMonth && fromYear && toMonth && toYear && getLongStayMonthCount(fromMonth, fromYear, toMonth, toYear) > 0 && getLongStayMonthCount(fromMonth, fromYear, toMonth, toYear) < 3 && (
+                    <p className="text-sm text-red-600">Long stay must be at least 3 months.</p>
+                  )}
                 </>
               )}
 
@@ -930,8 +1025,8 @@ const PropertyDetails = () => {
                   type="button"
                   onClick={handleContinueToAvailability}
                   disabled={stayType === "short" 
-                    ? !checkInDate || !checkOutDate || new Date(checkOutDate) <= new Date(checkInDate)
-                    : !fromMonth || !fromYear || !toMonth || !toYear
+                    ? !checkInDate || !checkOutDate || checkInDate < today || new Date(checkOutDate) <= new Date(checkInDate) || isAtLeastThreeMonths(checkInDate, checkOutDate)
+                    : !fromMonth || !fromYear || !toMonth || !toYear || !isLongStayStartFromCurrentOrFuture(fromMonth, fromYear) || !isLongStayRangeChronological(fromMonth, fromYear, toMonth, toYear) || getLongStayMonthCount(fromMonth, fromYear, toMonth, toYear) < 3
                   }
                   className="w-1/2 bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >

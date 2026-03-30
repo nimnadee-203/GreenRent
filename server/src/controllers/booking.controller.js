@@ -7,6 +7,7 @@ import {
   updateBookingStatus,
   updatePaymentStatus,
   cancelBooking,
+  requestRefund,
   deleteBooking,
   checkAvailability,
 } from "../services/booking.service.js";
@@ -321,6 +322,49 @@ export const cancelBookingHandler = async (req, res) => {
   } catch (error) {
     console.error("Cancel booking error:", error);
     return res.status(500).json({ message: "Failed to cancel booking" });
+  }
+};
+
+/**
+ * Request refund for a booking
+ * PUT /api/bookings/:id/refund-request
+ */
+export const requestRefundHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { refundReason } = req.body;
+
+    const booking = await getBookingById(id);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    if (userRole !== "admin" && booking.userId?.toString() !== userId) {
+      return res.status(403).json({
+        message: "Access denied. You can only request refund for your own booking.",
+      });
+    }
+
+    const updatedBooking = await requestRefund(id, refundReason);
+    return res.status(200).json({
+      message: "Refund request submitted successfully",
+      booking: updatedBooking,
+    });
+  } catch (error) {
+    if (error.message === "RefundAllowedOnlyForPaidBookings") {
+      return res.status(400).json({ message: "Refund can only be requested for paid bookings." });
+    }
+    if (error.message === "RefundRequiresCancelledBooking") {
+      return res.status(400).json({ message: "Cancel the booking first before requesting a refund." });
+    }
+    if (error.message === "RefundAlreadyRequestedOrProcessed") {
+      return res.status(400).json({ message: "Refund request is already in progress or completed." });
+    }
+    console.error("Request refund error:", error);
+    return res.status(500).json({ message: "Failed to request refund" });
   }
 };
 

@@ -50,6 +50,18 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    refundReason: {
+      type: String,
+      trim: true,
+    },
+    refundStatus: {
+      type: String,
+      enum: ["none", "requested", "approved", "rejected", "refunded"],
+      default: "none",
+    },
+    refundRequestedAt: {
+      type: Date,
+    },
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -57,6 +69,13 @@ const bookingSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Business rule: once a booking is paid, it must be at least confirmed.
+bookingSchema.pre("validate", function () {
+  if (this.paymentStatus === "paid" && this.status !== "completed") {
+    this.status = "confirmed";
+  }
+});
 
 // Indexes for efficient queries
 bookingSchema.index({ userId: 1, createdAt: -1 });

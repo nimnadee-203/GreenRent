@@ -4,7 +4,9 @@ import userModel from '../models/userModel.js';
 import transporter from '../config/nodemailer.js';
 
 export const registerUser = async (name, email, password) => {
-    const existingUser = await userModel.findOne({ email });
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+
+    const existingUser = await userModel.findOne({ email: normalizedEmail });
 
     if (existingUser) {
         throw new Error('User already exists');
@@ -15,22 +17,27 @@ export const registerUser = async (name, email, password) => {
 
     const user = await userModel.create({
         name,
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
         avatar
     });
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.role, user.email, user.name);
 
     // Sending welcome email asynchronously
-    sendWelcomeEmail(email).catch(err => console.error('Error sending welcome email:', err));
+    sendWelcomeEmail(normalizedEmail).catch(err => console.error('Error sending welcome email:', err));
 
     return { user, token };
 };
 
 export const loginUser = async (email, password) => {
     const normalizedEmail = String(email || "").trim().toLowerCase();
-    const user = await userModel.findOne({ email: normalizedEmail });
+    // Try exact lowercase match first (for new users), then case-insensitive match
+    let user = await userModel.findOne({ email: normalizedEmail });
+
+    if (!user) {
+        user = await userModel.findOne({ email: new RegExp(`^${normalizedEmail}$`, 'i') });
+    }
 
     if (!user) {
         throw new Error('Invalid email or password');

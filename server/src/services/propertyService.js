@@ -84,7 +84,7 @@ export const createProperty = async (data) => {
 
 /**
  * List properties with optional filtering, text search, and sorting
- * @param {Object} options - { filter, search, sortBy, sortOrder, limit, skip }
+ * @param {Object} options - { filter, search, sortBy, sortOrder, limit, skip, includeHidden }
  */
 export const listProperties = async (options = {}) => {
   const {
@@ -94,12 +94,13 @@ export const listProperties = async (options = {}) => {
     sortOrder = "desc",
     limit,
     skip = 0,
+    includeHidden = false,
   } = options;
 
   const query = { ...filter };
 
   // Filter hidden listings for public (where ownerId is missing)
-  if (!filter.ownerId && !filter._id) {
+  if (!includeHidden && !filter.ownerId && !filter._id) {
     const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const validityOr = [
@@ -108,7 +109,28 @@ export const listProperties = async (options = {}) => {
       { ecoRatingId: null, ecoRatingClearedAt: { $ne: null }, ecoRatingClearedAt: { $gte: oneHourAgo } }
     ];
     query.$and = query.$and || [];
-    query.$and.push({ $or: validityOr });
+
+    // Manual visibility overrides by admin:
+    // hidden  -> always hidden
+    // visible -> always shown
+    // auto    -> follow eco visibility rules
+    query.$and.push({ visibilityStatus: { $ne: "hidden" } });
+    query.$and.push({
+      $or: [
+        { visibilityStatus: "visible" },
+        {
+          $and: [
+            {
+              $or: [
+                { visibilityStatus: "auto" },
+                { visibilityStatus: { $exists: false } },
+              ],
+            },
+            { $or: validityOr },
+          ],
+        },
+      ],
+    });
   }
 
   if (search && search.trim()) {

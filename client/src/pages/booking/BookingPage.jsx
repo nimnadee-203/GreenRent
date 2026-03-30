@@ -462,6 +462,7 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
       const savedBooking = data?.booking;
       const bookingPayload = savedBooking
         ? {
+            _id: savedBooking._id,
             apartmentId: savedBooking.apartmentId,
             stayType: savedBooking.stayType,
             checkInDate: savedBooking.checkInDate,
@@ -469,6 +470,8 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
             numberOfGuests: savedBooking.numberOfGuests,
             months: savedBooking.months,
             totalPrice: savedBooking.totalPrice,
+            paymentStatus: savedBooking.paymentStatus,
+            status: savedBooking.status,
           }
         : payload;
 
@@ -483,7 +486,13 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
         });
       }, 1500);
     } catch (err) {
-      const msg = err.response?.data?.message || "Failed to save booking. Please try again.";
+      const data = err.response?.data;
+      const validationMsg = Array.isArray(data?.errors) && data.errors.length > 0
+        ? String(data.errors[0])
+        : null;
+
+      const msg = validationMsg || data?.message || "Failed to save booking. Please try again.";
+
       if (err.response?.status === 401 || msg.toLowerCase().includes("no token")) {
         setError("You must be logged in to book. Redirecting to login...");
         setTimeout(() => {

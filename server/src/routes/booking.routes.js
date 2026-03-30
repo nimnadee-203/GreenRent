@@ -10,6 +10,7 @@ import {
   updateBookingStatusHandler,
   updatePaymentStatusHandler,
   cancelBookingHandler,
+  requestRefundHandler,
   deleteBookingHandler,
   checkAvailabilityHandler,
 } from "../controllers/booking.controller.js";
@@ -49,6 +50,9 @@ router.put("/:id/payment", authenticate, updatePaymentStatusHandler);
 
 // Cancel booking
 router.put("/:id/cancel", authenticate, cancelBookingHandler);
+
+// Request refund for cancelled paid booking
+router.put("/:id/refund-request", authenticate, requestRefundHandler);
 
 
 /**

@@ -42,6 +42,11 @@ export const createRenterReviewHandler = async (req, res) => {
         message: "You have already reviewed this listing",
       });
     }
+    if (error.message === "ReviewNotAllowedForUnbookedListing") {
+      return res.status(403).json({
+        message: "You can review only properties you have booked.",
+      });
+    }
     console.error("Create review error:", error);
     return res.status(500).json({ message: "Failed to create review" });
   }
@@ -55,7 +60,7 @@ export const getListingReviewsHandler = async (req, res) => {
     const { listingId } = req.params;
     const includeStatus = req.query.status 
       ? req.query.status.split(",")
-      : ["approved"];
+      : ["approved", "pending"];
 
     const reviews = await getReviewsByListing(listingId, includeStatus);
     const averages = await getAverageRenterScores(listingId);
