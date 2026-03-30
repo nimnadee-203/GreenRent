@@ -2,35 +2,61 @@ import mongoose from "mongoose";
 import Booking from "../models/booking.model.js";
 import Property from "../models/Property.js";
 
+const getDailyRate = (property) => {
+  if (property.dailyPrice != null && property.dailyPrice !== "") {
+    return Number(property.dailyPrice);
+  }
+  return Number(property.price ?? 0);
+};
+
+const getMonthlyRate = (property) => {
+  if (property.monthlyPrice != null && property.monthlyPrice !== "") {
+    return Number(property.monthlyPrice);
+  }
+  return Number(property.price ?? 0);
+};
+
 /**
- * Calculate total price based on stay type
+ * Calculate total price based on stay type (uses dailyPrice / monthlyPrice when set)
  * @param {string} stayType - "short" or "long"
  * @param {Date} checkInDate - Check-in date
  * @param {Date} checkOutDate - Check-out date
- * @param {Object} property - Property object with price information
+ * @param {Object} property - Property with price, dailyPrice, monthlyPrice
+ * @param {{ months?: number }} [options] - For long stays, optional explicit month count from the client
  * @returns {number} - Calculated total price
  */
-export const calculateTotalPrice = (stayType, checkInDate, checkOutDate, property) => {
-  if (!property || !property.price) {
-    throw new Error("Property price information is required");
+export const calculateTotalPrice = (stayType, checkInDate, checkOutDate, property, options = {}) => {
+  if (!property) {
+    throw new Error("Property is required");
   }
 
   const checkIn = new Date(checkInDate);
   const checkOut = new Date(checkOutDate);
 
   if (stayType === "short") {
-    // Short stay: price per night × number of nights
-    const oneDay = 24 * 60 * 60 * 1000; // milliseconds in a day
-    const nights = Math.ceil((checkOut - checkIn) / oneDay);
-    return property.price * nights;
-  } else if (stayType === "long") {
-    // Long stay: price per month × number of months
-    // Calculate months difference
+    const nightly = getDailyRate(property);
+    if (!Number.isFinite(nightly) || nightly < 0) {
+      throw new Error("Property daily rate is required for short stays");
+    }
+    const oneDay = 24 * 60 * 60 * 1000;
+    const nights = Math.max(1, Math.ceil((checkOut - checkIn) / oneDay));
+    return nightly * nights;
+  }
+
+  if (stayType === "long") {
+    const monthly = getMonthlyRate(property);
+    if (!Number.isFinite(monthly) || monthly < 0) {
+      throw new Error("Property monthly rate is required for long stays");
+    }
+    const explicitMonths = options.months != null ? Number(options.months) : NaN;
+    if (Number.isFinite(explicitMonths) && explicitMonths > 0) {
+      return monthly * explicitMonths;
+    }
     const monthsDiff =
       (checkOut.getFullYear() - checkIn.getFullYear()) * 12 +
       (checkOut.getMonth() - checkIn.getMonth());
-    const months = Math.ceil(monthsDiff);
-    return property.price * Math.max(1, months); // At least 1 month
+    const months = Math.max(1, Math.ceil(monthsDiff));
+    return monthly * months;
   }
 
   throw new Error(`Invalid stay type: ${stayType}`);
@@ -107,18 +133,28 @@ export const createBooking = async (bookingData) => {
     throw new Error("Apartment is not available for the selected dates");
   }
 
-  // Get property to calculate price if not provided
-  if (!bookingData.totalPrice) {
-    const property = await Property.findById(bookingData.apartmentId);
-    if (!property) {
-      throw new Error("Property not found");
-    }
-    bookingData.totalPrice = calculateTotalPrice(
-      bookingData.stayType,
-      bookingData.checkInDate,
-      bookingData.checkOutDate,
-      property
-    );
+  const property = await Property.findById(bookingData.apartmentId);
+  if (!property) {
+    throw new Error("Property not found");
+  }
+
+  const monthsArg =
+    bookingData.stayType === "long" && bookingData.months != null
+      ? Number(bookingData.months)
+      : undefined;
+
+  bookingData.totalPrice = calculateTotalPrice(
+    bookingData.stayType,
+    bookingData.checkInDate,
+    bookingData.checkOutDate,
+    property,
+    { months: monthsArg }
+  );
+
+  if (bookingData.stayType === "long" && bookingData.months != null && Number(bookingData.months) > 0) {
+    bookingData.months = Number(bookingData.months);
+  } else {
+    delete bookingData.months;
   }
 
   const booking = await Booking.create(bookingData);
@@ -184,11 +220,10 @@ export const updateBooking = async (bookingId, updateData) => {
     return null;
   }
 
-  // If dates are being updated, check availability
-  if (updateData.checkInDate || updateData.checkOutDate) {
-    const checkInDate = updateData.checkInDate || booking.checkInDate;
-    const checkOutDate = updateData.checkOutDate || booking.checkOutDate;
+  const checkInDate = updateData.checkInDate || booking.checkInDate;
+  const checkOutDate = updateData.checkOutDate || booking.checkOutDate;
 
+  if (updateData.checkInDate || updateData.checkOutDate) {
     const isAvailable = await checkAvailability(
       updateData.apartmentId || booking.apartmentId,
       checkInDate,
@@ -199,29 +234,38 @@ export const updateBooking = async (bookingId, updateData) => {
     if (!isAvailable) {
       throw new Error("Apartment is not available for the selected dates");
     }
+  }
 
-    // Recalculate price if dates or stayType changed
-    if (
-      updateData.checkInDate ||
-      updateData.checkOutDate ||
-      updateData.stayType ||
-      updateData.apartmentId
-    ) {
-      const apartmentId = updateData.apartmentId || booking.apartmentId;
-      const stayType = updateData.stayType || booking.stayType;
-      const property = await Property.findById(apartmentId);
-      if (property) {
-        updateData.totalPrice = calculateTotalPrice(
-          stayType,
-          checkInDate,
-          checkOutDate,
-          property
-        );
-      }
+  const shouldRecalcPrice =
+    updateData.checkInDate ||
+    updateData.checkOutDate ||
+    updateData.stayType ||
+    updateData.apartmentId ||
+    updateData.months != null;
+
+  if (shouldRecalcPrice) {
+    const apartmentId = updateData.apartmentId || booking.apartmentId;
+    const stayType = updateData.stayType || booking.stayType;
+    const property = await Property.findById(apartmentId);
+    if (property) {
+      const monthsForCalc =
+        stayType === "long"
+          ? updateData.months != null
+            ? Number(updateData.months)
+            : booking.months != null
+              ? Number(booking.months)
+              : undefined
+          : undefined;
+      updateData.totalPrice = calculateTotalPrice(
+        stayType,
+        checkInDate,
+        checkOutDate,
+        property,
+        { months: monthsForCalc }
+      );
     }
   }
 
-  // Update booking
   Object.assign(booking, updateData);
   await booking.save();
 

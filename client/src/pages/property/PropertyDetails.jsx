@@ -62,23 +62,46 @@ const PropertyDetails = () => {
       return;
     }
 
+    let finalCheckInDate = checkInDate;
+    let finalCheckOutDate = checkOutDate;
+    let computedMonths = 0;
+
     if (stayType === "short") {
       if (!checkInDate || !checkOutDate || new Date(checkOutDate) <= new Date(checkInDate)) {
         alert('Please select valid check-in and check-out dates.');
         return;
       }
-      alert(`Reservation requested from ${checkInDate} to ${checkOutDate}.`);
-    } else {
+    } else if (stayType === "long") {
       if (!fromMonth || !fromYear || !toMonth || !toYear) {
         alert('Please select valid month and year range for long stay.');
         return;
       }
-      alert(`Reservation requested from ${fromMonth} ${fromYear} to ${toMonth} ${toYear}.`);
+      
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      const fromMonthIndex = monthNames.indexOf(fromMonth);
+      const toMonthIndex = monthNames.indexOf(toMonth);
+      
+      const pad = (n) => n.toString().padStart(2, '0');
+      finalCheckInDate = `${fromYear}-${pad(fromMonthIndex + 1)}-01`;
+      const lastDay = new Date(parseInt(toYear), toMonthIndex + 1, 0).getDate();
+      finalCheckOutDate = `${toYear}-${pad(toMonthIndex + 1)}-${pad(lastDay)}`;
+      
+      computedMonths = (parseInt(toYear) - parseInt(fromYear)) * 12 + (toMonthIndex - fromMonthIndex) + 1;
+      
+      if (computedMonths <= 0) {
+        alert('End month must be after start month.');
+        return;
+      }
     }
 
     setShowAvailabilityModal(false);
     navigate(`/booking/${id}`, {
-      state: { checkInDate, checkOutDate }
+      state: { 
+        checkInDate: finalCheckInDate, 
+        checkOutDate: finalCheckOutDate,
+        stayType: stayType || property.stayType,
+        selectedMonths: computedMonths
+      }
     });
   };
 

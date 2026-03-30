@@ -96,6 +96,11 @@ export const validateCreateBooking = [
     .isInt({ min: 1 })
     .withMessage("numberOfGuests must be a positive integer"),
 
+  body("months")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("months must be a positive integer"),
+
   // paymentStatus validation (optional, defaults to "unpaid")
   body("paymentStatus")
     .optional()
@@ -188,6 +193,11 @@ export const validateUpdateBooking = [
     .optional()
     .isInt({ min: 1 })
     .withMessage("numberOfGuests must be a positive integer"),
+
+  body("months")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("months must be a positive integer"),
 
   // status validation (optional)
   body("status")
