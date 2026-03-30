@@ -10,11 +10,13 @@ import { Eye, EyeOff, Mail, Lock, UserRound } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../../components/Home/Navbar";
 import { auth, googleProvider, hasFirebaseConfig } from "../../config/firebase";
+import { useAuth } from "../../context/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { fetchBackendUser } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,15 +50,18 @@ export default function Login() {
       .trim();
   };
 
+  const getApiErrorMessage = (error) => {
+    return (
+      error?.response?.data?.message ||
+      (Array.isArray(error?.response?.data?.errors) ? error.response.data.errors[0] : "") ||
+      normalizeFirebaseError(error?.message)
+    );
+  };
+
   const handleEmailAuth = async (event) => {
     event.preventDefault();
     setError("");
     setSuccess("");
-
-    if (!hasFirebaseConfig || !auth) {
-      setError("Firebase config is missing. Add VITE_FIREBASE_* values in your client .env file.");
-      return;
-    }
 
     if (!form.email || !form.password || (isSignUp && !form.name)) {
       setError("Please fill all required fields.");
@@ -64,9 +69,15 @@ export default function Login() {
     }
 
     setIsLoading(true);
+    const normalizedEmail = form.email.trim().toLowerCase();
 
     try {
       if (isSignUp) {
+        if (!hasFirebaseConfig || !auth) {
+          setError("Firebase config is missing. Add VITE_FIREBASE_* values in your client .env file.");
+          return;
+        }
+
         const credential = await createUserWithEmailAndPassword(auth, form.email, form.password);
         if (form.name.trim()) {
           await updateProfile(credential.user, { displayName: form.name.trim() });
@@ -77,7 +88,7 @@ export default function Login() {
             `${API_BASE_URL}/api/auth/register`,
             {
               name: form.name.trim(),
-              email: form.email,
+              email: normalizedEmail,
               password: form.password,
             },
             { withCredentials: true }
@@ -87,7 +98,7 @@ export default function Login() {
             await axios.post(
               `${API_BASE_URL}/api/auth/login`,
               {
-                email: form.email,
+                email: normalizedEmail,
                 password: form.password,
               },
               { withCredentials: true }
@@ -99,21 +110,32 @@ export default function Login() {
 
         setSuccess("Account created successfully.");
       } else {
-        await signInWithEmailAndPassword(auth, form.email, form.password);
+        // Backend login should work for seeded/admin/seller users even without Firebase accounts.
         await axios.post(
           `${API_BASE_URL}/api/auth/login`,
           {
-            email: form.email,
+            email: normalizedEmail,
             password: form.password,
           },
           { withCredentials: true }
         );
+        await fetchBackendUser();
+
+        // Optional Firebase sync for users that do have Firebase credentials.
+        if (hasFirebaseConfig && auth) {
+          try {
+            await signInWithEmailAndPassword(auth, normalizedEmail, form.password);
+          } catch (firebaseSyncError) {
+            // Ignore Firebase mismatch for backend-authenticated users.
+          }
+        }
+
         setSuccess("Login successful.");
       }
 
       navigate("/");
     } catch (authError) {
-      setError(normalizeFirebaseError(authError?.message));
+      setError(getApiErrorMessage(authError));
     } finally {
       setIsLoading(false);
     }

@@ -29,7 +29,8 @@ export const registerUser = async (name, email, password) => {
 };
 
 export const loginUser = async (email, password) => {
-    const user = await userModel.findOne({ email });
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const user = await userModel.findOne({ email: normalizedEmail });
 
     if (!user) {
         throw new Error('Invalid email or password');

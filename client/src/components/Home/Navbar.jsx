@@ -12,6 +12,7 @@ const navClassName = ({ isActive }) =>
 const Navbar = () => {
     const { currentUser, backendUser, logout } = useAuth();
     const navigate = useNavigate();
+    const sessionUser = currentUser || backendUser;
 
     const handleLogout = async () => {
         try {
@@ -48,11 +49,11 @@ const Navbar = () => {
                 </div>
 
                 <div className="hidden md:flex items-center gap-3">
-                    {currentUser ? (
+                    {sessionUser ? (
                         <Menu as="div" className="relative inline-block text-left">
                             <div>
                                 <Menu.Button className="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition ring-2 ring-transparent focus:ring-emerald-500">
-                                    {currentUser.photoURL ? (
+                                    {currentUser?.photoURL ? (
                                         <img src={currentUser.photoURL} alt="Profile" className="w-full h-full rounded-full object-cover" />
                                     ) : (
                                         <User className="w-5 h-5" />
@@ -72,7 +73,7 @@ const Navbar = () => {
                                     <div className="px-4 py-3">
                                         <p className="text-sm">Signed in as</p>
                                         <p className="truncate text-sm font-semibold text-slate-900">
-                                            {currentUser.displayName || currentUser.email}
+                                            {currentUser?.displayName || currentUser?.email || backendUser?.name || backendUser?.email}
                                         </p>
                                     </div>
                                     <div className="p-1">
