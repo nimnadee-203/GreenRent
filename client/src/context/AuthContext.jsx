@@ -29,18 +29,20 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    if (!auth) {
+    const bootstrapBackendSession = async () => {
+      await fetchBackendUser();
       setLoading(false);
+    };
+
+    if (!auth) {
+      bootstrapBackendSession();
       return;
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      if (user) {
-        await fetchBackendUser();
-      } else {
-        setBackendUser(null);
-      }
+      // Always check backend cookie session (supports backend-only login).
+      await fetchBackendUser();
       setLoading(false);
     });
 
@@ -48,10 +50,17 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = async () => {
+    try {
+      await axios.post(`${API_BASE_URL}/api/auth/logout`, {}, { withCredentials: true });
+    } catch (error) {
+      // Continue to clear local auth state even if backend logout fails.
+    }
+
     if (auth) {
       await signOut(auth);
     }
     setBackendUser(null);
+    setCurrentUser(null);
   };
 
   const value = {
