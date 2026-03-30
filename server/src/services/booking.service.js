@@ -307,6 +307,9 @@ export const updatePaymentStatus = async (bookingId, paymentStatus) => {
   }
 
   booking.paymentStatus = paymentStatus;
+  if (paymentStatus === "paid" && booking.status !== "completed") {
+    booking.status = "confirmed";
+  }
   await booking.save();
 
   return booking;
@@ -327,6 +330,40 @@ export const cancelBooking = async (bookingId, cancellationReason = null) => {
   booking.status = "cancelled";
   if (cancellationReason) {
     booking.cancellationReason = cancellationReason;
+  }
+
+  await booking.save();
+  return booking;
+};
+
+/**
+ * Request a refund for a cancelled paid booking
+ * @param {string} bookingId - Booking ID
+ * @param {string} refundReason - Optional reason for refund request
+ * @returns {Promise<Object|null>} - Updated booking document or null if not found
+ */
+export const requestRefund = async (bookingId, refundReason = null) => {
+  const booking = await Booking.findById(bookingId);
+  if (!booking) {
+    return null;
+  }
+
+  if (booking.paymentStatus !== "paid") {
+    throw new Error("RefundAllowedOnlyForPaidBookings");
+  }
+
+  if (booking.status !== "cancelled") {
+    throw new Error("RefundRequiresCancelledBooking");
+  }
+
+  if (["requested", "approved", "refunded"].includes(booking.refundStatus)) {
+    throw new Error("RefundAlreadyRequestedOrProcessed");
+  }
+
+  booking.refundStatus = "requested";
+  booking.refundRequestedAt = new Date();
+  if (refundReason && String(refundReason).trim()) {
+    booking.refundReason = String(refundReason).trim();
   }
 
   await booking.save();

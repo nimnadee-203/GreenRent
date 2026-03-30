@@ -90,6 +90,12 @@ const propertySchema = new mongoose.Schema(
       enum: ["available", "rented", "archived"],
       default: "available",
     },
+    // auto: follow eco visibility rules, visible: force-show publicly, hidden: force-hide publicly
+    visibilityStatus: {
+      type: String,
+      enum: ["auto", "visible", "hidden"],
+      default: "auto",
+    },
     ownerId: {
       type: String,
       required: true,

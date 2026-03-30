@@ -14,6 +14,7 @@ import {
 import Navbar from "../../components/Home/Navbar";
 import Footer from "../../components/Home/Footer";
 import PropertyFilterBar from "../../components/PropertyListing/PropertyFilterBar";
+import { useAuth } from "../../context/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
@@ -51,6 +52,7 @@ const capitalize = (value) => {
 };
 
 export default function PropertyListing() {
+  const { backendUser } = useAuth();
   const navigate = useNavigate();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [properties, setProperties] = useState([]);
@@ -70,6 +72,7 @@ export default function PropertyListing() {
     if (filters.availabilityStatus) params.availabilityStatus = filters.availabilityStatus;
     if (filters.minPrice) params.minPrice = Number(filters.minPrice);
     if (filters.maxPrice) params.maxPrice = Number(filters.maxPrice);
+    if (backendUser?.role === "admin") params.includeHidden = "true";
 
     return params;
   }, [
@@ -80,6 +83,7 @@ export default function PropertyListing() {
     filters.maxPrice,
     filters.sortBy,
     filters.sortOrder,
+    backendUser?.role,
   ]);
 
   const fetchProperties = async () => {
@@ -89,6 +93,7 @@ export default function PropertyListing() {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/properties`, {
         params: requestParams,
+        withCredentials: true,
       });
       setProperties(Array.isArray(response.data) ? response.data : []);
     } catch (err) {

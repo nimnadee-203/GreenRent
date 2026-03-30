@@ -1,5 +1,6 @@
 const PROPERTY_TYPES = ["apartment", "house", "studio", "townhouse", "other"];
 const AVAILABILITY_STATUSES = ["available", "rented", "archived"];
+const VISIBILITY_STATUSES = ["auto", "visible", "hidden"];
 const STAY_TYPES = ["long", "short", "both"];
 
 const isNumber = (value) => typeof value === "number" && !isNaN(value);
@@ -71,6 +72,10 @@ export const validatePropertyCreate = (data) => {
 
     if (!PROPERTY_TYPES.includes(data.propertyType)) {
         errors.push(`Property type must be one of: ${PROPERTY_TYPES.join(", ")}`);
+    }
+
+    if (data.visibilityStatus !== undefined && !VISIBILITY_STATUSES.includes(data.visibilityStatus)) {
+        errors.push(`Visibility status must be one of: ${VISIBILITY_STATUSES.join(", ")}`);
     }
 
     if (!data.ecoFeatures || typeof data.ecoFeatures !== "object") {
@@ -156,6 +161,10 @@ export const validatePropertyUpdate = (data) => {
 
     if (data.availabilityStatus !== undefined && !AVAILABILITY_STATUSES.includes(data.availabilityStatus)) {
         errors.push(`Availability status must be one of: ${AVAILABILITY_STATUSES.join(", ")}`);
+    }
+
+    if (data.visibilityStatus !== undefined && !VISIBILITY_STATUSES.includes(data.visibilityStatus)) {
+        errors.push(`Visibility status must be one of: ${VISIBILITY_STATUSES.join(", ")}`);
     }
 
     if (data.ecoFeatures !== undefined && typeof data.ecoFeatures !== "object") {

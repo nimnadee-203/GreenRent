@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 import { CreditCard, Shield, CheckCircle, ArrowLeft } from "lucide-react";
 import Navbar from "../../components/Home/Navbar";
 import Footer from "../../components/Home/Footer";
@@ -10,6 +11,8 @@ import {
   calculateMonthsFromDates,
   formatLkr,
 } from "../../utils/bookingPricing";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const PaymentPage = () => {
   const { id } = useParams();
@@ -26,6 +29,7 @@ const PaymentPage = () => {
   const [cardHolder, setCardHolder] = useState("");
   const [processing, setProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
 
   useEffect(() => {
     if (!bookingData || !selectedOption || !property) {
@@ -35,25 +39,44 @@ const PaymentPage = () => {
 
   const handlePayment = async (e) => {
     e.preventDefault();
+    setPaymentError("");
     setProcessing(true);
 
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      // Simulate gateway processing delay
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
+      if (!bookingData?._id) {
+        throw new Error("Missing booking id for payment update.");
+      }
+
+      await axios.put(
+        `${API_BASE_URL}/api/bookings/${bookingData._id}/payment`,
+        { paymentStatus: "paid" },
+        { withCredentials: true }
+      );
+
       setPaymentSuccess(true);
       setProcessing(false);
 
-      // Redirect to success page after showing success
       setTimeout(() => {
         navigate("/dashboard", {
           state: {
             paymentSuccess: true,
-            bookingData,
+            bookingData: {
+              ...bookingData,
+              paymentStatus: "paid",
+              status: "confirmed",
+            },
             selectedOption,
             property
           }
         });
-      }, 2000);
-    }, 3000);
+      }, 1800);
+    } catch (error) {
+      setProcessing(false);
+      setPaymentError(error?.response?.data?.message || error.message || "Payment update failed. Please try again.");
+    }
   };
 
   if (!bookingData || !selectedOption || !property) {
@@ -200,6 +223,12 @@ const PaymentPage = () => {
                   </>
                 )}
               </button>
+
+              {paymentError && (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {paymentError}
+                </p>
+              )}
             </form>
           </div>
 

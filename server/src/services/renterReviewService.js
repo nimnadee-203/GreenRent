@@ -1,4 +1,6 @@
 import RenterReview from "../models/RenterReview.js";
+import mongoose from "mongoose";
+import Booking from "../models/booking.model.js";
 
 const CRITERIA_WEIGHTS = {
   energyEfficiency: 0.25,
@@ -21,10 +23,36 @@ export const calculateReviewScore = (criteria) => {
   return roundToOneDecimal(score);
 };
 
+const hasEligibleBookingForListing = async (renterId, listingId) => {
+  const statusQuery = { $in: ["confirmed", "completed"] };
+  const bookingQuery = {
+    apartmentId: listingId,
+    status: statusQuery,
+  };
+
+  const isObjectId = mongoose.Types.ObjectId.isValid(renterId) && String(renterId).length === 24;
+  if (isObjectId) {
+    bookingQuery.$or = [
+      { userId: renterId },
+      { userId: new mongoose.Types.ObjectId(renterId) },
+    ];
+  } else {
+    bookingQuery.userId = renterId;
+  }
+
+  const eligibleBooking = await Booking.findOne(bookingQuery).select("_id");
+  return Boolean(eligibleBooking);
+};
+
 /**
  * Create a new renter review
  */
 export const createRenterReview = async (data, renterId, renterName) => {
+  const canReview = await hasEligibleBookingForListing(renterId, data.listingId);
+  if (!canReview) {
+    throw new Error("ReviewNotAllowedForUnbookedListing");
+  }
+
   const totalScore = calculateReviewScore(data.criteria);
 
   const review = await RenterReview.create({
@@ -40,8 +68,10 @@ export const createRenterReview = async (data, renterId, renterName) => {
 
 /**
  * Get all reviews for a specific listing
+ * By default include both approved and pending reviews so renters
+ * can see their feedback immediately.
  */
-export const getReviewsByListing = async (listingId, includeStatus = ["approved"]) => {
+export const getReviewsByListing = async (listingId, includeStatus = ["approved", "pending"]) => {
   const query = { listingId };
   
   if (includeStatus.length > 0) {

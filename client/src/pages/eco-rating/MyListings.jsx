@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import Navbar from "../../components/Home/Navbar";
@@ -21,6 +21,7 @@ const INITIAL_ECO_FORM = { energyRating: 'C', solarPanels: false, ledLighting: f
 export default function MyListings() {
   const [user, setUser] = useState(null);
   const [listings, setListings] = useState([]);
+  const [listView, setListView] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   
@@ -290,6 +291,24 @@ export default function MyListings() {
   };
 
   const getEcoStatus = (property) => {
+    if (property.visibilityStatus === 'hidden') {
+      return {
+        status: 'hidden',
+        label: 'Hidden (Admin)',
+        reason: 'admin',
+        color: 'text-red-700 bg-red-50 border-red-200',
+      };
+    }
+
+    if (property.visibilityStatus === 'visible') {
+      return {
+        status: 'active',
+        label: 'Visible (Admin Override)',
+        score: property.ecoRatingId?.totalScore,
+        color: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+      };
+    }
+
     if (property.ecoRatingId) {
       return { status: 'active', label: 'Eco-Rated', score: property.ecoRatingId.totalScore, color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
     }
@@ -305,6 +324,34 @@ export default function MyListings() {
     
     return { status: 'pending', label: 'Pending Rating', deadline, color: 'text-amber-700 bg-amber-50 border-amber-200' };
   };
+
+  const listingCounts = useMemo(() => {
+    let visible = 0;
+    let hidden = 0;
+
+    for (const property of listings) {
+      const ecoState = getEcoStatus(property);
+      if (ecoState.status === 'hidden') hidden += 1;
+      else visible += 1;
+    }
+
+    return {
+      all: listings.length,
+      visible,
+      hidden,
+    };
+  }, [listings]);
+
+  const filteredListings = useMemo(() => {
+    if (listView === 'all') return listings;
+
+    return listings.filter((property) => {
+      const ecoState = getEcoStatus(property);
+      if (listView === 'hidden') return ecoState.status === 'hidden';
+      if (listView === 'visible') return ecoState.status !== 'hidden';
+      return true;
+    });
+  }, [listings, listView]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
@@ -343,8 +390,39 @@ export default function MyListings() {
         )}
 
         {!isLoading && listings.length > 0 && (
-          <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
-            {listings.map((property) => {
+          <>
+            <div className="mb-5 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setListView('all')}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold border transition ${listView === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+              >
+                All ({listingCounts.all})
+              </button>
+              <button
+                type="button"
+                onClick={() => setListView('visible')}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold border transition ${listView === 'visible' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+              >
+                Visible ({listingCounts.visible})
+              </button>
+              <button
+                type="button"
+                onClick={() => setListView('hidden')}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold border transition ${listView === 'hidden' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+              >
+                Hidden ({listingCounts.hidden})
+              </button>
+            </div>
+
+            {filteredListings.length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <p className="text-lg font-semibold text-slate-900">No listings in this view.</p>
+                <p className="mt-2 text-slate-500 text-sm">Switch filters above to view all, visible, or hidden listings you created.</p>
+              </div>
+            ) : (
+              <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+                {filteredListings.map((property) => {
               const ecoState = getEcoStatus(property);
               
               return (
@@ -391,7 +469,11 @@ export default function MyListings() {
                                {ecoState.status === 'hidden' ? 'Listing Hidden' : 'Action Required'}
                              </p>
                              <p className={`text-xs mt-1 leading-relaxed ${ecoState.status === 'hidden' ? 'text-red-600' : 'text-amber-700'}`}>
-                               {ecoState.status === 'hidden' ? 'Your property is hidden from public view because it lacks an Eco-Rating.' : `Add an Eco-Rating before time runs out or your listing will be hidden. Time left: ${formatDistanceToNow(ecoState.deadline)}.`}
+                               {ecoState.status === 'hidden'
+                                 ? ecoState.reason === 'admin'
+                                   ? 'Your property is hidden by an admin visibility override.'
+                                   : 'Your property is hidden from public view because it lacks an Eco-Rating.'
+                                 : `Add an Eco-Rating before time runs out or your listing will be hidden. Time left: ${formatDistanceToNow(ecoState.deadline)}.`}
                              </p>
                            </div>
                         </div>
@@ -418,7 +500,9 @@ export default function MyListings() {
                 </div>
               );
             })}
-          </div>
+              </div>
+            )}
+          </>
         )}
       </main>
 
