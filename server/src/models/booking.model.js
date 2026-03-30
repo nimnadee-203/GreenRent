@@ -42,6 +42,10 @@ const bookingSchema = new mongoose.Schema(
       type: Number,
       min: 1,
     },
+    months: {
+      type: Number,
+      min: 1,
+    },
     cancellationReason: {
       type: String,
       trim: true,

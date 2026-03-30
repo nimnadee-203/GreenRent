@@ -27,7 +27,8 @@
     "mongoose": "^9.1.6",
     "nodemailer": "^8.0.1",
     "nodemon": "^3.1.11",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "stripe": "^21.0.1"
   },
   "devDependencies": {
     "jest": "^30.2.0",
