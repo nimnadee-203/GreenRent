@@ -14,6 +14,7 @@ const INITIAL_FORM = {
   coverImageIndex: 0,
   bedrooms: "",
   bathrooms: "",
+  maxGuests: "",
   parking: false,
   solarPower: false,
   rainwaterHarvesting: false,
@@ -137,6 +138,10 @@ export default function AddApartment() {
       },
       price: Number(form.price),
       propertyType: form.propertyType,
+      bedrooms: form.bedrooms ? Number(form.bedrooms) : undefined,
+      bathrooms: form.bathrooms ? Number(form.bathrooms) : undefined,
+      maxGuests: form.maxGuests ? Number(form.maxGuests) : undefined,
+      parking: Boolean(form.parking),
       ecoFeatures: {
         solarPower: form.solarPower,
         rainwaterHarvesting: form.rainwaterHarvesting,
@@ -232,9 +237,10 @@ export default function AddApartment() {
               </select>
             </label>
 
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-4">
               <Input label="Bedrooms" value={form.bedrooms} onChange={onFieldChange("bedrooms")} type="number" min="0" placeholder="e.g., 2" />
               <Input label="Bathrooms" value={form.bathrooms} onChange={onFieldChange("bathrooms")} type="number" min="0" step="0.5" placeholder="e.g., 1" />
+              <Input label="Maximum Guests" value={form.maxGuests} onChange={onFieldChange("maxGuests")} type="number" min="1" placeholder="e.g., 4" />
               <Checkbox label="Parking Available" checked={form.parking} onChange={onFieldChange("parking")} />
             </div>
 

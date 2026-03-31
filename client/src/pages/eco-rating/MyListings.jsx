@@ -37,6 +37,7 @@ export default function MyListings() {
     address: '',
     bedrooms: '',
     bathrooms: '',
+    maxGuests: '',
     parking: false,
     area: '',
     imageFiles: [],
@@ -115,6 +116,7 @@ export default function MyListings() {
       address: property.location?.address || '',
       bedrooms: property.bedrooms || '',
       bathrooms: property.bathrooms || '',
+      maxGuests: property.maxGuests || '',
       parking: property.parking || false,
       area: property.area || '',
       imageFiles: [],
@@ -165,6 +167,11 @@ export default function MyListings() {
         return;
       }
 
+      if ((updateForm.stayType === 'short' || updateForm.stayType === 'both') && (!updateForm.maxGuests || Number(updateForm.maxGuests) < 1)) {
+        alert('Please enter a valid maximum number of guests for short stay.');
+        return;
+      }
+
       const existingImages = Array.isArray(activeProperty?.images)
         ? activeProperty.images.filter((img) => typeof img === 'string' && img.trim().length > 0)
         : [];
@@ -189,6 +196,13 @@ export default function MyListings() {
       if (updateForm.bedrooms) payload.bedrooms = Number(updateForm.bedrooms);
       if (updateForm.bathrooms) payload.bathrooms = Number(updateForm.bathrooms);
       if (updateForm.area) payload.area = Number(updateForm.area);
+      if (updateForm.stayType === 'short' || updateForm.stayType === 'both') {
+        if (updateForm.maxGuests) {
+          payload.maxGuests = Number(updateForm.maxGuests);
+        }
+      } else {
+        payload.maxGuests = null;
+      }
       await axios.put(`${API_BASE_URL}/api/properties/${activeProperty._id}`, payload, { withCredentials: true });
       setUpdateModalOpen(false);
       fetchData();
@@ -633,6 +647,19 @@ export default function MyListings() {
                     <label className="block text-sm font-semibold text-slate-700 mb-2">Bathrooms</label>
                     <input type="number" min="0" step="0.5" value={updateForm.bathrooms} onChange={onUpdateFieldChange('bathrooms')} placeholder="e.g., 1" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" />
                   </div>
+                  {(updateForm.stayType === 'short' || updateForm.stayType === 'both') && (
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">Maximum Guests</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={updateForm.maxGuests}
+                        onChange={onUpdateFieldChange('maxGuests')}
+                        placeholder="e.g., 4"
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  )}
                   <label className="flex items-end gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer hover:bg-slate-100 transition-colors">
                     <input type="checkbox" checked={updateForm.parking} onChange={onUpdateFieldChange('parking')} className="w-4 h-4 text-emerald-600 rounded cursor-pointer" />
                     <span className="text-sm font-medium text-slate-700">Parking</span>

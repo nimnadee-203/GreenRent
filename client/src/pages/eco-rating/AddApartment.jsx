@@ -20,6 +20,7 @@ const INITIAL_FORM = {
   coverImageIndex: 0,
   bedrooms: '',
   bathrooms: '',
+  maxGuests: '',
   parking: false,
 };
 const INITIAL_ECO_FORM = { latitude: '', longitude: '', energyRating: 'C', solarPanels: false, ledLighting: false, efficientAc: false, waterSavingTaps: false, rainwaterHarvesting: false, waterMeter: false, recyclingAvailable: false, compostAvailable: false, transportDistance: '1-3 km', evCharging: false, goodVentilationSunlight: false };
@@ -177,6 +178,11 @@ export default function AddApartment() {
         return;
       }
 
+      if ((form.stayType === 'short' || form.stayType === 'both') && (!form.maxGuests || Number(form.maxGuests) < 1)) {
+        setError('Please enter a valid maximum number of guests for short stay.');
+        return;
+      }
+
       // Compress and convert images to base64
       let compressedImages = [];
       if (form.imageFiles.length > 0) {
@@ -215,6 +221,13 @@ export default function AddApartment() {
       if (form.bathrooms) payload.bathrooms = Number(form.bathrooms);
       if (form.area) payload.area = Number(form.area);
       if (form.parking) payload.parking = form.parking;
+      if (form.stayType === 'short' || form.stayType === 'both') {
+        if (form.maxGuests) {
+          payload.maxGuests = Number(form.maxGuests);
+        }
+      } else {
+        payload.maxGuests = null;
+      }
       
       const response = await axios.post(`${API_BASE_URL}/api/properties`, payload, { withCredentials: true });
       setCreatedPropertyId(response.data._id);
@@ -364,7 +377,7 @@ export default function AddApartment() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="flex flex-col">
                           <label className="mb-1.5 flex items-center text-sm font-semibold text-slate-700">
                             <Home className="w-4 h-4 mr-2 text-slate-400" />
@@ -395,6 +408,23 @@ export default function AddApartment() {
                             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
                           />
                         </div>
+
+                        {(form.stayType === 'short' || form.stayType === 'both') && (
+                          <div className="flex flex-col">
+                            <label className="mb-1.5 flex items-center text-sm font-semibold text-slate-700">
+                              <Home className="w-4 h-4 mr-2 text-slate-400" />
+                              Maximum Guests
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={form.maxGuests}
+                              onChange={onFieldChange('maxGuests')}
+                              placeholder="e.g., 4"
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
+                            />
+                          </div>
+                        )}
 
                         <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 cursor-pointer hover:bg-slate-100 transition-colors min-h-[50px]">
                           <input

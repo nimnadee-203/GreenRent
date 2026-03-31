@@ -203,6 +203,40 @@ export default function PropertyListing() {
     return "bg-slate-100 text-slate-700 border-slate-200";
   };
 
+  const getPrimaryPriceInfo = (property) => {
+    const stayType = property.stayType || "long";
+    const monthlyPrice =
+      typeof property.monthlyPrice === "number"
+        ? property.monthlyPrice
+        : stayType !== "short" && typeof property.price === "number"
+        ? property.price
+        : null;
+    const dailyPrice =
+      typeof property.dailyPrice === "number"
+        ? property.dailyPrice
+        : stayType === "short" && typeof property.price === "number"
+        ? property.price
+        : null;
+
+    if (stayType === "short") {
+      const value = dailyPrice ?? monthlyPrice ?? property.price ?? 0;
+      return { value, unit: "/night" };
+    }
+
+    if (stayType === "both") {
+      // Prefer showing the short-stay (daily) rate if available
+      if (dailyPrice != null) {
+        return { value: dailyPrice, unit: "/night" };
+      }
+      const value = monthlyPrice ?? property.price ?? 0;
+      return { value, unit: "/month" };
+    }
+
+    // Default: long stay
+    const value = monthlyPrice ?? property.price ?? 0;
+    return { value, unit: "/month" };
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
@@ -282,6 +316,7 @@ export default function PropertyListing() {
                 const location = toLocationLabel(property);
                 const ecoScore = toEcoScore(property);                  const airQuality = toAirQuality(property);                const bedrooms = property.bedrooms ?? property.beds ?? 1;
                 const bathrooms = property.bathrooms ?? property.baths ?? 1;
+                const { value: displayPrice, unit: priceUnit } = getPrimaryPriceInfo(property);
 
                 return (
                   <Link
@@ -347,8 +382,8 @@ export default function PropertyListing() {
                       </div>
 
                       <div className="mt-4 pt-3 border-t border-slate-100 flex items-baseline">
-                        <span className="text-xl font-bold text-slate-900">Rs {Number(property.price || 0).toLocaleString('en-LK')}</span>
-                        <span className="text-slate-500 text-xs ml-1">/month</span>
+                        <span className="text-xl font-bold text-slate-900">Rs {Number(displayPrice || 0).toLocaleString('en-LK')}</span>
+                        <span className="text-slate-500 text-xs ml-1">{priceUnit}</span>
                       </div>
                     </div>
                   </article>
