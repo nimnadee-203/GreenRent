@@ -68,6 +68,11 @@ const propertySchema = new mongoose.Schema(
       default: null,
       min: 0,
     },
+    maxGuests: {
+      type: Number,
+      default: null,
+      min: 1,
+    },
     parking: {
       type: Boolean,
       default: false,

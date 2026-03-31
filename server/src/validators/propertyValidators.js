@@ -66,6 +66,10 @@ export const validatePropertyCreate = (data) => {
         errors.push("Bathrooms must be a positive number");
     }
 
+    if (data.maxGuests !== undefined && data.maxGuests !== null && (!isNumber(data.maxGuests) || data.maxGuests < 1)) {
+        errors.push("Maximum guests must be at least 1");
+    }
+
     if (data.parking !== undefined && typeof data.parking !== "boolean") {
         errors.push("Parking must be a boolean");
     }
@@ -149,6 +153,10 @@ export const validatePropertyUpdate = (data) => {
 
     if (data.bathrooms !== undefined && data.bathrooms !== null && (!isNumber(data.bathrooms) || data.bathrooms < 0)) {
         errors.push("Bathrooms must be a positive number");
+    }
+
+    if (data.maxGuests !== undefined && data.maxGuests !== null && (!isNumber(data.maxGuests) || data.maxGuests < 1)) {
+        errors.push("Maximum guests must be at least 1");
     }
 
     if (data.parking !== undefined && typeof data.parking !== "boolean") {
