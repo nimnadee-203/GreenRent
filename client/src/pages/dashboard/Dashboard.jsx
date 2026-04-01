@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Navbar from '../../components/Home/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { Link, Navigate } from 'react-router-dom';
-import { CalendarDays, Clock3, CreditCard, Home, MapPin, MessageSquarePlus, Search, Star, XCircle } from 'lucide-react';
+import { CalendarDays, Clock3, CreditCard, Home, MapPin, MessageSquarePlus, Pencil, Search, Star, Trash2, XCircle } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -31,9 +31,11 @@ export default function Dashboard() {
   const [bookingsError, setBookingsError] = useState('');
   const [bookingFilter, setBookingFilter] = useState('all');
   const [reviewedListingIds, setReviewedListingIds] = useState(new Set());
+  const [myReviewsByListing, setMyReviewsByListing] = useState({});
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [selectedEcoRatingId, setSelectedEcoRatingId] = useState('');
+  const [editingReviewId, setEditingReviewId] = useState('');
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewError, setReviewError] = useState('');
   const [actionLoadingById, setActionLoadingById] = useState({});
@@ -84,10 +86,19 @@ export default function Dashboard() {
       const response = await axios.get(`${API_BASE_URL}/api/renter-reviews/my/reviews`, {
         withCredentials: true,
       });
-      const ids = new Set((response.data?.reviews || []).map((review) => review?.listingId).filter(Boolean));
+      const reviews = response.data?.reviews || [];
+      const ids = new Set(reviews.map((review) => review?.listingId).filter(Boolean));
+      const mappedReviews = reviews.reduce((acc, review) => {
+        if (review?.listingId) {
+          acc[review.listingId] = review;
+        }
+        return acc;
+      }, {});
       setReviewedListingIds(ids);
+      setMyReviewsByListing(mappedReviews);
     } catch (error) {
       setReviewedListingIds(new Set());
+      setMyReviewsByListing({});
     }
   };
 
@@ -178,7 +189,7 @@ export default function Dashboard() {
     }
   };
 
-  const openReviewModal = async (booking) => {
+  const openReviewModal = async (booking, existingReview = null) => {
     try {
       setReviewError('');
       setReviewLoading(true);
@@ -188,19 +199,24 @@ export default function Dashboard() {
         return;
       }
 
-      const ecoRes = await axios.get(`${API_BASE_URL}/api/eco-ratings?listingId=${listingId}`);
-      const ecoRating = Array.isArray(ecoRes.data) ? ecoRes.data[0] : null;
-      if (!ecoRating?._id) {
+      let ecoRatingId = existingReview?.ecoRatingId;
+      if (!ecoRatingId) {
+        const ecoRes = await axios.get(`${API_BASE_URL}/api/eco-ratings?listingId=${listingId}`);
+        const ecoRating = Array.isArray(ecoRes.data) ? ecoRes.data[0] : null;
+        ecoRatingId = ecoRating?._id;
+      }
+      if (!ecoRatingId) {
         setReviewError('This property does not have an eco-rating yet, so review is not available.');
         return;
       }
 
       setSelectedBooking(booking);
-      setSelectedEcoRatingId(ecoRating._id);
-      setCriteria({ ...REVIEW_DEFAULTS });
-      setReviewText('');
-      setLivingDuration('< 3 months');
-      setWouldRecommend(true);
+      setSelectedEcoRatingId(ecoRatingId);
+      setEditingReviewId(existingReview?._id || '');
+      setCriteria(existingReview?.criteria ? { ...REVIEW_DEFAULTS, ...existingReview.criteria } : { ...REVIEW_DEFAULTS });
+      setReviewText(existingReview?.review || '');
+      setLivingDuration(existingReview?.livingDuration || '< 3 months');
+      setWouldRecommend(typeof existingReview?.wouldRecommend === 'boolean' ? existingReview.wouldRecommend : true);
       setReviewModalOpen(true);
     } catch (error) {
       setReviewError(error?.response?.data?.message || 'Failed to open review form.');
@@ -213,7 +229,30 @@ export default function Dashboard() {
     setReviewModalOpen(false);
     setSelectedBooking(null);
     setSelectedEcoRatingId('');
+    setEditingReviewId('');
     setReviewError('');
+  };
+
+  const deleteReview = async (booking) => {
+    const listingId = booking?.apartmentId?._id;
+    const review = listingId ? myReviewsByListing[listingId] : null;
+    if (!review?._id) return;
+
+    const confirmed = window.confirm('Delete your review for this apartment?');
+    if (!confirmed) return;
+
+    try {
+      setBookingActionLoading(booking._id, true);
+      setReviewError('');
+      await axios.delete(`${API_BASE_URL}/api/renter-reviews/${review._id}`, {
+        withCredentials: true,
+      });
+      await fetchMyReviews();
+    } catch (error) {
+      setReviewError(error?.response?.data?.message || 'Failed to delete review.');
+    } finally {
+      setBookingActionLoading(booking._id, false);
+    }
   };
 
   const submitReview = async (event) => {
@@ -226,24 +265,26 @@ export default function Dashboard() {
     try {
       setReviewLoading(true);
       setReviewError('');
-      await axios.post(
-        `${API_BASE_URL}/api/renter-reviews`,
-        {
-          listingId: selectedBooking.apartmentId._id,
-          ecoRatingId: selectedEcoRatingId,
-          criteria,
-          review: reviewText,
-          livingDuration,
-          wouldRecommend,
-        },
-        { withCredentials: true }
-      );
+      const payload = {
+        listingId: selectedBooking.apartmentId._id,
+        ecoRatingId: selectedEcoRatingId,
+        criteria,
+        review: reviewText,
+        livingDuration,
+        wouldRecommend,
+      };
 
-      setReviewedListingIds((prev) => {
-        const next = new Set(prev);
-        next.add(selectedBooking.apartmentId._id);
-        return next;
-      });
+      if (editingReviewId) {
+        await axios.put(`${API_BASE_URL}/api/renter-reviews/${editingReviewId}`, payload, {
+          withCredentials: true,
+        });
+      } else {
+        await axios.post(`${API_BASE_URL}/api/renter-reviews`, payload, {
+          withCredentials: true,
+        });
+      }
+
+      await fetchMyReviews();
       closeReviewModal();
     } catch (error) {
       setReviewError(error?.response?.data?.message || error?.response?.data?.errors?.[0] || 'Failed to submit review.');
@@ -257,6 +298,13 @@ export default function Dashboard() {
     const status = booking?.status;
     const eligibleStatus = status === 'confirmed' || status === 'completed';
     return Boolean(eligibleStatus && listingId && !reviewedListingIds.has(listingId));
+  };
+
+  const canManageReview = (booking) => {
+    const listingId = booking?.apartmentId?._id;
+    const status = booking?.status;
+    const eligibleStatus = status === 'confirmed' || status === 'completed';
+    return Boolean(eligibleStatus && listingId && myReviewsByListing[listingId]?._id);
   };
 
   // Redirect admins and sellers to their dedicated workspaces
@@ -367,9 +415,11 @@ export default function Dashboard() {
               {filteredBookings.map((booking) => {
                 const listingId = booking?.apartmentId?._id;
                 const reviewed = listingId && reviewedListingIds.has(listingId);
+                const existingReview = listingId ? myReviewsByListing[listingId] : null;
                 const bookingActionLoading = Boolean(actionLoadingById[booking._id]);
                 const canCancel = booking?.status === 'pending' || booking?.status === 'confirmed';
                 const canRequestRefund = booking?.status === 'cancelled' && booking?.paymentStatus === 'paid' && !['requested', 'approved', 'refunded'].includes(booking?.refundStatus || 'none');
+                const canManageExistingReview = canManageReview(booking);
                 return (
                   <article key={booking._id} className="rounded-2xl border border-slate-200 p-4 md:p-5 bg-slate-50/60">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
@@ -412,6 +462,30 @@ export default function Dashboard() {
                           {reviewed ? 'Reviewed' : 'Rate & Review'}
                         </button>
 
+                        {existingReview && (
+                          <button
+                            type="button"
+                            onClick={() => openReviewModal(booking, existingReview)}
+                            disabled={!canManageExistingReview || reviewLoading || bookingActionLoading}
+                            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-emerald-200 text-emerald-700 text-sm font-semibold hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Pencil size={15} />
+                            Update Review
+                          </button>
+                        )}
+
+                        {existingReview && (
+                          <button
+                            type="button"
+                            onClick={() => deleteReview(booking)}
+                            disabled={!canManageExistingReview || bookingActionLoading}
+                            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-red-200 text-red-700 text-sm font-semibold hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Trash2 size={15} />
+                            Delete Review
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => openCancelModal(booking)}
@@ -434,6 +508,9 @@ export default function Dashboard() {
 
                     {!canReviewBooking(booking) && !reviewed && (
                       <p className="text-xs text-slate-500 mt-3">Reviews are available only for confirmed or completed bookings.</p>
+                    )}
+                    {existingReview && !canManageExistingReview && (
+                      <p className="text-xs text-slate-500 mt-3">You can update/delete this review only while this apartment is in your current or previously completed stays.</p>
                     )}
                     {booking.status === 'pending' && booking.paymentStatus !== 'paid' && (
                       <p className="text-xs text-amber-700 mt-2">Status remains pending because payment is not marked as paid yet.</p>
@@ -539,7 +616,7 @@ export default function Dashboard() {
         <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-xl bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-              <h3 className="text-xl font-bold text-slate-900">Rate Your Stay</h3>
+              <h3 className="text-xl font-bold text-slate-900">{editingReviewId ? 'Update Your Review' : 'Rate Your Stay'}</h3>
               <button type="button" onClick={closeReviewModal} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600">
                 <XCircle size={18} />
               </button>
@@ -595,7 +672,7 @@ export default function Dashboard() {
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={closeReviewModal} className="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50">Cancel</button>
                 <button type="submit" disabled={reviewLoading} className="w-1/2 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-60">
-                  {reviewLoading ? 'Submitting...' : 'Submit Review'}
+                  {reviewLoading ? 'Saving...' : editingReviewId ? 'Save Changes' : 'Submit Review'}
                 </button>
               </div>
             </form>

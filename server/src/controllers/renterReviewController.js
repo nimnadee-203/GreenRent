@@ -154,6 +154,11 @@ export const updateRenterReviewHandler = async (req, res) => {
     if (error.message === "Unauthorized to update this review") {
       return res.status(403).json({ message: error.message });
     }
+    if (error.message === "ReviewNotAllowedForUnbookedListing") {
+      return res.status(403).json({
+        message: "You can update reviews only for properties you currently use or used previously.",
+      });
+    }
     console.error("Update review error:", error);
     return res.status(500).json({ message: "Failed to update review" });
   }
@@ -178,6 +183,11 @@ export const deleteRenterReviewHandler = async (req, res) => {
   } catch (error) {
     if (error.message === "Unauthorized to delete this review") {
       return res.status(403).json({ message: error.message });
+    }
+    if (error.message === "ReviewNotAllowedForUnbookedListing") {
+      return res.status(403).json({
+        message: "You can delete reviews only for properties you currently use or used previously.",
+      });
     }
     console.error("Delete review error:", error);
     return res.status(500).json({ message: "Failed to delete review" });

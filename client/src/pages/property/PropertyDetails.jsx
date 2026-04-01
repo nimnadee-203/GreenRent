@@ -297,6 +297,15 @@ const PropertyDetails = () => {
   const today = new Date().toISOString().split("T")[0];
   const propertyStayType = property?.stayType || "long";
   const availableStayTypes = propertyStayType === "both" ? ["short", "long"] : [propertyStayType];
+  const displayReviews = Array.isArray(reviewsData.reviews) ? reviewsData.reviews : [];
+  const averageScoreOutOfTen = reviewsData.summary ? Number(reviewsData.summary.averageTotalScore || 0) : 0;
+  const averageScoreOutOfFive = averageScoreOutOfTen > 0 ? averageScoreOutOfTen / 2 : 0;
+  const totalReviewCount = displayReviews.length;
+  const ratingBuckets = [5, 4, 3, 2, 1].map((star) => {
+    const count = displayReviews.filter((review) => Math.max(1, Math.min(5, Math.round(Number(review?.totalScore || 0) / 2))) === star).length;
+    const percent = totalReviewCount ? Math.round((count / totalReviewCount) * 100) : 0;
+    return { star, count, percent };
+  });
 
   const handleCheckAvailabilityClick = (event) => {
     event.stopPropagation();
@@ -623,15 +632,39 @@ const PropertyDetails = () => {
                     <div className="mt-4 flex items-end gap-2">
                       <span className="text-5xl font-black">{ecoRating.totalScore}</span>
                       <span className="text-emerald-100 font-medium mb-1.5">/ 100</span>
-                    </div>                      {typeof ecoRating.airQualityScore === 'number' && (
-                        <div className="mt-4 flex items-center gap-2 text-sm text-emerald-50 bg-emerald-800/40 p-2 rounded-lg backdrop-blur-sm w-fit border border-emerald-500/30">
-                           <span className="font-semibold">Air Quality (AQI):</span>
-                           <span className="bg-emerald-500 px-2 py-0.5 rounded text-white font-bold">{ecoRating.airQualityScore} / 10</span>
-                           {ecoRating.externalSignals?.airQuality?.source && (
-                              <span className="text-[10px] opacity-70 ml-1">via {ecoRating.externalSignals.airQuality.source}</span>
-                           )}
+                    </div>
+
+                    {typeof ecoRating.airQualityScore === 'number' && (
+                      <div className="mt-4 space-y-2 text-sm text-emerald-50 bg-emerald-800/40 p-3 rounded-lg backdrop-blur-sm border border-emerald-500/30">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold">Air Quality Score:</span>
+                          <span className="bg-emerald-500 px-2 py-0.5 rounded text-white font-bold">{ecoRating.airQualityScore} / 10</span>
+
+                          {typeof ecoRating.externalSignals?.airQuality?.europeanAqi === 'number' && (
+                            <span className="bg-emerald-700/60 px-2 py-0.5 rounded text-white text-xs font-semibold">
+                              EU AQI: {ecoRating.externalSignals.airQuality.europeanAqi}
+                            </span>
+                          )}
+
+                          {ecoRating.externalSignals?.airQuality?.source && (
+                            <span className="text-[10px] opacity-80 ml-1">via {ecoRating.externalSignals.airQuality.source}</span>
+                          )}
                         </div>
-                      )}                    <div className="my-6 grid grid-cols-2 gap-4">
+
+                        {(typeof ecoRating.externalSignals?.airQuality?.pm2_5 === 'number' || typeof ecoRating.externalSignals?.airQuality?.pm10 === 'number') && (
+                          <div className="flex items-center gap-3 flex-wrap text-xs text-emerald-100">
+                            {typeof ecoRating.externalSignals?.airQuality?.pm2_5 === 'number' && (
+                              <span>PM2.5: <strong>{ecoRating.externalSignals.airQuality.pm2_5}</strong></span>
+                            )}
+                            {typeof ecoRating.externalSignals?.airQuality?.pm10 === 'number' && (
+                              <span>PM10: <strong>{ecoRating.externalSignals.airQuality.pm10}</strong></span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="my-6 grid grid-cols-2 gap-4">
                       {ecoRating.criteria && Object.entries(ecoRating.criteria).slice(0, 4).map(([k, v]) => (
                         <div key={k} className="bg-white/10 rounded-lg p-2.5 backdrop-blur-sm">
                           <p className="text-[10px] text-emerald-100 uppercase tracking-wider mb-1">{k.replace(/([A-Z])/g, ' $1').trim()}</p>
@@ -657,26 +690,38 @@ const PropertyDetails = () => {
                   Renter Feedback
                 </h3>
                 
-                {reviewsData.reviews.length > 0 ? (
+                {displayReviews.length > 0 ? (
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                      <div className="text-center">
-                        <p className="text-3xl font-bold text-slate-800">
-                          {reviewsData.summary ? Number(reviewsData.summary.averageTotalScore).toFixed(1) : "-"}
-                        </p>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Avg Score</p>
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                          <p className="text-3xl font-black text-slate-800 leading-none">{averageScoreOutOfFive ? averageScoreOutOfFive.toFixed(1) : '-'}</p>
+                          <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Average Rating (out of 5)</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-center">
+                            <p className="text-xl font-bold text-slate-800">{displayReviews.length}</p>
+                            <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Reviews</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xl font-bold text-emerald-600">
+                              {reviewsData.summary ? Math.round(reviewsData.summary.recommendationRate) : 0}%
+                            </p>
+                            <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Recommend</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="h-10 w-px bg-slate-200"></div>
-                      <div className="text-center">
-                        <p className="text-xl font-bold text-slate-800">{reviewsData.reviews.length}</p>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Reviews</p>
-                      </div>
-                      <div className="h-10 w-px bg-slate-200"></div>
-                      <div className="text-center">
-                        <p className="text-xl font-bold text-emerald-600">
-                          {reviewsData.summary ? Math.round(reviewsData.summary.recommendationRate) : 0}%
-                        </p>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Recommend</p>
+
+                      <div className="space-y-2">
+                        {ratingBuckets.map((bucket) => (
+                          <div key={bucket.star} className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-slate-600 w-12">{bucket.star} star</span>
+                            <div className="flex-1 h-2.5 rounded-full bg-slate-200 overflow-hidden">
+                              <div className="h-full bg-amber-400 rounded-full" style={{ width: `${bucket.percent}%` }} />
+                            </div>
+                            <span className="text-xs text-slate-500 w-8 text-right">{bucket.count}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -705,7 +750,7 @@ const PropertyDetails = () => {
             </div>
           </div>
 
-          {reviewsData.reviews.length === 0 ? (
+          {displayReviews.length === 0 ? (
             <div className="text-center py-12 px-4 border-2 border-dashed border-slate-100 rounded-xl">
               <div className="mx-auto w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
                 <Star className="w-8 h-8 text-slate-300" />
@@ -715,7 +760,7 @@ const PropertyDetails = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">      
-              {reviewsData.reviews.map((review) => (
+              {displayReviews.map((review) => (
                 <div key={review._id} className="p-5 border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-white transition-colors duration-200 shadow-sm hover:shadow-md h-full flex flex-col">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
@@ -735,13 +780,29 @@ const PropertyDetails = () => {
                     </div>
                   </div>
 
-                  <p className="text-sm text-slate-600 italic mb-4 flex-grow">"{review.review}"</p>
+                  <p className="text-sm text-slate-600 italic mb-4 flex-grow">"{review.review || 'No written comment provided.'}"</p>
+
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    {Object.entries(review.criteria || {}).map(([key, value]) => (
+                      <div key={key} className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5">
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
+                        <p className="text-xs font-semibold text-slate-800">{value}/10</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-600 mb-3">
+                    <span className={`font-semibold ${review.wouldRecommend ? 'text-emerald-700' : 'text-red-700'}`}>
+                      {review.wouldRecommend ? 'Recommended by renter' : 'Not recommended by renter'}
+                    </span>
+                    <span className="capitalize">{review.status || 'pending'}</span>
+                  </div>
 
                   {review.verification && Object.keys(review.verification).length > 0 && (
                     <div className="mt-auto pt-4 border-t border-slate-100">
                       <p className="text-xs font-semibold text-slate-900 mb-2.5 uppercase tracking-wider">Tenant Verified Features:</p>
                       <div className="flex flex-wrap gap-2">
-                        {Object.entries(review.verification).slice(0, 4).map(([key, val]) => {
+                        {Object.entries(review.verification).map(([key, val]) => {
                           if (val === null) return null;
                           return (
                             <span key={key} className={`inline-flex items-center px-2 py-1 rounded text-[10px] sm:text-xs font-medium border ${val ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
@@ -750,11 +811,6 @@ const PropertyDetails = () => {
                             </span>
                           );
                         })}
-                        {Object.keys(review.verification).length > 4 && (
-                          <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-medium bg-slate-100 text-slate-600">
-                            +{Object.keys(review.verification).length - 4} more
-                          </span>
-                        )}
                       </div>
                     </div>
                   )}

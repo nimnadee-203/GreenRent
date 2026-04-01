@@ -129,6 +129,13 @@ export const updateRenterReview = async (reviewId, data, userId, userRole) => {
     throw new Error("Unauthorized to update this review");
   }
 
+  if (userRole !== "admin") {
+    const canReview = await hasEligibleBookingForListing(userId, review.listingId);
+    if (!canReview) {
+      throw new Error("ReviewNotAllowedForUnbookedListing");
+    }
+  }
+
   // Recalculate score if criteria changed
   let totalScore = review.totalScore;
   let updatedCriteria = review.criteria;
@@ -164,6 +171,13 @@ export const deleteRenterReview = async (reviewId, userId, userRole) => {
   // Check permissions
   if (review.renterId !== userId && userRole !== "admin") {
     throw new Error("Unauthorized to delete this review");
+  }
+
+  if (userRole !== "admin") {
+    const canReview = await hasEligibleBookingForListing(userId, review.listingId);
+    if (!canReview) {
+      throw new Error("ReviewNotAllowedForUnbookedListing");
+    }
   }
 
   await RenterReview.findByIdAndDelete(reviewId);
