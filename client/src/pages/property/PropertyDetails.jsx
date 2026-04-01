@@ -530,6 +530,15 @@ const PropertyDetails = () => {
             {/* Description */}
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
               <h2 className="text-xl font-bold text-slate-900 mb-4">About this Property</h2>
+              <div className="mb-3 text-sm text-slate-700 bg-emerald-50 p-3 rounded-lg border border-emerald-100">
+                <p>
+                  <span className="font-semibold text-slate-800">Short-stay max guests:</span>
+                  {' '}{property.maxGuests ?? property.guests ?? "Not specified"}
+                </p>
+                <p className="text-xs text-slate-600 mt-1">
+                  This applies only for short stay. Any guest count above this limit may incur an additional fee.
+                </p>
+              </div>
               <p className="text-slate-600 leading-relaxed whitespace-pre-line">
                 {property.description}
               </p>
