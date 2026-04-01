@@ -22,19 +22,89 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  Heart
+  Heart,
+  MessageCircle,
+  SendHorizontal
 } from "lucide-react";
 import Navbar from "../../components/Home/Navbar";
 import Footer from "../../components/Home/Footer";
+import { useAuth } from "../../context/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const PropertyDetails = () => {
+  const { backendUser } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const [property, setProperty] = useState(null);
   const [ecoRating, setEcoRating] = useState(null);
   const [reviewsData, setReviewsData] = useState({ reviews: [], summary: null });
+  const [replyDrafts, setReplyDrafts] = useState({});
+  const [replySubmittingByReview, setReplySubmittingByReview] = useState({});
+  const [replyError, setReplyError] = useState("");
+  const [reviewActionLoadingById, setReviewActionLoadingById] = useState({});
+
+  const fetchReviews = async (listingId) => {
+    try {
+      const revRes = await axios.get(`${API_BASE_URL}/api/renter-reviews/listing/${listingId}`);
+      setReviewsData({
+        reviews: revRes.data.reviews || [],
+        summary: revRes.data.summary || null,
+      });
+    } catch (revErr) {
+      console.error("Reviews not found or error:", revErr);
+      setReviewsData({ reviews: [], summary: null });
+    }
+  };
+
+  const submitReply = async (reviewId) => {
+    const text = (replyDrafts[reviewId] || "").trim();
+    if (!text) return;
+
+    try {
+      setReplyError("");
+      setReplySubmittingByReview((prev) => ({ ...prev, [reviewId]: true }));
+      await axios.post(
+        `${API_BASE_URL}/api/renter-reviews/${reviewId}/replies`,
+        { text },
+        { withCredentials: true }
+      );
+      setReplyDrafts((prev) => ({ ...prev, [reviewId]: "" }));
+      await fetchReviews(id);
+    } catch (error) {
+      setReplyError(error?.response?.data?.message || error?.response?.data?.errors?.[0] || "Failed to add reply.");
+    } finally {
+      setReplySubmittingByReview((prev) => ({ ...prev, [reviewId]: false }));
+    }
+  };
+
+  const moderateReview = async (reviewId, action) => {
+    try {
+      setReviewActionLoadingById((prev) => ({ ...prev, [reviewId]: true }));
+      if (action === "delete") {
+        const confirmed = window.confirm("Delete this review permanently?");
+        if (!confirmed) return;
+        await axios.delete(`${API_BASE_URL}/api/renter-reviews/${reviewId}`, { withCredentials: true });
+      } else if (action === "hide") {
+        await axios.patch(
+          `${API_BASE_URL}/api/renter-reviews/${reviewId}/status`,
+          { status: "hidden" },
+          { withCredentials: true }
+        );
+      } else if (action === "unhide") {
+        await axios.patch(
+          `${API_BASE_URL}/api/renter-reviews/${reviewId}/status`,
+          { status: "approved" },
+          { withCredentials: true }
+        );
+      }
+      await fetchReviews(id);
+    } catch (error) {
+      setReplyError(error?.response?.data?.message || "Failed to moderate review.");
+    } finally {
+      setReviewActionLoadingById((prev) => ({ ...prev, [reviewId]: false }));
+    }
+  };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -189,16 +259,7 @@ const PropertyDetails = () => {
           setEcoRating(ecoRes.data[0]);
         }
 
-        // Fetch user reviews
-        try {
-          const revRes = await axios.get(`${API_BASE_URL}/api/renter-reviews/listing/${id}`);
-          setReviewsData({
-            reviews: revRes.data.reviews || [],
-            summary: revRes.data.summary || null
-          });
-        } catch (revErr) {
-          console.error("Reviews not found or error:", revErr);
-        }
+        await fetchReviews(id);
       } catch (err) {
         console.error(err);
         setError("Failed to load property details.");
@@ -762,6 +823,27 @@ const PropertyDetails = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">      
               {displayReviews.map((review) => (
                 <div key={review._id} className="p-5 border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-white transition-colors duration-200 shadow-sm hover:shadow-md h-full flex flex-col">
+                  {backendUser?.role === "admin" && (
+                    <div className="mb-3 flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => moderateReview(review._id, review.status === "approved" ? "hide" : "unhide")}
+                        disabled={Boolean(reviewActionLoadingById[review._id])}
+                        className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+                      >
+                        {review.status === "approved" ? "Hide" : "Unhide"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moderateReview(review._id, "delete")}
+                        disabled={Boolean(reviewActionLoadingById[review._id])}
+                        className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
@@ -795,7 +877,7 @@ const PropertyDetails = () => {
                     <span className={`font-semibold ${review.wouldRecommend ? 'text-emerald-700' : 'text-red-700'}`}>
                       {review.wouldRecommend ? 'Recommended by renter' : 'Not recommended by renter'}
                     </span>
-                    <span className="capitalize">{review.status || 'pending'}</span>
+                    <span className="capitalize">{review.status === 'rejected' ? 'hidden' : (review.status || 'approved')}</span>
                   </div>
 
                   {review.verification && Object.keys(review.verification).length > 0 && (
@@ -814,8 +896,52 @@ const PropertyDetails = () => {
                       </div>
                     </div>
                   )}
+
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <p className="text-xs font-semibold text-slate-900 mb-2 uppercase tracking-wider flex items-center gap-1">
+                      <MessageCircle className="w-3.5 h-3.5" /> Replies
+                    </p>
+
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                      {(review.replies || []).length === 0 ? (
+                        <p className="text-xs text-slate-500">No replies yet.</p>
+                      ) : (
+                        (review.replies || []).map((reply) => (
+                          <div key={reply._id} className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
+                            <p className="text-[11px] font-semibold text-slate-800">{reply.userName || "Anonymous"}</p>
+                            <p className="text-[11px] text-slate-600 mt-0.5">{reply.text}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="mt-2.5 flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={replyDrafts[review._id] || ""}
+                        onChange={(event) => setReplyDrafts((prev) => ({ ...prev, [review._id]: event.target.value }))}
+                        placeholder="Write a reply..."
+                        className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs"
+                        maxLength={500}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => submitReply(review._id)}
+                        disabled={Boolean(replySubmittingByReview[review._id]) || !(replyDrafts[review._id] || '').trim()}
+                        className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                      >
+                        <SendHorizontal className="w-3.5 h-3.5" /> Send
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {replyError && (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {replyError}
             </div>
           )}
         </div>

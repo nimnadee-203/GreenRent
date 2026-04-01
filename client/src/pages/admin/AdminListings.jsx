@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { ArrowLeft, ShieldCheck, MapPin, CalendarDays, EyeOff, Eye } from "lucide-react";
+import { ArrowLeft, Bell, ShieldCheck, MapPin, CalendarDays, EyeOff, Eye } from "lucide-react";
 import Navbar from "../../components/Home/Navbar";
 import { useAuth } from "../../context/AuthContext";
 
@@ -35,6 +35,8 @@ export default function AdminListings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingVisibilityIds, setSavingVisibilityIds] = useState([]);
+  const [adminReviews, setAdminReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   const fetchAllListings = async () => {
     setLoading(true);
@@ -57,13 +59,29 @@ export default function AdminListings() {
     }
   };
 
+  const fetchAdminReviews = async () => {
+    setReviewsLoading(true);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/renter-reviews/admin/list`, {
+        withCredentials: true,
+      });
+      setAdminReviews(Array.isArray(response.data?.reviews) ? response.data.reviews : []);
+    } catch (err) {
+      setAdminReviews([]);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (backendUser?.role === "admin") {
       fetchAllListings();
+      fetchAdminReviews();
     } else {
       setLoading(false);
     }
   }, [backendUser?.role]);
+
 
   const updateVisibilityStatus = async (propertyId, visibilityStatus) => {
     if (savingVisibilityIds.includes(propertyId)) return;
@@ -112,23 +130,64 @@ export default function AdminListings() {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
 
-      <main className="w-full max-w-7xl mx-auto px-4 md:px-8 py-10">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-2">
-              <ShieldCheck className="w-7 h-7 text-emerald-600" /> Admin Listings View
-            </h1>
-            <p className="text-slate-600 mt-2">Complete property database, including records hidden from public listing pages.</p>
+      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        <section className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-white/80 backdrop-blur-sm shadow-sm mb-8">
+          <div className="absolute -top-20 -right-12 w-64 h-64 rounded-full bg-emerald-200/50 blur-3xl" />
+          <div className="absolute -bottom-24 -left-8 w-52 h-52 rounded-full bg-teal-200/40 blur-3xl" />
+          <div className="relative p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div>
+              <p className="text-sm uppercase tracking-wider text-emerald-700 font-semibold mb-1">Admin Space</p>
+              <h1 className="text-3xl md:text-4xl font-black text-slate-900 flex items-center gap-3">
+                <ShieldCheck className="w-8 h-8 text-emerald-600" /> Admin Listings View
+              </h1>
+              <p className="text-slate-600 mt-2">Complete property database, including records hidden from public listing pages.</p>
+            </div>
+            <div className="flex gap-3 flex-wrap">
+              <Link to="/admin/reviews" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
+                Review Management
+              </Link>
+              <Link to="/chat" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
+                Chat
+              </Link>
+              <Link to="/dashboard" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
+                <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+              </Link>
+            </div>
           </div>
-          <Link to="/dashboard" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
-            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-          </Link>
-        </div>
+        </section>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <StatCard label="Total" value={counts.total} />
           <StatCard label="Publicly Visible" value={counts.visible} />
           <StatCard label="Hidden by Eco Rules" value={counts.hidden} />
+        </div>
+
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 mb-6">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <h2 className="text-lg font-bold text-amber-900 flex items-center gap-2">
+              <Bell className="w-5 h-5" /> Review Notifications
+            </h2>
+            <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold bg-amber-200 text-amber-900">
+              {adminReviews.length} total
+            </span>
+          </div>
+
+          {reviewsLoading ? (
+            <p className="text-sm text-amber-900/80">Loading review notifications...</p>
+          ) : adminReviews.length === 0 ? (
+            <p className="text-sm text-amber-900/80">No new review notifications right now.</p>
+          ) : (
+            <p className="text-sm text-amber-900/80">You have {adminReviews.length} total reviews. Use Review Management to hide or delete any review.</p>
+          )}
+
+          <div className="mt-4">
+            <Link
+              to="/admin/reviews"
+              className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-white px-3.5 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100"
+            >
+              Open Review Management
+            </Link>
+          </div>
         </div>
 
         {loading && (

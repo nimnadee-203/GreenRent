@@ -14,7 +14,7 @@ const VALID_LIVING_DURATIONS = [
   "> 2 years",
 ];
 
-const VALID_STATUSES = ["pending", "approved", "rejected"];
+const VALID_STATUSES = ["pending", "approved", "rejected", "hidden"];
 
 const VERIFICATION_FIELDS = [
   "solarPanels",
@@ -175,6 +175,28 @@ export const validateStatusUpdate = (payload) => {
     errors.push("status is required");
   } else if (!VALID_STATUSES.includes(payload.status)) {
     errors.push(`status must be one of: ${VALID_STATUSES.join(", ")}`);
+  }
+
+  return errors;
+};
+
+export const validateReviewReply = (payload) => {
+  const errors = [];
+
+  if (!payload || typeof payload !== "object") {
+    return ["payload must be an object"];
+  }
+
+  if (!payload.text || typeof payload.text !== "string") {
+    errors.push("text is required and must be a string");
+  } else {
+    const trimmed = payload.text.trim();
+    if (!trimmed.length) {
+      errors.push("text cannot be empty");
+    }
+    if (trimmed.length > 500) {
+      errors.push("text must be 500 characters or less");
+    }
   }
 
   return errors;

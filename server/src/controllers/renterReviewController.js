@@ -9,11 +9,15 @@ import {
   updateReviewStatus,
   markReviewHelpful,
   getAverageRenterScores,
+  getReviewsForAdmin,
+  addReplyToReview,
+  deleteReplyFromReview,
 } from "../services/renterReviewService.js";
 import {
   validateRenterReviewCreate,
   validateRenterReviewUpdate,
   validateStatusUpdate,
+  validateReviewReply,
 } from "../validators/renterReviewValidators.js";
 
 /**
@@ -33,7 +37,7 @@ export const createRenterReviewHandler = async (req, res) => {
     );
 
     return res.status(201).json({
-      message: "Review submitted successfully and is pending approval",
+      message: "Review submitted successfully",
       review,
     });
   } catch (error) {
@@ -60,7 +64,7 @@ export const getListingReviewsHandler = async (req, res) => {
     const { listingId } = req.params;
     const includeStatus = req.query.status 
       ? req.query.status.split(",")
-      : ["approved", "pending"];
+      : ["approved"];
 
     const reviews = await getReviewsByListing(listingId, includeStatus);
     const averages = await getAverageRenterScores(listingId);
@@ -215,7 +219,7 @@ export const updateReviewStatusHandler = async (req, res) => {
     }
 
     return res.status(200).json({
-      message: `Review ${req.body.status} successfully`,
+      message: `Review ${req.body.status === "hidden" ? "hidden" : req.body.status} successfully`,
       review,
     });
   } catch (error) {
@@ -264,5 +268,63 @@ export const getListingAveragesHandler = async (req, res) => {
   } catch (error) {
     console.error("Get averages error:", error);
     return res.status(500).json({ message: "Failed to calculate averages" });
+  }
+};
+
+export const getAdminReviewsHandler = async (req, res) => {
+  try {
+    const { status } = req.query;
+    const reviews = await getReviewsForAdmin({ status });
+
+    return res.status(200).json({
+      reviews,
+      notificationCount: reviews.length,
+      hiddenCount: reviews.filter((review) => review.status === "rejected").length,
+    });
+  } catch (error) {
+    console.error("Get admin reviews error:", error);
+    return res.status(500).json({ message: "Failed to fetch admin review list" });
+  }
+};
+
+export const addReviewReplyHandler = async (req, res) => {
+  try {
+    const errors = validateReviewReply(req.body);
+    if (errors.length) {
+      return res.status(400).json({ errors });
+    }
+
+    const updatedReview = await addReplyToReview(req.params.id, req.body, req.user);
+    if (!updatedReview) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    return res.status(201).json({
+      message: "Reply added successfully",
+      review: updatedReview,
+    });
+  } catch (error) {
+    console.error("Add review reply error:", error);
+    return res.status(500).json({ message: "Failed to add reply" });
+  }
+};
+
+export const deleteReviewReplyHandler = async (req, res) => {
+  try {
+    const updatedReview = await deleteReplyFromReview(req.params.id, req.params.replyId, req.user);
+    if (!updatedReview) {
+      return res.status(404).json({ message: "Review or reply not found" });
+    }
+
+    return res.status(200).json({
+      message: "Reply deleted successfully",
+      review: updatedReview,
+    });
+  } catch (error) {
+    if (error.message === "Unauthorized to delete this reply") {
+      return res.status(403).json({ message: error.message });
+    }
+    console.error("Delete review reply error:", error);
+    return res.status(500).json({ message: "Failed to delete reply" });
   }
 };

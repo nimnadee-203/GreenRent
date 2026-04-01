@@ -11,6 +11,9 @@ import {
   updateReviewStatusHandler,
   markReviewHelpfulHandler,
   getListingAveragesHandler,
+  getAdminReviewsHandler,
+  addReviewReplyHandler,
+  deleteReviewReplyHandler,
 } from "../controllers/renterReviewController.js";
 
 const router = Router();
@@ -19,8 +22,11 @@ const router = Router();
 router.get("/listing/:listingId", getListingReviewsHandler);
 router.get("/listing/:listingId/averages", getListingAveragesHandler);
 router.get("/eco-rating/:ecoRatingId", getEcoRatingReviewsHandler);
+router.get("/admin/list", authenticate, authorize("admin"), getAdminReviewsHandler);
 router.get("/:id", getReviewByIdHandler);
 router.post("/:id/helpful", markReviewHelpfulHandler);
+router.post("/:id/replies", authenticate, authorize("renter", "user", "seller", "admin"), addReviewReplyHandler);
+router.delete("/:id/replies/:replyId", authenticate, authorize("renter", "user", "seller", "admin"), deleteReviewReplyHandler);
 
 // Protected routes - Renter/user roles
 // Allow both legacy "renter" role and current "user" role

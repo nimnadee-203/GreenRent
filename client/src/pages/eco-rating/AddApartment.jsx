@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Home/Navbar';
 import { Home, MapPin, AlignLeft, Image as ImageIcon, Banknote, Leaf, CheckCircle2, Sun, Zap, Wind, Droplets, Recycle, BatteryCharging, Loader2, ArrowLeft, Trash2 } from 'lucide-react';
 
@@ -309,6 +309,20 @@ export default function AddApartment() {
                 </button>
                 <div className="text-center w-full">
                   <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">List Your Property</h1>
+                </div>
+                <div className="flex md:absolute md:right-0 items-center gap-2">
+                  <Link
+                    to="/chat"
+                    className="inline-flex items-center justify-center rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-2.5 text-sm font-bold text-emerald-700 hover:bg-emerald-100 shadow-sm"
+                  >
+                    Chat
+                  </Link>
+                  <Link
+                    to="/my-listings"
+                    className="inline-flex items-center justify-center rounded-xl bg-white border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 shadow-sm"
+                  >
+                    My Listings
+                  </Link>
                 </div>
               </div>
               <div className="mt-9 flex items-center justify-center space-x-5">
