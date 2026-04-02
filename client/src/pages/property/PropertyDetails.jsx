@@ -22,19 +22,89 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  Heart
+  Heart,
+  MessageCircle,
+  SendHorizontal
 } from "lucide-react";
 import Navbar from "../../components/Home/Navbar";
 import Footer from "../../components/Home/Footer";
+import { useAuth } from "../../context/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const PropertyDetails = () => {
+  const { backendUser } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const [property, setProperty] = useState(null);
   const [ecoRating, setEcoRating] = useState(null);
   const [reviewsData, setReviewsData] = useState({ reviews: [], summary: null });
+  const [replyDrafts, setReplyDrafts] = useState({});
+  const [replySubmittingByReview, setReplySubmittingByReview] = useState({});
+  const [replyError, setReplyError] = useState("");
+  const [reviewActionLoadingById, setReviewActionLoadingById] = useState({});
+
+  const fetchReviews = async (listingId) => {
+    try {
+      const revRes = await axios.get(`${API_BASE_URL}/api/renter-reviews/listing/${listingId}`);
+      setReviewsData({
+        reviews: revRes.data.reviews || [],
+        summary: revRes.data.summary || null,
+      });
+    } catch (revErr) {
+      console.error("Reviews not found or error:", revErr);
+      setReviewsData({ reviews: [], summary: null });
+    }
+  };
+
+  const submitReply = async (reviewId) => {
+    const text = (replyDrafts[reviewId] || "").trim();
+    if (!text) return;
+
+    try {
+      setReplyError("");
+      setReplySubmittingByReview((prev) => ({ ...prev, [reviewId]: true }));
+      await axios.post(
+        `${API_BASE_URL}/api/renter-reviews/${reviewId}/replies`,
+        { text },
+        { withCredentials: true }
+      );
+      setReplyDrafts((prev) => ({ ...prev, [reviewId]: "" }));
+      await fetchReviews(id);
+    } catch (error) {
+      setReplyError(error?.response?.data?.message || error?.response?.data?.errors?.[0] || "Failed to add reply.");
+    } finally {
+      setReplySubmittingByReview((prev) => ({ ...prev, [reviewId]: false }));
+    }
+  };
+
+  const moderateReview = async (reviewId, action) => {
+    try {
+      setReviewActionLoadingById((prev) => ({ ...prev, [reviewId]: true }));
+      if (action === "delete") {
+        const confirmed = window.confirm("Delete this review permanently?");
+        if (!confirmed) return;
+        await axios.delete(`${API_BASE_URL}/api/renter-reviews/${reviewId}`, { withCredentials: true });
+      } else if (action === "hide") {
+        await axios.patch(
+          `${API_BASE_URL}/api/renter-reviews/${reviewId}/status`,
+          { status: "hidden" },
+          { withCredentials: true }
+        );
+      } else if (action === "unhide") {
+        await axios.patch(
+          `${API_BASE_URL}/api/renter-reviews/${reviewId}/status`,
+          { status: "approved" },
+          { withCredentials: true }
+        );
+      }
+      await fetchReviews(id);
+    } catch (error) {
+      setReplyError(error?.response?.data?.message || "Failed to moderate review.");
+    } finally {
+      setReviewActionLoadingById((prev) => ({ ...prev, [reviewId]: false }));
+    }
+  };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -189,16 +259,7 @@ const PropertyDetails = () => {
           setEcoRating(ecoRes.data[0]);
         }
 
-        // Fetch user reviews
-        try {
-          const revRes = await axios.get(`${API_BASE_URL}/api/renter-reviews/listing/${id}`);
-          setReviewsData({
-            reviews: revRes.data.reviews || [],
-            summary: revRes.data.summary || null
-          });
-        } catch (revErr) {
-          console.error("Reviews not found or error:", revErr);
-        }
+        await fetchReviews(id);
       } catch (err) {
         console.error(err);
         setError("Failed to load property details.");
@@ -297,6 +358,15 @@ const PropertyDetails = () => {
   const today = new Date().toISOString().split("T")[0];
   const propertyStayType = property?.stayType || "long";
   const availableStayTypes = propertyStayType === "both" ? ["short", "long"] : [propertyStayType];
+  const displayReviews = Array.isArray(reviewsData.reviews) ? reviewsData.reviews : [];
+  const averageScoreOutOfTen = reviewsData.summary ? Number(reviewsData.summary.averageTotalScore || 0) : 0;
+  const averageScoreOutOfFive = averageScoreOutOfTen > 0 ? averageScoreOutOfTen / 2 : 0;
+  const totalReviewCount = displayReviews.length;
+  const ratingBuckets = [5, 4, 3, 2, 1].map((star) => {
+    const count = displayReviews.filter((review) => Math.max(1, Math.min(5, Math.round(Number(review?.totalScore || 0) / 2))) === star).length;
+    const percent = totalReviewCount ? Math.round((count / totalReviewCount) * 100) : 0;
+    return { star, count, percent };
+  });
 
   const handleCheckAvailabilityClick = (event) => {
     event.stopPropagation();
@@ -632,15 +702,39 @@ const PropertyDetails = () => {
                     <div className="mt-4 flex items-end gap-2">
                       <span className="text-5xl font-black">{ecoRating.totalScore}</span>
                       <span className="text-emerald-100 font-medium mb-1.5">/ 100</span>
-                    </div>                      {typeof ecoRating.airQualityScore === 'number' && (
-                        <div className="mt-4 flex items-center gap-2 text-sm text-emerald-50 bg-emerald-800/40 p-2 rounded-lg backdrop-blur-sm w-fit border border-emerald-500/30">
-                           <span className="font-semibold">Air Quality (AQI):</span>
-                           <span className="bg-emerald-500 px-2 py-0.5 rounded text-white font-bold">{ecoRating.airQualityScore} / 10</span>
-                           {ecoRating.externalSignals?.airQuality?.source && (
-                              <span className="text-[10px] opacity-70 ml-1">via {ecoRating.externalSignals.airQuality.source}</span>
-                           )}
+                    </div>
+
+                    {typeof ecoRating.airQualityScore === 'number' && (
+                      <div className="mt-4 space-y-2 text-sm text-emerald-50 bg-emerald-800/40 p-3 rounded-lg backdrop-blur-sm border border-emerald-500/30">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold">Air Quality Score:</span>
+                          <span className="bg-emerald-500 px-2 py-0.5 rounded text-white font-bold">{ecoRating.airQualityScore} / 10</span>
+
+                          {typeof ecoRating.externalSignals?.airQuality?.europeanAqi === 'number' && (
+                            <span className="bg-emerald-700/60 px-2 py-0.5 rounded text-white text-xs font-semibold">
+                              EU AQI: {ecoRating.externalSignals.airQuality.europeanAqi}
+                            </span>
+                          )}
+
+                          {ecoRating.externalSignals?.airQuality?.source && (
+                            <span className="text-[10px] opacity-80 ml-1">via {ecoRating.externalSignals.airQuality.source}</span>
+                          )}
                         </div>
-                      )}                    <div className="my-6 grid grid-cols-2 gap-4">
+
+                        {(typeof ecoRating.externalSignals?.airQuality?.pm2_5 === 'number' || typeof ecoRating.externalSignals?.airQuality?.pm10 === 'number') && (
+                          <div className="flex items-center gap-3 flex-wrap text-xs text-emerald-100">
+                            {typeof ecoRating.externalSignals?.airQuality?.pm2_5 === 'number' && (
+                              <span>PM2.5: <strong>{ecoRating.externalSignals.airQuality.pm2_5}</strong></span>
+                            )}
+                            {typeof ecoRating.externalSignals?.airQuality?.pm10 === 'number' && (
+                              <span>PM10: <strong>{ecoRating.externalSignals.airQuality.pm10}</strong></span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="my-6 grid grid-cols-2 gap-4">
                       {ecoRating.criteria && Object.entries(ecoRating.criteria).slice(0, 4).map(([k, v]) => (
                         <div key={k} className="bg-white/10 rounded-lg p-2.5 backdrop-blur-sm">
                           <p className="text-[10px] text-emerald-100 uppercase tracking-wider mb-1">{k.replace(/([A-Z])/g, ' $1').trim()}</p>
@@ -666,26 +760,38 @@ const PropertyDetails = () => {
                   Renter Feedback
                 </h3>
                 
-                {reviewsData.reviews.length > 0 ? (
+                {displayReviews.length > 0 ? (
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                      <div className="text-center">
-                        <p className="text-3xl font-bold text-slate-800">
-                          {reviewsData.summary ? Number(reviewsData.summary.averageTotalScore).toFixed(1) : "-"}
-                        </p>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Avg Score</p>
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                          <p className="text-3xl font-black text-slate-800 leading-none">{averageScoreOutOfFive ? averageScoreOutOfFive.toFixed(1) : '-'}</p>
+                          <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Average Rating (out of 5)</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-center">
+                            <p className="text-xl font-bold text-slate-800">{displayReviews.length}</p>
+                            <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Reviews</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xl font-bold text-emerald-600">
+                              {reviewsData.summary ? Math.round(reviewsData.summary.recommendationRate) : 0}%
+                            </p>
+                            <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Recommend</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="h-10 w-px bg-slate-200"></div>
-                      <div className="text-center">
-                        <p className="text-xl font-bold text-slate-800">{reviewsData.reviews.length}</p>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Reviews</p>
-                      </div>
-                      <div className="h-10 w-px bg-slate-200"></div>
-                      <div className="text-center">
-                        <p className="text-xl font-bold text-emerald-600">
-                          {reviewsData.summary ? Math.round(reviewsData.summary.recommendationRate) : 0}%
-                        </p>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider mt-1">Recommend</p>
+
+                      <div className="space-y-2">
+                        {ratingBuckets.map((bucket) => (
+                          <div key={bucket.star} className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-slate-600 w-12">{bucket.star} star</span>
+                            <div className="flex-1 h-2.5 rounded-full bg-slate-200 overflow-hidden">
+                              <div className="h-full bg-amber-400 rounded-full" style={{ width: `${bucket.percent}%` }} />
+                            </div>
+                            <span className="text-xs text-slate-500 w-8 text-right">{bucket.count}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -714,7 +820,7 @@ const PropertyDetails = () => {
             </div>
           </div>
 
-          {reviewsData.reviews.length === 0 ? (
+          {displayReviews.length === 0 ? (
             <div className="text-center py-12 px-4 border-2 border-dashed border-slate-100 rounded-xl">
               <div className="mx-auto w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
                 <Star className="w-8 h-8 text-slate-300" />
@@ -724,8 +830,29 @@ const PropertyDetails = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">      
-              {reviewsData.reviews.map((review) => (
+              {displayReviews.map((review) => (
                 <div key={review._id} className="p-5 border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-white transition-colors duration-200 shadow-sm hover:shadow-md h-full flex flex-col">
+                  {backendUser?.role === "admin" && (
+                    <div className="mb-3 flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => moderateReview(review._id, review.status === "approved" ? "hide" : "unhide")}
+                        disabled={Boolean(reviewActionLoadingById[review._id])}
+                        className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+                      >
+                        {review.status === "approved" ? "Hide" : "Unhide"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moderateReview(review._id, "delete")}
+                        disabled={Boolean(reviewActionLoadingById[review._id])}
+                        className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
@@ -744,13 +871,29 @@ const PropertyDetails = () => {
                     </div>
                   </div>
 
-                  <p className="text-sm text-slate-600 italic mb-4 flex-grow">"{review.review}"</p>
+                  <p className="text-sm text-slate-600 italic mb-4 flex-grow">"{review.review || 'No written comment provided.'}"</p>
+
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    {Object.entries(review.criteria || {}).map(([key, value]) => (
+                      <div key={key} className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5">
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
+                        <p className="text-xs font-semibold text-slate-800">{value}/10</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-600 mb-3">
+                    <span className={`font-semibold ${review.wouldRecommend ? 'text-emerald-700' : 'text-red-700'}`}>
+                      {review.wouldRecommend ? 'Recommended by renter' : 'Not recommended by renter'}
+                    </span>
+                    <span className="capitalize">{review.status === 'rejected' ? 'hidden' : (review.status || 'approved')}</span>
+                  </div>
 
                   {review.verification && Object.keys(review.verification).length > 0 && (
                     <div className="mt-auto pt-4 border-t border-slate-100">
                       <p className="text-xs font-semibold text-slate-900 mb-2.5 uppercase tracking-wider">Tenant Verified Features:</p>
                       <div className="flex flex-wrap gap-2">
-                        {Object.entries(review.verification).slice(0, 4).map(([key, val]) => {
+                        {Object.entries(review.verification).map(([key, val]) => {
                           if (val === null) return null;
                           return (
                             <span key={key} className={`inline-flex items-center px-2 py-1 rounded text-[10px] sm:text-xs font-medium border ${val ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
@@ -759,16 +902,55 @@ const PropertyDetails = () => {
                             </span>
                           );
                         })}
-                        {Object.keys(review.verification).length > 4 && (
-                          <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-medium bg-slate-100 text-slate-600">
-                            +{Object.keys(review.verification).length - 4} more
-                          </span>
-                        )}
                       </div>
                     </div>
                   )}
+
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <p className="text-xs font-semibold text-slate-900 mb-2 uppercase tracking-wider flex items-center gap-1">
+                      <MessageCircle className="w-3.5 h-3.5" /> Replies
+                    </p>
+
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                      {(review.replies || []).length === 0 ? (
+                        <p className="text-xs text-slate-500">No replies yet.</p>
+                      ) : (
+                        (review.replies || []).map((reply) => (
+                          <div key={reply._id} className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
+                            <p className="text-[11px] font-semibold text-slate-800">{reply.userName || "Anonymous"}</p>
+                            <p className="text-[11px] text-slate-600 mt-0.5">{reply.text}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="mt-2.5 flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={replyDrafts[review._id] || ""}
+                        onChange={(event) => setReplyDrafts((prev) => ({ ...prev, [review._id]: event.target.value }))}
+                        placeholder="Write a reply..."
+                        className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs"
+                        maxLength={500}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => submitReply(review._id)}
+                        disabled={Boolean(replySubmittingByReview[review._id]) || !(replyDrafts[review._id] || '').trim()}
+                        className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                      >
+                        <SendHorizontal className="w-3.5 h-3.5" /> Send
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {replyError && (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {replyError}
             </div>
           )}
         </div>

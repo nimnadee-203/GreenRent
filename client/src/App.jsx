@@ -10,6 +10,8 @@ import Wishlist from './pages/property/Wishlist';
 import BookingPage from './pages/booking/BookingPage';
 import PaymentPage from './pages/booking/PaymentPage';
 import AdminListings from './pages/admin/AdminListings';
+import AdminReviews from './pages/admin/AdminReviews';
+import ChatPage from './pages/chat/ChatPage';
 import Login from './pages/auth/Login';
 import AddApartment from './pages/eco-rating/AddApartment';
 import MyListings from './pages/eco-rating/MyListings';
@@ -28,6 +30,8 @@ function App() {
          <Route path='/booking/:id' element={<BookingPage />} />
          <Route path='/payment/:id' element={<PaymentPage />} />
         <Route path='/admin/listings' element={<AdminListings />} />
+        <Route path='/admin/reviews' element={<AdminReviews />} />
+        <Route path='/chat' element={<ChatPage />} />
         <Route path='/login' element={<Login />} />
         <Route path='/add-apartment' element={<AddApartment />} />
         <Route path='/my-listings' element={<MyListings />} />

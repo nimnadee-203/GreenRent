@@ -36,6 +36,34 @@ const renterCriteriaSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const reviewReplySchema = new mongoose.Schema(
+  {
+    userId: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    userName: {
+      type: String,
+      required: true,
+      trim: true,
+      default: "Anonymous",
+    },
+    userRole: {
+      type: String,
+      enum: ["user", "seller", "admin", "renter"],
+      default: "user",
+    },
+    text: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 500,
+    },
+  },
+  { timestamps: true }
+);
+
 const renterReviewSchema = new mongoose.Schema(
   {
     ecoRatingId: {
@@ -142,7 +170,11 @@ const renterReviewSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],
-      default: "pending",
+      default: "approved",
+    },
+    replies: {
+      type: [reviewReplySchema],
+      default: [],
     },
   },
   { timestamps: true }

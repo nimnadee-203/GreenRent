@@ -368,23 +368,81 @@ export default function MyListings() {
   }, [listings, listView]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#d1fae5_0%,_#f8fafc_45%,_#f8fafc_100%)] flex flex-col font-sans">
       <Navbar />
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">My Listings</h1>
-            <p className="mt-2 text-slate-500 font-medium">Manage your properties and keep their eco-ratings up to date.</p>
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 w-full">
+        <section className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-white/80 backdrop-blur-sm shadow-sm mb-8">
+          <div className="absolute -top-20 -right-12 w-64 h-64 rounded-full bg-emerald-200/50 blur-3xl" />
+          <div className="absolute -bottom-24 -left-8 w-52 h-52 rounded-full bg-teal-200/40 blur-3xl" />
+          <div className="relative p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div>
+              <p className="text-sm uppercase tracking-wider text-emerald-700 font-semibold mb-1">Landlord Space</p>
+              <h1 className="text-3xl md:text-4xl font-black text-slate-900 flex items-center gap-3">
+                Overview & Listings
+              </h1>
+              <p className="text-slate-600 mt-2">Manage your properties, monitor visibility, and keep eco-ratings up to date.</p>
+            </div>
+            <div className="flex gap-3 flex-wrap">
+              <Link to="/add-apartment" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
+                <Home size={16} />
+                List New Property
+              </Link>
+              <Link to="/chat" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
+                Chat
+              </Link>
+            </div>
           </div>
-          <div className="flex gap-3">
-             <Link to="/dashboard" className="inline-flex items-center justify-center rounded-xl bg-white border border-slate-200 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm">
-               Back to Dashboard
-             </Link>
-             <Link to="/add-apartment" className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white hover:bg-black transition-all">
-               List New Property
-             </Link>
+        </section>
+
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-500">Total Listings</p>
+              <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                <Home size={18} />
+              </div>
+            </div>
+            <p className="text-3xl font-black text-slate-900 mt-3">{listingCounts.all}</p>
           </div>
-        </div>
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-500">Visible to Public</p>
+              <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                <Eye size={18} />
+              </div>
+            </div>
+            <p className="text-3xl font-black text-slate-900 mt-3">{listingCounts.visible}</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-500">Hidden / Action Required</p>
+              <div className="w-9 h-9 rounded-xl bg-red-100 text-red-700 flex items-center justify-center">
+                <AlertCircle size={18} />
+              </div>
+            </div>
+            <p className="text-3xl font-black text-slate-900 mt-3">{listingCounts.hidden}</p>
+          </div>
+        </section>
+
+        <section className="mb-8 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm">
+          <div className="flex gap-4">
+            <div className="mt-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+              <Leaf size={20} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Guide: How to Add & Maintain Eco-Ratings</h3>
+              <p className="mt-1 text-sm text-slate-700">
+                To keep your properties visible to renters, they must maintain a valid Eco-Rating. 
+              </p>
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">
+                <li>When you create a new listing, it's visible for exactly <strong>48 hours</strong> to give you time to add an Eco-Rating.</li>
+                <li>Click the <strong>Add Eco-Rating</strong> button on your listing below, fill in the green features (solar, water saving, etc.), and submit.</li>
+                <li>Once rated, your listing stays visible indefinitely and renters can read its precise sustainability breakdown.</li>
+                <li>If you clear an existing rating, you are given a <strong>1-hour grace period</strong> to update it before the listing is hidden from the public.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
 
         {isLoading && <div className="text-center py-20 text-slate-500 font-medium">Loading your listings...</div>}
         {!isLoading && error && <div className="mb-6 rounded-xl bg-red-50 p-4 font-medium text-sm text-red-700 border border-red-100">{error}</div>}

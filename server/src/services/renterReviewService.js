@@ -60,7 +60,7 @@ export const createRenterReview = async (data, renterId, renterName) => {
     renterId,
     renterName: renterName || "Anonymous",
     totalScore,
-    status: "pending", // All reviews start as pending
+    status: "approved", // Reviews are visible by default
   });
 
   return review;
@@ -71,7 +71,7 @@ export const createRenterReview = async (data, renterId, renterName) => {
  * By default include both approved and pending reviews so renters
  * can see their feedback immediately.
  */
-export const getReviewsByListing = async (listingId, includeStatus = ["approved", "pending"]) => {
+export const getReviewsByListing = async (listingId, includeStatus = ["approved"]) => {
   const query = { listingId };
   
   if (includeStatus.length > 0) {
@@ -129,6 +129,13 @@ export const updateRenterReview = async (reviewId, data, userId, userRole) => {
     throw new Error("Unauthorized to update this review");
   }
 
+  if (userRole !== "admin") {
+    const canReview = await hasEligibleBookingForListing(userId, review.listingId);
+    if (!canReview) {
+      throw new Error("ReviewNotAllowedForUnbookedListing");
+    }
+  }
+
   // Recalculate score if criteria changed
   let totalScore = review.totalScore;
   let updatedCriteria = review.criteria;
@@ -166,6 +173,13 @@ export const deleteRenterReview = async (reviewId, userId, userRole) => {
     throw new Error("Unauthorized to delete this review");
   }
 
+  if (userRole !== "admin") {
+    const canReview = await hasEligibleBookingForListing(userId, review.listingId);
+    if (!canReview) {
+      throw new Error("ReviewNotAllowedForUnbookedListing");
+    }
+  }
+
   await RenterReview.findByIdAndDelete(reviewId);
   return review;
 };
@@ -180,9 +194,10 @@ export const updateReviewStatus = async (reviewId, status, adminId) => {
     return null;
   }
 
-  review.status = status;
+  const normalizedStatus = status === "hidden" ? "rejected" : status;
+  review.status = normalizedStatus;
   
-  if (status === "approved") {
+  if (normalizedStatus === "approved") {
     review.verified = true;
     review.verifiedBy = adminId;
   }
@@ -244,4 +259,53 @@ export const getAverageRenterScores = async (listingId) => {
       (reviews.filter((r) => r.wouldRecommend).length / reviews.length) * 100
     ),
   };
+};
+
+export const getReviewsForAdmin = async (filter = {}) => {
+  const query = {};
+  if (filter.status) {
+    if (filter.status === "hidden") {
+      query.status = "rejected";
+    } else if (filter.status === "visible") {
+      query.status = "approved";
+    } else {
+      query.status = filter.status;
+    }
+  }
+
+  return RenterReview.find(query)
+    .sort({ createdAt: -1 })
+    .select("-__v");
+};
+
+export const addReplyToReview = async (reviewId, payload, user) => {
+  const review = await RenterReview.findById(reviewId);
+  if (!review) return null;
+
+  review.replies.push({
+    userId: user.id,
+    userName: user.name || "Anonymous",
+    userRole: user.role || "user",
+    text: payload.text.trim(),
+  });
+
+  await review.save();
+  return review;
+};
+
+export const deleteReplyFromReview = async (reviewId, replyId, user) => {
+  const review = await RenterReview.findById(reviewId);
+  if (!review) return null;
+
+  const reply = review.replies.id(replyId);
+  if (!reply) return null;
+
+  const canDelete = user.role === "admin" || String(reply.userId) === String(user.id);
+  if (!canDelete) {
+    throw new Error("Unauthorized to delete this reply");
+  }
+
+  review.replies.pull(replyId);
+  await review.save();
+  return review;
 };
