@@ -37,7 +37,7 @@ const Footer = () => {
               <li><Link to="/properties" className="hover:text-emerald-600 transition-colors">Browse Properties</Link></li>
               <li><Link to="/" className="hover:text-emerald-600 transition-colors">Smart Recommendations</Link></li>
               <li><Link to="/" className="hover:text-emerald-600 transition-colors">Renter Guide</Link></li>
-              <li><Link to="/" className="hover:text-emerald-600 transition-colors">Eco Score Explained</Link></li>
+              <li><Link to="/eco-score-explained" className="hover:text-emerald-600 transition-colors">Eco Score Explained</Link></li>
             </ul>
           </div>
 
@@ -55,9 +55,9 @@ const Footer = () => {
             <h4 className="font-semibold text-slate-900 mb-4">Company</h4>
             <ul className="space-y-3 text-sm text-slate-500">
               <li><Link to="/about" className="hover:text-emerald-600 transition-colors">About Us</Link></li>
-              <li><Link to="/" className="hover:text-emerald-600 transition-colors">Careers</Link></li>
-              <li><Link to="/" className="hover:text-emerald-600 transition-colors">Contact</Link></li>
-              <li><Link to="/" className="hover:text-emerald-600 transition-colors">Press</Link></li>
+              <li><Link to="/careers" className="hover:text-emerald-600 transition-colors">Careers</Link></li>
+              <li><Link to="/contact" className="hover:text-emerald-600 transition-colors">Contact</Link></li>
+              <li><Link to="/press" className="hover:text-emerald-600 transition-colors">Press</Link></li>
             </ul>
           </div>
         </div>
