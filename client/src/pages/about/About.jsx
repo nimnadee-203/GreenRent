@@ -1,5 +1,6 @@
 import React from 'react';
 import Navbar from '../../components/Home/Navbar';
+import Footer from '../../components/Home/Footer';
 import { Leaf, Users, ShieldCheck, Globe, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -146,6 +147,8 @@ export default function About() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 }
