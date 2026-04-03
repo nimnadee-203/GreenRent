@@ -30,11 +30,20 @@ const allowedOrigins = [
   process.env.CLIENT_URL,
 ].filter(Boolean);
 
+const isLocalDevOrigin = (origin) => {
+  try {
+    const url = new URL(origin);
+    return ["localhost", "127.0.0.1"].includes(url.hostname);
+  } catch {
+    return false;
+  }
+};
+
 app.use(cors({
   credentials: true,
   origin: (origin, callback) => {
     if (!origin) return callback(null, true); // allow non-browser clients (Postman)
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(origin) || isLocalDevOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error("CORS policy: Origin not allowed"));
