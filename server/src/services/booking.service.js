@@ -306,13 +306,24 @@ export const updatePaymentStatus = async (bookingId, paymentStatus) => {
     return null;
   }
 
-  booking.paymentStatus = paymentStatus;
-  if (paymentStatus === "paid" && booking.status !== "completed") {
-    booking.status = "confirmed";
-  }
-  await booking.save();
+  if (paymentStatus === "paid") {
+    const updateDoc = {
+      paymentStatus,
+      ...(booking.status !== "completed" ? { status: "confirmed" } : {}),
+    };
 
-  return booking;
+    return Booking.findByIdAndUpdate(
+      bookingId,
+      { $set: updateDoc, $unset: { cancellationReason: 1 } },
+      { new: true, runValidators: true }
+    );
+  }
+
+  return Booking.findByIdAndUpdate(
+    bookingId,
+    { $set: { paymentStatus } },
+    { new: true, runValidators: true }
+  );
 };
 
 /**
@@ -325,6 +336,10 @@ export const cancelBooking = async (bookingId, cancellationReason = null) => {
   const booking = await Booking.findById(bookingId);
   if (!booking) {
     return null;
+  }
+
+  if (booking.paymentStatus === "paid") {
+    throw new Error("CannotCancelPaidBooking");
   }
 
   booking.status = "cancelled";

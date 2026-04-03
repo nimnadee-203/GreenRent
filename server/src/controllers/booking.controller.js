@@ -320,6 +320,9 @@ export const cancelBookingHandler = async (req, res) => {
       booking: cancelledBooking,
     });
   } catch (error) {
+    if (error.message === "CannotCancelPaidBooking") {
+      return res.status(409).json({ message: "Paid bookings cannot be cancelled from this flow." });
+    }
     console.error("Cancel booking error:", error);
     return res.status(500).json({ message: "Failed to cancel booking" });
   }

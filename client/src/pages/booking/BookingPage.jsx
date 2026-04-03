@@ -12,6 +12,7 @@ import {
   calculateMonthsFromDates,
   formatLkr,
 } from "../../utils/bookingPricing";
+import { startBookingTimer, clearBookingTimer, getRemainingBookingMs } from "./bookingTimer";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
@@ -29,10 +30,26 @@ const BookingPage = () => {
   const [error, setError] = useState("");
   const [selectedOption, setSelectedOption] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [shortStayGuests, setShortStayGuests] = useState(1);
+  const [editMode, setEditMode] = useState(false);
+  const [existingBookingData, setExistingBookingData] = useState(null);
+  const [userDetails, setUserDetails] = useState(null);
 
   useEffect(() => {
-    if (location.state?.checkInDate) setCheckInDate(location.state.checkInDate);
-    if (location.state?.checkOutDate) setCheckOutDate(location.state.checkOutDate);
+    // Handle edit mode from payment page
+    if (location.state?.editMode && location.state?.bookingData) {
+      setEditMode(true);
+      setExistingBookingData(location.state.bookingData);
+      setUserDetails(location.state.userDetails);
+      setCheckInDate(location.state.bookingData.checkInDate || "");
+      setCheckOutDate(location.state.bookingData.checkOutDate || "");
+      setStayType(location.state.bookingData.stayType || null);
+      setSelectedMonths(location.state.bookingData.months || null);
+      setShortStayGuests(location.state.bookingData.numberOfGuests || 1);
+    } else {
+      if (location.state?.checkInDate) setCheckInDate(location.state.checkInDate);
+      if (location.state?.checkOutDate) setCheckOutDate(location.state.checkOutDate);
+    }
 
     const fetchProperty = async () => {
       try {
@@ -76,7 +93,7 @@ const BookingPage = () => {
         monthlyRate,
         details: `${property.bedrooms || 1} Bedroom${(property.bedrooms || 1) !== 1 ? 's' : ''} · ${property.bathrooms || 1} Bathroom${(property.bathrooms || 1) !== 1 ? 's' : ''} · ${property.area || 'N/A'} sqft`,
         cancellation: "Free cancellation before 30 days",
-        prepayment: "No prepayment needed – pay at the property",
+        prepayment: "Full or partial payment must be made at the time of booking",
         amenities: property.ecoFeatures 
           ? Object.entries(property.ecoFeatures)
               .filter(([key, value]) => value === true || value === "Yes" || value === "true")
@@ -108,6 +125,19 @@ const BookingPage = () => {
       ? monthlyRate * monthsFromDates
       : null;
   const options = generateOptions(nights);
+
+  const includedShortStayGuests = property?.maxGuests ?? property?.guests ?? 3;
+
+  useEffect(() => {
+    if (property && (propertyStayType === "short" || propertyStayType === "both")) {
+      setShortStayGuests(includedShortStayGuests);
+    }
+  }, [property, propertyStayType, includedShortStayGuests]);
+
+  const shortExtraGuests = Math.max(0, shortStayGuests - includedShortStayGuests);
+  const shortExtraGuestChargePerNight = shortExtraGuests * 1000;
+  const shortExtraGuestTotal = (propertyStayType === "short" || propertyStayType === "both") ? shortExtraGuestChargePerNight * nights : 0;
+  const shortStayWithGuestTotal = (propertyStayType === "short" || propertyStayType === "both") ? (dailyRate * nights) + shortExtraGuestTotal : 0;
 
   if (loading) {
     return (
@@ -191,7 +221,7 @@ const BookingPage = () => {
                   {propertyStayType === "long" 
                     ? `${monthsFromDates} month${monthsFromDates !== 1 ? 's' : ''}` 
                     : `${nights} night${nights !== 1 ? 's' : ''}`
-                  }, 1 apartment for 2 adults
+                  }
                 </p>
                 <p className="text-[14px] text-slate-600 mt-2">1 x {property.title || "Apartment"}</p>
                 <Link to={`/properties/${id}`} className="text-[#0071c2] hover:underline text-[14px] font-bold mt-4 inline-block">
@@ -211,20 +241,45 @@ const BookingPage = () => {
                     {propertyStayType === "long" ? formatLkr(monthlyRate) : formatLkr(dailyRate)}
                   </p>
                 </div>
+
+                {(propertyStayType === "short" || propertyStayType === "both") && (
+                  <div className="mt-4 bg-white border border-slate-200 rounded-lg p-3">
+                    <label className="text-sm font-semibold text-slate-800">Number of guests (short stay)</label>
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={includedShortStayGuests}
+                        max={15}
+                        value={shortStayGuests}
+                        onChange={(e) => {
+                          const value = Number(e.target.value);
+                          setShortStayGuests(Math.max(includedShortStayGuests, Math.min(15, isNaN(value) ? includedShortStayGuests : value)));
+                        }}
+                        className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                      />
+                      <span className="text-xs text-slate-500">
+                        First {includedShortStayGuests} guests included; each extra guest +Rs 1000/night.
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-2">
+                      Extra guests: {shortExtraGuests} (additional fee: {formatLkr(shortExtraGuestTotal)})
+                    </p>
+                  </div>
+                )}
               </div>
 
-              <div className="bg-[#ebf3ff] p-5 flex flex-col">
+              <div className="bg-[#EAF7EF] p-5 flex flex-col">
                 <div className="flex justify-between items-end">
                   <h3 className="text-[32px] font-bold text-slate-900 leading-none">Price</h3>
                   <div className="text-right">
                     <p className="text-[32px] font-bold text-slate-900 leading-none">
-                      {propertyStayType === "long" ? formatLkr(longRentFromDates) : formatLkr(shortRentLine)}
+                      {propertyStayType === "long" ? formatLkr(longRentFromDates) : formatLkr(shortStayWithGuestTotal)}
                     </p>
                   </div>
                 </div>
                 <p className="text-[13px] text-slate-500 text-right mt-2">Includes taxes and charges</p>
                 <p className="text-[14px] font-bold text-slate-700 text-right mt-1">
-                  In property currency: {propertyStayType === "long" ? formatLkr(longRentFromDates).replace('Rs', 'LKR') : formatLkr(shortRentLine).replace('Rs', 'LKR')}
+                  In property currency: {propertyStayType === "long" ? formatLkr(longRentFromDates).replace('Rs', 'LKR') : formatLkr(shortStayWithGuestTotal).replace('Rs', 'LKR')}
                 </p>
               </div>
             </div>
@@ -267,7 +322,7 @@ const BookingPage = () => {
 
             {/* Header info */}
             <div className="mb-4">
-              <h1 className="text-[24px] font-bold text-slate-900">Select your accommodation</h1>
+              <h1 className="text-[24px] font-bold text-slate-900">Accommodation</h1>
             </div>
 
             <div className="space-y-6">
@@ -279,20 +334,12 @@ const BookingPage = () => {
                   }`}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-6 p-6">
-                    {/* Left: Accommodation Details */}
+                    {/* Left: Accommodation rules Details */}
                     <div className="md:col-span-2">
-                      <h3 className="text-[16px] font-bold text-[#0071c2] hover:underline cursor-pointer mb-2">{option.type}</h3>
-                      <p className="text-[13px] text-slate-600 mb-4">{option.details}</p>
                       <div className="space-y-1.5 text-[13px]">
                         <p className="text-[#008234] font-bold flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> {option.cancellation}</p>
+                        <br></br>
                         <p className="text-[#008234] font-bold flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> {option.prepayment}</p>
-                      </div>
-                      <div className="mt-4 flex flex-wrap gap-1.5">
-                        {option.amenities.map((amenity, i) => (
-                          <span key={i} className="px-2 py-1 bg-slate-100 border border-slate-200 text-slate-700 text-[11px] rounded-md font-medium">
-                            {amenity}
-                          </span>
-                        ))}
                       </div>
                     </div>
 
@@ -334,15 +381,13 @@ const BookingPage = () => {
 
                     {/* Right: Reserve Button */}
                     <div className="md:col-span-2 flex flex-col items-end justify-start border-t md:border-t-0 md:border-l border-slate-200 pt-4 md:pt-0 md:pl-6">
-                      <div className="text-right mb-4">
-                        <p className="text-[13px] text-slate-600 mb-1 flex items-center justify-end gap-1"><span className="font-medium text-slate-900">Guests:</span> {option.guests}</p>
-                      </div>
+                    
                       <button 
                         onClick={() => {
                           setSelectedOption(option);
                           setShowDetailModal(true);
                         }}
-                        className="w-full px-4 py-2.5 bg-[#0071c2] text-white font-bold rounded-md hover:bg-[#005999] transition mb-2"
+                        className="w-full px-4 py-2.5 bg-[#28A745] text-white font-bold rounded-md hover:bg-[#1E7E34] transition mb-2"
                       >
                         I'll reserve
                       </button>
@@ -381,6 +426,9 @@ const BookingPage = () => {
           navigate={navigate}
           defaultStayType={propertyStayType}
           defaultMonths={monthsFromDates || 1}
+          editMode={editMode}
+          existingBookingData={existingBookingData}
+          userDetails={userDetails}
         />
       )}
 
@@ -389,15 +437,17 @@ const BookingPage = () => {
   );
 };
 
-const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDate, backendUser, currentUser, onClose, navigate, defaultStayType, defaultMonths }) => {
-  const [fullName, setFullName] = useState(backendUser?.name || currentUser?.displayName || "");
-  const [email, setEmail] = useState(backendUser?.email || currentUser?.email || "");
-  const [phone, setPhone] = useState("");
-  const [notes, setNotes] = useState("");
+const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDate, backendUser, currentUser, onClose, navigate, defaultStayType, defaultMonths, editMode = false, existingBookingData = null, userDetails = null }) => {
+  const [fullName, setFullName] = useState(userDetails?.fullName || backendUser?.name || currentUser?.displayName || "");
+  const [email, setEmail] = useState(userDetails?.email || backendUser?.email || currentUser?.email || "");
+  const [phone, setPhone] = useState(userDetails?.phone || "");
+  const [notes, setNotes] = useState(userDetails?.notes || "");
   const [stayType, setStayType] = useState(() =>
-    defaultStayType === "both" ? "long" : (defaultStayType || "short")
+    editMode && existingBookingData ? existingBookingData.stayType : (defaultStayType === "both" ? "long" : (defaultStayType || "short"))
   );
-  const [months, setMonths] = useState(defaultMonths);
+  const [months, setMonths] = useState(editMode && existingBookingData ? existingBookingData.months : defaultMonths);
+  const includedGuests = property?.maxGuests ?? property?.guests ?? 3;
+  const [guests, setGuests] = useState(editMode && existingBookingData ? existingBookingData.numberOfGuests : includedGuests);
   const [longStayTotal, setLongStayTotal] = useState(0);
   const [error, setError] = useState("");
 
@@ -405,24 +455,32 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
   const dailyRate = getDailyRate(property);
   const monthlyRate = getMonthlyRate(property);
 
-  const shortStayTotal = stayType === "short" ? dailyRate * nights : 0;
+  const extraGuestChargePerNight = guests > includedGuests ? (guests - includedGuests) * 1000 : 0;
+  const extraGuestTotal = stayType === "short" ? extraGuestChargePerNight * nights : 0;
+  const shortStayTotal = stayType === "short" ? (dailyRate * nights) + extraGuestTotal : 0;
 
   useEffect(() => {
     const name = backendUser?.name || currentUser?.displayName;
     const mail = backendUser?.email || currentUser?.email;
-    if (name) setFullName(name);
-    if (mail) setEmail(mail);
-  }, [backendUser, currentUser]);
+    if (!userDetails && name) setFullName(name);
+    if (!userDetails && mail) setEmail(mail);
+  }, [backendUser, currentUser, userDetails]);
+
+  useEffect(() => {
+    if (stayType === "short") {
+      setGuests(includedGuests);
+    }
+  }, [stayType, includedGuests]);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Autofill user data when available
+  // Autofill user data when available (only if no userDetails provided)
   useEffect(() => {
-    if (backendUser) {
+    if (!userDetails && backendUser) {
       setFullName(backendUser.name || "");
       setEmail(backendUser.email || "");
     }
-  }, [backendUser]);
+  }, [backendUser, userDetails]);
 
   useEffect(() => {
     if (stayType === "long") {
@@ -434,6 +492,24 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const normalizedPhone = phone.replace(/\D/g, "");
+    if (!/^\d{10}$/.test(normalizedPhone)) {
+      setError("Phone number must be exactly 10 digits and contain numbers only.");
+      return;
+    }
+
+    if (stayType === "short") {
+      if (!guests || guests < 1) {
+        setError("Please enter a valid number of guests for short stay.");
+        return;
+      }
+      if (guests > 15) {
+        setError("A maximum of 15 guests is allowed for short stay.");
+        return;
+      }
+    }
+
     if (!checkInDate || !checkOutDate) {
       setError("Please set check-in and check-out dates before continuing.");
       return;
@@ -453,36 +529,59 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
         stayType,
         checkInDate,
         checkOutDate,
-        numberOfGuests: 1,
+        numberOfGuests: stayType === "short" ? guests : 1,
         ...(stayType === "long" ? { months } : {}),
         totalPrice,
       };
 
-      const { data } = await axios.post(`${API_BASE_URL}/api/bookings`, payload, { withCredentials: true });
-      const savedBooking = data?.booking;
+      let response;
+      if (editMode && existingBookingData) {
+        // Update existing booking
+        response = await axios.put(`${API_BASE_URL}/api/bookings/${existingBookingData._id}`, payload, { withCredentials: true });
+        setSuccessMessage("Booking updated successfully. Redirecting to payment...");
+      } else {
+        // Create new booking
+        response = await axios.post(`${API_BASE_URL}/api/bookings`, payload, { withCredentials: true });
+        setSuccessMessage("Booking request saved successfully. Redirecting to payment...");
+      }
+
+      const savedBooking = response.data?.booking || response.data;
       const bookingPayload = savedBooking
         ? {
-            _id: savedBooking._id,
-            apartmentId: savedBooking.apartmentId,
-            stayType: savedBooking.stayType,
-            checkInDate: savedBooking.checkInDate,
-            checkOutDate: savedBooking.checkOutDate,
-            numberOfGuests: savedBooking.numberOfGuests,
-            months: savedBooking.months,
-            totalPrice: savedBooking.totalPrice,
-            paymentStatus: savedBooking.paymentStatus,
-            status: savedBooking.status,
+            _id: savedBooking._id || existingBookingData._id,
+            apartmentId: savedBooking.apartmentId || payload.apartmentId,
+            stayType: savedBooking.stayType || payload.stayType,
+            checkInDate: savedBooking.checkInDate || payload.checkInDate,
+            checkOutDate: savedBooking.checkOutDate || payload.checkOutDate,
+            numberOfGuests: savedBooking.numberOfGuests || payload.numberOfGuests,
+            months: savedBooking.months || payload.months,
+            totalPrice: savedBooking.totalPrice || payload.totalPrice,
+            paymentStatus: savedBooking.paymentStatus || 'pending',
+            status: savedBooking.status || 'pending',
           }
         : payload;
+      // Start timer when the user confirms (new flow). Old timer is cleared if there is one.
+      if (bookingPayload?._id) {
+        // Only start a new timer if there's no existing active timer
+        if (getRemainingBookingMs(bookingPayload._id) <= 0) {
+          clearBookingTimer(bookingPayload._id);
+          startBookingTimer(bookingPayload._id, 15);
+        }
+      }
 
-      setSuccessMessage("Booking request saved successfully. Redirecting to payment...");
       setTimeout(() => {
         navigate(`/payment/${property?._id}`, {
           state: {
             bookingData: bookingPayload,
             selectedOption,
-            property
-          }
+            property,
+            userDetails: {
+              fullName,
+              email,
+              phone,
+              notes,
+            },
+          },
         });
       }, 1500);
     } catch (err) {
@@ -517,7 +616,7 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
           <X className="w-6 h-6" />
         </button>
 
-        <h2 className="text-2xl font-bold mb-2">Confirm Booking</h2>
+        <h2 className="text-2xl font-bold mb-2">{editMode ? "Edit Booking" : "Confirm Booking"}</h2>
         <p className="text-slate-500 mb-4">{property?.title || "Selected property"}</p>
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 mb-4">
@@ -531,13 +630,36 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
           <p className="text-xs text-slate-500 mt-1">{property?.location?.address || "No address"}</p>
           <p className="text-xs text-slate-500 mt-1">Check-in: {checkInDate || "-"}, Check-out: {checkOutDate || "-"}</p>
           {stayType === "short" ? (
-            <p className="text-xs text-slate-500 mt-1">
-              Total for {nights} night{nights > 1 ? "s" : ""}: {formatLkr(shortStayTotal)} ({formatLkr(dailyRate)} × {nights})
-            </p>
+            <>
+              <p className="text-xs text-slate-500 mt-1">Guests: {guests} (First {includedGuests} included; extra {Math.max(0, guests - includedGuests)} × Rs 1000/night)</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Base for {nights} night{nights > 1 ? "s" : ""}: {formatLkr(dailyRate * nights)} ({formatLkr(dailyRate)} × {nights})
+              </p>
+              {extraGuestTotal > 0 && (
+                <p className="text-xs text-slate-500 mt-1">
+                  Extra guest charge: {formatLkr(extraGuestTotal)} ({Math.max(0, guests - 3)} × Rs 1000 × {nights})
+                </p>
+              )}
+              <div className="mt-2 rounded-lg border border-emerald-300 bg-gradient-to-r from-emerald-50 via-white to-emerald-100 px-3 py-3 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700">Total Payable</p>
+                <p className="mt-1 text-xl font-extrabold leading-none text-emerald-900">
+                  {formatLkr(shortStayTotal)}
+                </p>
+                <p className="mt-1 text-xs text-emerald-700">
+                  for {nights} night{nights > 1 ? "s" : ""}
+                </p>
+              </div>
+            </>
           ) : (
-            <p className="text-xs text-slate-500 mt-1">
-              Total for {months} month{months > 1 ? "s" : ""}: {formatLkr(longStayTotal)} ({formatLkr(monthlyRate)} × {months})
-            </p>
+            <div className="mt-2 rounded-lg border border-emerald-300 bg-gradient-to-r from-emerald-50 via-white to-emerald-100 px-3 py-3 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700">Total Payable</p>
+              <p className="mt-1 text-xl font-extrabold leading-none text-emerald-900">
+                {formatLkr(longStayTotal)}
+              </p>
+              <p className="mt-1 text-xs text-emerald-700">
+                for {months} month{months > 1 ? "s" : ""} ({formatLkr(monthlyRate)} × {months})
+              </p>
+            </div>
           )}
         </div>
 
@@ -572,6 +694,21 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
                 />
               </label>
             )}
+            {stayType === "short" && (
+              <label className="block text-sm">
+                <span>Number of Guests</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={15}
+                  value={guests}
+                  onChange={(e) => setGuests(Math.max(1, Math.min(15, Number(e.target.value) || 1)))}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                  required
+                />
+                <small className="text-xs text-slate-500">First {includedGuests} guests included; extra guests charged Rs 1000 per night each.</small>
+              </label>
+            )}
             <label className="block text-sm">
               <span>Name</span>
               <input
@@ -598,9 +735,13 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
               <input
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  const onlyDigits = e.target.value.replace(/\D/g, "");
+                  setPhone(onlyDigits.slice(0, 10));
+                }}
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
                 required
+                placeholder="Enter 10-digit phone number"
               />
             </label>
           </div>
@@ -623,7 +764,7 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
             disabled={submitting}
             className="w-full rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
           >
-            {submitting ? "Saving..." : "Confirm Booking"}
+            {submitting ? "Saving..." : (editMode ? "Update Booking" : "Confirm Booking")}
           </button>
         </form>
       </div>
