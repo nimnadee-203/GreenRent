@@ -16,6 +16,8 @@ import AddApartment from './pages/eco-rating/AddApartment';
 import MyListings from './pages/eco-rating/MyListings';
 import Contact from './pages/company/Contact';
 import AboutPage from './pages/company/About';
+import Careers from './pages/company/Careers';
+import Press from './pages/company/Press';
 import EcoScoreExplained from './pages/renter/EcoScoreExplained';
 
 function App() {
@@ -25,6 +27,8 @@ function App() {
         <Route path='/' element={<Home />} />
         <Route path='/about' element={<AboutPage />} />
         <Route path='/contact' element={<Contact />} />
+        <Route path='/careers' element={<Careers />} />
+        <Route path='/press' element={<Press />} />
         <Route path='/eco-score-explained' element={<EcoScoreExplained />} />
         <Route path='/dashboard' element={<Dashboard />} />
         <Route path='/properties' element={<PropertyListing />} />
