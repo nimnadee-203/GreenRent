@@ -49,6 +49,10 @@ const PropertyDetails = () => {
   const [stayType, setStayType] = useState(""); // "long" or "short"
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilityResult, setAvailabilityResult] = useState(null);
+  const [availabilityError, setAvailabilityError] = useState("");
+  const [selectedAvailability, setSelectedAvailability] = useState(null);
   const [fromMonth, setFromMonth] = useState("");
   const [fromYear, setFromYear] = useState("");
   const [toMonth, setToMonth] = useState("");
@@ -106,72 +110,57 @@ const PropertyDetails = () => {
   };
 
   const handleBookNow = () => {
+    const availability = selectedAvailability || availabilityResult;
+
     if (!property || property.availabilityStatus !== 'available') {
       alert('This property is not currently available for booking.');
       return;
     }
 
-    let finalCheckInDate = checkInDate;
-    let finalCheckOutDate = checkOutDate;
-    let computedMonths = 0;
+    if (!availability || !availability.available) {
+      alert('Please confirm availability for your selected duration first.');
+      return;
+    }
 
-    if (stayType === "short") {
-      if (checkInDate && checkInDate < today) {
-        alert('Check-in date must be today or a future date.');
-        return;
-      }
-      if (!checkInDate || !checkOutDate || new Date(checkOutDate) <= new Date(checkInDate)) {
+    let finalCheckInDate = availability.checkInDate || checkInDate;
+    let finalCheckOutDate = availability.checkOutDate || checkOutDate;
+    let finalStayType = availability.stayType || stayType || property.stayType;
+    let computedMonths = availability.months || 0;
+
+    if (finalStayType === "short") {
+      if (!finalCheckInDate || !finalCheckOutDate || new Date(finalCheckOutDate) <= new Date(finalCheckInDate)) {
         alert('Please select valid check-in and check-out dates.');
         return;
       }
-      if (isAtLeastThreeMonths(checkInDate, checkOutDate)) {
-        alert('Short stay must be less than 3 months. Please choose Long Stay for 3 months or more.');
+      if (new Date(finalCheckInDate) < new Date(today)) {
+        alert('Check-in date must be today or a future date.');
         return;
       }
-    } else if (stayType === "long") {
-      if (!fromMonth || !fromYear || !toMonth || !toYear) {
-        alert('Please select valid month and year range for long stay.');
+      if (isAtLeastThreeMonths(finalCheckInDate, finalCheckOutDate)) {
+        alert('Short stay must be less than 3 months.');
         return;
       }
-
-      if (!isLongStayStartFromCurrentOrFuture(fromMonth, fromYear)) {
-        alert('Long stay start month must be current month or a future month.');
+    } else if (finalStayType === "long") {
+      if (!finalCheckInDate || !finalCheckOutDate) {
+        alert('Please select valid long-stay dates.');
         return;
       }
-
-      if (!isLongStayRangeChronological(fromMonth, fromYear, toMonth, toYear)) {
-        alert('End month must be after start month.');
-        return;
-      }
-      
-      const fromMonthIndex = monthNames.indexOf(fromMonth);
-      const toMonthIndex = monthNames.indexOf(toMonth);
-      
-      const pad = (n) => n.toString().padStart(2, '0');
-      finalCheckInDate = `${fromYear}-${pad(fromMonthIndex + 1)}-01`;
-      const lastDay = new Date(parseInt(toYear), toMonthIndex + 1, 0).getDate();
-      finalCheckOutDate = `${toYear}-${pad(toMonthIndex + 1)}-${pad(lastDay)}`;
-      
-      computedMonths = getLongStayMonthCount(fromMonth, fromYear, toMonth, toYear);
-      
-      if (computedMonths <= 0) {
-        alert('End month must be after start month.');
-        return;
-      }
-      if (computedMonths < 3) {
+      const monthsCount = computedMonths || getLongStayMonthCount(fromMonth, fromYear, toMonth, toYear);
+      if (monthsCount < 3) {
         alert('Long stay must be at least 3 months.');
         return;
       }
+      computedMonths = monthsCount;
     }
 
     setShowAvailabilityModal(false);
     navigate(`/booking/${id}`, {
-      state: { 
-        checkInDate: finalCheckInDate, 
+      state: {
+        checkInDate: finalCheckInDate,
         checkOutDate: finalCheckOutDate,
-        stayType: stayType || property.stayType,
-        selectedMonths: computedMonths
-      }
+        stayType: finalStayType,
+        selectedMonths: computedMonths,
+      },
     });
   };
 
@@ -340,21 +329,95 @@ const PropertyDetails = () => {
     setShowDatePickerModal(true);
   };
 
-  const handleContinueToAvailability = () => {
+  const handleContinueToAvailability = async () => {
+    setAvailabilityError("");
+    setAvailabilityResult(null);
+
+    let finalCheckInDate = "";
+    let finalCheckOutDate = "";
+    let computedMonths = 0;
+
     if (stayType === "short") {
-      if (!checkInDate || !checkOutDate) return;
-      if (checkInDate < today) return;
-      if (new Date(checkOutDate) <= new Date(checkInDate)) return;
-      if (isAtLeastThreeMonths(checkInDate, checkOutDate)) return;
+      if (!checkInDate || !checkOutDate) {
+        setAvailabilityError("Please select both check-in and check-out dates.");
+        return;
+      }
+      if (checkInDate < today) {
+        setAvailabilityError("Check-in date must be today or later.");
+        return;
+      }
+      if (new Date(checkOutDate) <= new Date(checkInDate)) {
+        setAvailabilityError("Check-out date must be after check-in date.");
+        return;
+      }
+      if (isAtLeastThreeMonths(checkInDate, checkOutDate)) {
+        setAvailabilityError("Short stay must be less than 3 months; please select long stay for longer periods.");
+        return;
+      }
+
+      finalCheckInDate = checkInDate;
+      finalCheckOutDate = checkOutDate;
     } else if (stayType === "long") {
-      if (!fromMonth || !fromYear || !toMonth || !toYear) return;
-      if (!isLongStayStartFromCurrentOrFuture(fromMonth, fromYear)) return;
-      if (!isLongStayRangeChronological(fromMonth, fromYear, toMonth, toYear)) return;
-      if (getLongStayMonthCount(fromMonth, fromYear, toMonth, toYear) < 3) return;
+      if (!fromMonth || !fromYear || !toMonth || !toYear) {
+        setAvailabilityError("Please select a valid long-stay month range.");
+        return;
+      }
+      if (!isLongStayStartFromCurrentOrFuture(fromMonth, fromYear)) {
+        setAvailabilityError("Long stay must begin in the current or a future month.");
+        return;
+      }
+      if (!isLongStayRangeChronological(fromMonth, fromYear, toMonth, toYear)) {
+        setAvailabilityError("Long stay end must be after long stay start.");
+        return;
+      }
+
+      const monthsCount = getLongStayMonthCount(fromMonth, fromYear, toMonth, toYear);
+      if (monthsCount < 3) {
+        setAvailabilityError("Long stay must be at least 3 months.");
+        return;
+      }
+
+      const fromMonthIndex = monthNames.indexOf(fromMonth);
+      const toMonthIndex = monthNames.indexOf(toMonth);
+      const pad = (n) => n.toString().padStart(2, "0");
+
+      finalCheckInDate = `${fromYear}-${pad(fromMonthIndex + 1)}-01`;
+      const lastDayOfToMonth = new Date(parseInt(toYear), toMonthIndex + 1, 0).getDate();
+      finalCheckOutDate = `${toYear}-${pad(toMonthIndex + 1)}-${pad(lastDayOfToMonth)}`;
+      computedMonths = monthsCount;
     }
 
     setShowDatePickerModal(false);
     setShowAvailabilityModal(true);
+
+    try {
+      setAvailabilityLoading(true);
+      const response = await axios.post(`${API_BASE_URL}/api/bookings/check-availability`, {
+        apartmentId: id,
+        checkInDate: finalCheckInDate,
+        checkOutDate: finalCheckOutDate,
+      });
+
+      const { available } = response.data;
+      const result = {
+        available,
+        checkInDate: finalCheckInDate,
+        checkOutDate: finalCheckOutDate,
+        stayType,
+        months: computedMonths,
+      };
+      setAvailabilityResult(result);
+      setSelectedAvailability(result);
+
+      if (!available) {
+        setAvailabilityError("The apartment is already booked in this period; please choose a different duration.");
+      }
+    } catch (err) {
+      setAvailabilityError(err.response?.data?.message || "Failed to verify availability. Please retry.");
+      setAvailabilityResult(null);
+    } finally {
+      setAvailabilityLoading(false);
+    }
   };
 
   const closeDatePickerModal = () => {
@@ -1052,7 +1115,7 @@ const PropertyDetails = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-slate-900">Availability Status</h2>
+              <h2 className="text-2xl font-bold text-slate-900">Availability Check</h2>
               <button
                 onClick={() => setShowAvailabilityModal(false)}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition"
@@ -1061,48 +1124,52 @@ const PropertyDetails = () => {
               </button>
             </div>
             <div className="p-8 space-y-6">
-              <div className="flex items-start gap-4">
-                <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
-                  property.availabilityStatus === 'available' ? 'bg-emerald-50' : 
-                  property.availabilityStatus === 'rented' ? 'bg-amber-50' : 
-                  'bg-red-50'
-                }`}>
-                  {property.availabilityStatus === 'available' && <CheckCircle2 className="w-6 h-6 text-emerald-600" />}
-                  {property.availabilityStatus === 'rented' && <AlertCircle className="w-6 h-6 text-amber-600" />}
-                  {property.availabilityStatus === 'archived' && <XCircle className="w-6 h-6 text-red-600" />}
-                </div>
-                <div>
-                  <p className="text-sm text-slate-600 font-medium">Current Status</p>
-                  <p className={`text-xl font-bold mt-1 ${
-                    property.availabilityStatus === 'available' ? 'text-emerald-700' : 
-                    property.availabilityStatus === 'rented' ? 'text-amber-700' : 
-                    'text-red-700'
-                  }`}>
-                    {property.availabilityStatus === 'available' && 'Available for Rent'}
-                    {property.availabilityStatus === 'rented' && 'Currently Rented'}
-                    {property.availabilityStatus === 'archived' && 'Archived'}
-                  </p>
-                </div>
+              {availabilityLoading ? (
+                <div className="text-center text-slate-600">Checking availability...</div>
+              ) : (
+                <>
+                  {availabilityResult && (
+                    <div className={`rounded-xl p-4 ${availabilityResult.available ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
+                      <p className={`text-lg font-bold ${availabilityResult.available ? 'text-emerald-700' : 'text-red-700'}`}>
+                        {availabilityResult.available ? 'Available!' : 'Not Available'}
+                      </p>
+                      <p className="text-sm text-slate-600 mt-1">
+                        {availabilityResult.stayType === 'short'
+                          ? `Duration: ${availabilityResult.checkInDate} → ${availabilityResult.checkOutDate}`
+                          : `Duration: ${availabilityResult.months} month${availabilityResult.months > 1 ? 's' : ''} (${availabilityResult.checkInDate} → ${availabilityResult.checkOutDate})`}
+                      </p>
+                    </div>
+                  )}
+
+                  {availabilityError && (
+                    <div className="rounded-xl p-4 bg-red-50 border border-red-200 text-red-700 text-sm">
+                      {availabilityError}
+                    </div>
+                  )}
+
+                  {!availabilityResult && !availabilityError && (
+                    <div className="rounded-xl p-4 bg-slate-50 border border-slate-200 text-sm text-slate-700">
+                      Please select stay type and duration to run availability.
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div className="grid grid-cols-1 gap-3">
+                <button
+                  onClick={handleBookNow}
+                  disabled={!availabilityResult?.available || availabilityLoading}
+                  className="w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {availabilityResult?.available ? 'Book Now' : 'Book Now'}
+                </button>
+                <button
+                  onClick={() => setShowAvailabilityModal(false)}
+                  className="w-full bg-slate-100 text-slate-700 font-semibold py-3 rounded-xl hover:bg-slate-200 transition"
+                >
+                  Close
+                </button>
               </div>
-              <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600">
-                <p>
-                  {property.availabilityStatus === 'available' && 'This property is currently available for rent. Contact the landlord to inquire or schedule a viewing.'}
-                  {property.availabilityStatus === 'rented' && 'This property has been rented out. Check back later for updates or explore other properties.'}
-                  {property.availabilityStatus === 'archived' && 'This property is no longer available for rent and has been archived.'}
-                </p>
-              </div>
-              <button
-                onClick={handleBookNow}
-                className="w-full bg-white text-emerald-700 border border-emerald-600 font-semibold py-3 rounded-xl hover:bg-emerald-50 transition"
-              >
-                Book Now
-              </button>
-              <button
-                onClick={() => setShowAvailabilityModal(false)}
-                className="w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition"
-              >
-                Close
-              </button>
             </div>
           </div>
         </div>
