@@ -5,6 +5,7 @@ import userModel from "../models/userModel.js";
 
 const PAYMENT_TIMEOUT_MS = 15 * 60 * 1000;
 const PAYMENT_TIMEOUT_REASON = "Booking expired because payment timeout was reached.";
+const CANCELLATION_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
 
 const getPaymentDeadline = () => new Date(Date.now() + PAYMENT_TIMEOUT_MS);
 
@@ -457,8 +458,9 @@ export const cancelBooking = async (bookingId, cancellationReason = null) => {
     return null;
   }
 
-  if (booking.paymentStatus === "paid") {
-    throw new Error("CannotCancelPaidBooking");
+  const createdAtMs = booking?.createdAt ? new Date(booking.createdAt).getTime() : NaN;
+  if (!Number.isNaN(createdAtMs) && Date.now() - createdAtMs > CANCELLATION_WINDOW_MS) {
+    throw new Error("CancellationWindowExpired");
   }
 
   booking.status = "cancelled";
@@ -529,6 +531,40 @@ export const processRefundByAdmin = async (bookingId, refundReason = null) => {
   }
 
   booking.refundStatus = "refunded";
+  booking.refundRequestedAt = booking.refundRequestedAt || new Date();
+  if (refundReason && String(refundReason).trim()) {
+    booking.refundReason = String(refundReason).trim();
+  }
+
+  await booking.save();
+  return booking;
+};
+
+/**
+ * Reject refund request by admin for a cancelled paid booking
+ * @param {string} bookingId - Booking ID
+ * @param {string} refundReason - Optional rejection reason/notes
+ * @returns {Promise<Object|null>} - Updated booking document or null if not found
+ */
+export const rejectRefundByAdmin = async (bookingId, refundReason = null) => {
+  const booking = await Booking.findById(bookingId);
+  if (!booking) {
+    return null;
+  }
+
+  if (booking.paymentStatus !== "paid") {
+    throw new Error("RefundAllowedOnlyForPaidBookings");
+  }
+
+  if (booking.status !== "cancelled") {
+    throw new Error("RefundRequiresCancelledBooking");
+  }
+
+  if (booking.refundStatus === "refunded") {
+    throw new Error("RefundAlreadyCompleted");
+  }
+
+  booking.refundStatus = "rejected";
   booking.refundRequestedAt = booking.refundRequestedAt || new Date();
   if (refundReason && String(refundReason).trim()) {
     booking.refundReason = String(refundReason).trim();

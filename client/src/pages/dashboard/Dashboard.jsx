@@ -26,6 +26,7 @@ const statusBadgeClass = {
 };
 
 const PAYMENT_TIMEOUT_MS = 15 * 60 * 1000;
+const CANCELLATION_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
 
 const getPaymentRemainingMs = (booking) => {
   if (booking?.status !== 'pending' || booking?.paymentStatus === 'paid') return 0;
@@ -306,6 +307,8 @@ export default function Dashboard() {
     const timer = setInterval(() => setClockNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [bookings]);
+
+  useEffect(() => {
     fetchSellerAnalytics();
   }, [fetchSellerAnalytics]);
 
@@ -804,7 +807,11 @@ export default function Dashboard() {
                 const reviewed = listingId && reviewedListingIds.has(listingId);
                 const existingReview = listingId ? myReviewsByListing[listingId] : null;
                 const bookingActionLoading = Boolean(actionLoadingById[booking._id]);
-                const canCancel = booking?.status === 'pending' || booking?.status === 'confirmed';
+                const bookingCreatedAtMs = booking?.createdAt ? new Date(booking.createdAt).getTime() : NaN;
+                const isWithinCancellationWindow = Number.isFinite(bookingCreatedAtMs)
+                  ? Date.now() - bookingCreatedAtMs <= CANCELLATION_WINDOW_MS
+                  : false;
+                const canCancel = (booking?.status === 'pending' || booking?.status === 'confirmed') && isWithinCancellationWindow;
                 const canContinuePayment = booking?.status === 'pending' && booking?.paymentStatus !== 'paid';
                 const paymentRemainingMs = getPaymentRemainingMs(booking);
                 const paymentProgress = getPaymentProgress(booking);
@@ -902,6 +909,9 @@ export default function Dashboard() {
 
                     {!canReviewBooking(booking) && !reviewed && (
                       <p className="text-xs text-slate-500 mt-3">Reviews are available only for confirmed or completed bookings.</p>
+                    )}
+                    {!isWithinCancellationWindow && ['pending', 'confirmed'].includes(booking?.status) && (
+                      <p className="text-xs text-amber-700 mt-3">Cancellation window expired (more than 3 days since booking placement).</p>
                     )}
                     {existingReview && !canManageExistingReview && (
                       <p className="text-xs text-slate-500 mt-3">You can update/delete this review only while this apartment is in your current or previously completed stays.</p>
