@@ -110,8 +110,8 @@ export const validateCreateBooking = [
   // status validation (optional, defaults to "pending")
   body("status")
     .optional()
-    .isIn(["pending", "confirmed", "cancelled", "completed"])
-    .withMessage('status must be one of: "pending", "confirmed", "cancelled", "completed"'),
+    .isIn(["pending", "confirmed", "cancelled", "completed", "expired"])
+    .withMessage('status must be one of: "pending", "confirmed", "cancelled", "completed", "expired"'),
 
   // cancellationReason validation (optional)
   body("cancellationReason")
@@ -202,8 +202,8 @@ export const validateUpdateBooking = [
   // status validation (optional)
   body("status")
     .optional()
-    .isIn(["pending", "confirmed", "cancelled", "completed"])
-    .withMessage('status must be one of: "pending", "confirmed", "cancelled", "completed"'),
+    .isIn(["pending", "confirmed", "cancelled", "completed", "expired"])
+    .withMessage('status must be one of: "pending", "confirmed", "cancelled", "completed", "expired"'),
 
   // paymentStatus validation (optional)
   body("paymentStatus")

@@ -25,10 +25,21 @@ const PaymentPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const bookingData = location.state?.bookingData;
-  const selectedOption = location.state?.selectedOption;
-  const property = location.state?.property;
-  const userDetails = location.state?.userDetails;
+  const routeBookingData = location.state?.bookingData;
+  const routeSelectedOption = location.state?.selectedOption;
+  const routeProperty = location.state?.property;
+  const routeUserDetails = location.state?.userDetails;
+
+  const [resolvedBookingData, setResolvedBookingData] = useState(routeBookingData || null);
+  const [resolvedSelectedOption, setResolvedSelectedOption] = useState(routeSelectedOption || null);
+  const [resolvedProperty, setResolvedProperty] = useState(routeProperty || null);
+  const [pageLoading, setPageLoading] = useState(!routeBookingData || !routeProperty);
+
+  const bookingData = resolvedBookingData;
+  const selectedOption = resolvedSelectedOption;
+  const property = resolvedProperty;
+  const userDetails = routeUserDetails;
+  const propertyId = property?._id || bookingData?.apartmentId?._id || bookingData?.apartmentId;
 
   const [cardNumber, setCardNumber] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
@@ -48,6 +59,62 @@ const PaymentPage = () => {
   const [cancellingBooking, setCancellingBooking] = useState(false);
   const [bookingCancelled, setBookingCancelled] = useState(false);
   const [cancelledBookingId, setCancelledBookingId] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const resolveBookingContext = async () => {
+      try {
+        setPageLoading(true);
+
+        let booking = routeBookingData;
+        if (!booking) {
+          const bookingResponse = await axios.get(`${API_BASE_URL}/api/bookings/${id}`, {
+            withCredentials: true,
+          });
+          booking = bookingResponse.data?.booking || bookingResponse.data;
+        }
+
+        if (!booking) {
+          throw new Error("Booking not found for payment session.");
+        }
+
+        const apartmentRef = booking?.apartmentId?._id || booking?.apartmentId;
+        let propertyData = routeProperty;
+        if (!propertyData && apartmentRef) {
+          const propertyResponse = await axios.get(`${API_BASE_URL}/api/properties/${apartmentRef}`);
+          propertyData = propertyResponse.data;
+        }
+
+        if (isMounted) {
+          setResolvedBookingData(booking);
+          setResolvedProperty(propertyData || null);
+          if (!routeSelectedOption) {
+            setResolvedSelectedOption({
+              type: booking?.stayType === "long" ? "Long stay" : "Short stay",
+            });
+          }
+          setPaymentError("");
+        }
+      } catch (error) {
+        if (isMounted) {
+          setResolvedBookingData(null);
+          setResolvedProperty(null);
+          setPaymentError(error?.response?.data?.message || error.message || "Unable to load this booking payment session.");
+        }
+      } finally {
+        if (isMounted) {
+          setPageLoading(false);
+        }
+      }
+    };
+
+    resolveBookingContext();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, routeBookingData, routeProperty, routeSelectedOption]);
 
   const formatInvoiceDate = (value) => {
     if (!value) return "-";
@@ -179,8 +246,7 @@ const PaymentPage = () => {
   };
 
   useEffect(() => {
-    if (!bookingData || !selectedOption || !property) {
-      navigate(`/properties/${id}`);
+    if (!bookingData || !property) {
       return;
     }
 
@@ -195,19 +261,21 @@ const PaymentPage = () => {
       if (processing || cancellingBooking || paymentSuccess || bookingCancelled) {
         return;
       }
-      const remainingMs = getRemainingBookingMs(bookingData._id);
+      const timerMs = getRemainingBookingMs(bookingData._id);
+      const dueAtMs = bookingData?.paymentDueAt ? new Date(bookingData.paymentDueAt).getTime() - Date.now() : 0;
+      const remainingMs = timerMs > 0 ? timerMs : Math.max(0, dueAtMs);
       if (remainingMs <= 0) {
         setTimerExpired(true);
         setTimeRemaining("00:00");
         clearBookingTimer(bookingData._id);
-        // auto cancel on expiry
+        // Auto-mark as expired once payment window is over.
         axios
           .put(
-            `${API_BASE_URL}/api/bookings/${bookingData._id}/cancel`,
-            { cancellationReason: "Payment timeout (15m)" },
+            `${API_BASE_URL}/api/bookings/${bookingData._id}/expire`,
+            {},
             { withCredentials: true }
           )
-          .catch((err) => console.error("Auto-cancel failed", err));
+          .catch((err) => console.error("Auto-expire failed", err));
         return;
       }
       setTimeRemaining(formatBookingRemaining(remainingMs));
@@ -220,8 +288,6 @@ const PaymentPage = () => {
     bookingData,
     selectedOption,
     property,
-    navigate,
-    id,
     processing,
     paymentSuccess,
     timerExpired,
@@ -302,13 +368,23 @@ const PaymentPage = () => {
     }
   };
 
-  if (!bookingData || !selectedOption || !property) {
+  if (pageLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-slate-600">Loading payment session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!bookingData || !property) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-slate-600 mb-4">Invalid payment session</p>
-          <Link to={`/properties/${id}`} className="text-blue-600 hover:underline">
-            Return to property
+          <Link to="/dashboard" className="text-blue-600 hover:underline">
+            Return to dashboard
           </Link>
         </div>
       </div>
@@ -411,7 +487,7 @@ const PaymentPage = () => {
       <Navbar />
       <main className="max-w-4xl mx-auto p-4 md:p-8">
         {!timerExpired && (
-          <Link to={`/booking/${id}`} className="inline-flex items-center text-blue-600 hover:underline mb-6">
+          <Link to={`/booking/${propertyId}`} className="inline-flex items-center text-blue-600 hover:underline mb-6">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to booking
           </Link>
@@ -431,10 +507,10 @@ const PaymentPage = () => {
           <div className="bg-red-50 border-2 border-red-500 rounded-xl p-6 mb-6">
             <div className="mb-4">
               <p className="text-red-900 font-bold text-lg mb-1">⏱️ Time has expired</p>
-              <p className="text-red-700">Your booking has been automatically cancelled. Please start a new booking to continue.</p>
+              <p className="text-red-700">Your booking payment window expired. Please start a new booking to continue.</p>
             </div>
             <Link 
-              to={`/properties/${id}`} 
+              to={`/properties/${propertyId}`} 
               className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition"
             >
               <RotateCcw className="w-5 h-5" />
@@ -591,7 +667,7 @@ const PaymentPage = () => {
             <div className="mt-6 pt-6 border-t border-slate-200">
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
-                  onClick={() => navigate(`/booking/${id}`, {
+                  onClick={() => navigate(`/booking/${propertyId}`, {
                     state: {
                       checkInDate: bookingData.checkInDate,
                       checkOutDate: bookingData.checkOutDate,

@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+const PAYMENT_TIMEOUT_MS = 15 * 60 * 1000;
+
 const bookingSchema = new mongoose.Schema(
   {
     userId: {
@@ -30,7 +32,7 @@ const bookingSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "cancelled", "completed"],
+      enum: ["pending", "confirmed", "cancelled", "completed", "expired"],
       default: "pending",
     },
     paymentStatus: {
@@ -66,6 +68,13 @@ const bookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    paymentDueAt: {
+      type: Date,
+      default: () => new Date(Date.now() + PAYMENT_TIMEOUT_MS),
+    },
+    expiredAt: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );
@@ -74,6 +83,7 @@ const bookingSchema = new mongoose.Schema(
 bookingSchema.pre("validate", function () {
   if (this.paymentStatus === "paid" && this.status !== "completed") {
     this.status = "confirmed";
+    this.expiredAt = undefined;
   }
 });
 

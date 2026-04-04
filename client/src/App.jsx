@@ -12,6 +12,7 @@ import BookingPage from './pages/booking/BookingPage';
 import PaymentPage from './pages/booking/PaymentPage';
 import AdminListings from './pages/admin/AdminListings';
 import AdminReviews from './pages/admin/AdminReviews';
+import AdminBookings from './pages/admin/AdminBookings';
 import ChatPage from './pages/chat/ChatPage';
 import Login from './pages/auth/Login';
 import AddApartment from './pages/eco-rating/AddApartment';
@@ -41,6 +42,7 @@ function App() {
          <Route path='/payment/:id' element={<PaymentPage />} />
         <Route path='/admin/listings' element={<AdminListings />} />
         <Route path='/admin/reviews' element={<AdminReviews />} />
+        <Route path='/admin/bookings' element={<AdminBookings />} />
         <Route path='/chat' element={<ChatPage />} />
         <Route path='/login' element={<Login />} />
         <Route path='/add-apartment' element={<AddApartment />} />

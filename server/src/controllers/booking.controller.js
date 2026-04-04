@@ -8,6 +8,8 @@ import {
   updatePaymentStatus,
   cancelBooking,
   requestRefund,
+  processRefundByAdmin,
+  expireBookingById,
   deleteBooking,
   checkAvailability,
 } from "../services/booking.service.js";
@@ -209,7 +211,7 @@ export const updateBookingStatusHandler = async (req, res) => {
       return res.status(400).json({ message: "Status is required" });
     }
 
-    const validStatuses = ["pending", "confirmed", "cancelled", "completed"];
+    const validStatuses = ["pending", "confirmed", "cancelled", "completed", "expired"];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ 
         message: `Status must be one of: ${validStatuses.join(", ")}` 
@@ -368,6 +370,71 @@ export const requestRefundHandler = async (req, res) => {
     }
     console.error("Request refund error:", error);
     return res.status(500).json({ message: "Failed to request refund" });
+  }
+};
+
+/**
+ * Process refund for a booking (Admin only)
+ * PUT /api/bookings/:id/refund
+ */
+export const processRefundByAdminHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { refundReason } = req.body;
+
+    const booking = await getBookingById(id);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    const updatedBooking = await processRefundByAdmin(id, refundReason);
+    return res.status(200).json({
+      message: "Refund processed successfully",
+      booking: updatedBooking,
+    });
+  } catch (error) {
+    if (error.message === "RefundAllowedOnlyForPaidBookings") {
+      return res.status(400).json({ message: "Refund can only be processed for paid bookings." });
+    }
+    if (error.message === "RefundRequiresCancelledBooking") {
+      return res.status(400).json({ message: "Only cancelled bookings can be refunded." });
+    }
+    if (error.message === "RefundAlreadyCompleted") {
+      return res.status(400).json({ message: "Refund has already been completed for this booking." });
+    }
+    console.error("Process refund error:", error);
+    return res.status(500).json({ message: "Failed to process refund" });
+  }
+};
+
+/**
+ * Expire booking when payment timeout has passed
+ * PUT /api/bookings/:id/expire
+ */
+export const expireBookingHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const booking = await getBookingById(id);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+    if (userRole !== "admin" && booking.userId?.toString() !== userId) {
+      return res.status(403).json({
+        message: "Access denied. You can only expire your own bookings.",
+      });
+    }
+
+    const updatedBooking = await expireBookingById(id);
+    return res.status(200).json({
+      message: "Booking expiry evaluated successfully",
+      booking: updatedBooking,
+    });
+  } catch (error) {
+    console.error("Expire booking error:", error);
+    return res.status(500).json({ message: "Failed to expire booking" });
   }
 };
 

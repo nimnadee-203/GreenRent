@@ -22,6 +22,35 @@ const statusBadgeClass = {
   completed: 'bg-blue-100 text-blue-700',
   pending: 'bg-amber-100 text-amber-700',
   cancelled: 'bg-red-100 text-red-700',
+  expired: 'bg-rose-100 text-rose-700',
+};
+
+const PAYMENT_TIMEOUT_MS = 15 * 60 * 1000;
+
+const getPaymentRemainingMs = (booking) => {
+  if (booking?.status !== 'pending' || booking?.paymentStatus === 'paid') return 0;
+  const dueAt = booking?.paymentDueAt
+    ? new Date(booking.paymentDueAt).getTime()
+    : booking?.createdAt
+      ? new Date(booking.createdAt).getTime() + 15 * 60 * 1000
+      : null;
+  if (!dueAt || Number.isNaN(dueAt)) return 0;
+  return Math.max(0, dueAt - Date.now());
+};
+
+const getPaymentProgress = (booking) => {
+  if (booking?.status !== 'pending' || booking?.paymentStatus === 'paid') return 0;
+  const totalWindow = booking?.paymentDueAt || booking?.createdAt ? PAYMENT_TIMEOUT_MS : 0;
+  if (!totalWindow) return 0;
+  const remainingMs = getPaymentRemainingMs(booking);
+  return Math.max(0, Math.min(100, (remainingMs / totalWindow) * 100));
+};
+
+const formatRemaining = (ms) => {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
 export default function Dashboard() {
@@ -53,12 +82,18 @@ export default function Dashboard() {
   const [reviewText, setReviewText] = useState('');
   const [livingDuration, setLivingDuration] = useState('< 3 months');
   const [wouldRecommend, setWouldRecommend] = useState(true);
+  const [, setClockNow] = useState(Date.now());
 
   const userRole = backendUser?.role;
   const isAdmin = userRole === 'admin';
   const isSeller = userRole === 'seller';
   const isUserDashboard = !isAdmin && !isSeller;
-  const userName = currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Guest';
+  const userName =
+    backendUser?.name ||
+    backendUser?.fullName ||
+    currentUser?.displayName ||
+    currentUser?.email?.split('@')[0] ||
+    'Guest';
 
   const bookingCounts = useMemo(() => {
     const counts = { all: bookings.length, confirmed: 0, pending: 0, cancelled: 0, completed: 0 };
@@ -265,6 +300,12 @@ export default function Dashboard() {
   }, [backendUser?._id, backendUser?.id, isUserDashboard]);
 
   useEffect(() => {
+    const hasActivePaymentWindow = bookings.some((booking) => getPaymentRemainingMs(booking) > 0);
+    if (!hasActivePaymentWindow) return undefined;
+
+    const timer = setInterval(() => setClockNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [bookings]);
     fetchSellerAnalytics();
   }, [fetchSellerAnalytics]);
 
@@ -764,6 +805,9 @@ export default function Dashboard() {
                 const existingReview = listingId ? myReviewsByListing[listingId] : null;
                 const bookingActionLoading = Boolean(actionLoadingById[booking._id]);
                 const canCancel = booking?.status === 'pending' || booking?.status === 'confirmed';
+                const canContinuePayment = booking?.status === 'pending' && booking?.paymentStatus !== 'paid';
+                const paymentRemainingMs = getPaymentRemainingMs(booking);
+                const paymentProgress = getPaymentProgress(booking);
                 const canRequestRefund = booking?.status === 'cancelled' && booking?.paymentStatus === 'paid' && !['requested', 'approved', 'refunded'].includes(booking?.refundStatus || 'none');
                 const canManageExistingReview = canManageReview(booking);
                 return (
@@ -792,11 +836,15 @@ export default function Dashboard() {
                       </div>
 
                       <div className="flex gap-2 flex-wrap lg:justify-end">
-                        {listingId && (
+                        {canContinuePayment ? (
+                          <Link to={`/payment/${booking._id}`} className="px-3.5 py-2 rounded-xl border border-blue-300 text-blue-700 text-sm font-semibold hover:bg-blue-50">
+                            View Booking
+                          </Link>
+                        ) : listingId ? (
                           <Link to={`/properties/${listingId}`} className="px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-white">
                             View Property
                           </Link>
-                        )}
+                        ) : null}
 
                         <button
                           type="button"
@@ -859,7 +907,31 @@ export default function Dashboard() {
                       <p className="text-xs text-slate-500 mt-3">You can update/delete this review only while this apartment is in your current or previously completed stays.</p>
                     )}
                     {booking.status === 'pending' && booking.paymentStatus !== 'paid' && (
-                      <p className="text-xs text-amber-700 mt-2">Status remains pending because payment is not marked as paid yet.</p>
+                      <div className={`mt-3 rounded-2xl border px-4 py-3 shadow-sm ${paymentRemainingMs > 0 ? 'border-amber-200 bg-gradient-to-r from-amber-50 via-white to-orange-50' : 'border-rose-200 bg-gradient-to-r from-rose-50 via-white to-pink-50'}`}>
+                        <div className="flex items-start gap-3">
+                          <div className={`mt-0.5 flex h-9 w-9 items-center justify-center rounded-full ${paymentRemainingMs > 0 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                            <Clock3 size={17} />
+                          </div>
+                          <div className="flex-1">
+                            <div className={`text-sm font-bold ${paymentRemainingMs > 0 ? 'text-amber-900' : 'text-rose-900'}`}>
+                              {paymentRemainingMs > 0 ? `Payment expires in ${formatRemaining(paymentRemainingMs)}` : 'Payment window expired'}
+                            </div>
+                            <p className={`text-xs mt-1 ${paymentRemainingMs > 0 ? 'text-amber-800' : 'text-rose-700'}`}>
+                              {paymentRemainingMs > 0
+                                ? 'Complete the payment to keep this booking active and continue to the property page.'
+                                : 'This booking will stay expired unless a new booking session is created.'}
+                            </p>
+                            {paymentRemainingMs > 0 && (
+                              <div className="mt-3 h-2 overflow-hidden rounded-full bg-amber-100">
+                                <div
+                                  className="h-full rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 transition-all duration-1000"
+                                  style={{ width: `${Math.max(8, paymentProgress)}%` }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </article>
                 );

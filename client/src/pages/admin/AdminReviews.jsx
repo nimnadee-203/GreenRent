@@ -113,6 +113,9 @@ export default function AdminReviews() {
               <p className="text-slate-600 mt-2">Hide, unhide, view, or delete user reviews from one place.</p>
             </div>
             <div className="flex gap-3 flex-wrap">
+              <Link to="/admin/bookings" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800 transition">
+                Booking Dashboard
+              </Link>
               <Link to="/admin/listings" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
                 Listings View
               </Link>
