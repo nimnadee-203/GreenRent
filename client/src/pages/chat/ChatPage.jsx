@@ -221,6 +221,9 @@ export default function ChatPage() {
                 <Link to="/admin/listings" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
                   Listings View
                 </Link>
+                <Link to="/admin/bookings" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                  Booking Dashboard
+                </Link>
                 <Link to="/admin/reviews" className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">
                   Review Management
                 </Link>

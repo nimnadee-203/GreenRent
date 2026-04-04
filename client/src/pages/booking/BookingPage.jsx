@@ -570,7 +570,7 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
       }
 
       setTimeout(() => {
-        navigate(`/payment/${property?._id}`, {
+        navigate(`/payment/${bookingPayload?._id}`, {
           state: {
             bookingData: bookingPayload,
             selectedOption,

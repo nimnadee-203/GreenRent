@@ -133,6 +133,17 @@ const Navbar = () => {
                                                 <Menu.Item>
                                                     {({ active }) => (
                                                         <Link
+                                                            to="/admin/bookings"
+                                                            className={`${active ? 'bg-emerald-50 text-emerald-700' : 'text-slate-700'} group flex w-full items-center rounded-xl px-3 py-2 text-sm transition-colors`}
+                                                        >
+                                                            <LayoutDashboard className="mr-3 h-4 w-4" />
+                                                            Booking Dashboard
+                                                        </Link>
+                                                    )}
+                                                </Menu.Item>
+                                                <Menu.Item>
+                                                    {({ active }) => (
+                                                        <Link
                                                             to="/admin/reviews"
                                                             className={`${active ? 'bg-emerald-50 text-emerald-700' : 'text-slate-700'} group flex w-full items-center rounded-xl px-3 py-2 text-sm transition-colors`}
                                                         >
@@ -198,6 +209,7 @@ const Navbar = () => {
                                 {backendUser?.role === 'admin' && (
                                     <>
                                         <Link to="/admin/listings" onClick={() => setMobileOpen(false)} className="px-2 py-2 rounded-lg text-slate-700 hover:bg-slate-100">Admin Listings</Link>
+                                        <Link to="/admin/bookings" onClick={() => setMobileOpen(false)} className="px-2 py-2 rounded-lg text-slate-700 hover:bg-slate-100">Booking Dashboard</Link>
                                         <Link to="/admin/reviews" onClick={() => setMobileOpen(false)} className="px-2 py-2 rounded-lg text-slate-700 hover:bg-slate-100">Admin Reviews</Link>
                                     </>
                                 )}

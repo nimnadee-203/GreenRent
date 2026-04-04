@@ -1,6 +1,107 @@
 import mongoose from "mongoose";
 import Booking from "../models/booking.model.js";
 import Property from "../models/Property.js";
+import userModel from "../models/userModel.js";
+
+const PAYMENT_TIMEOUT_MS = 15 * 60 * 1000;
+const PAYMENT_TIMEOUT_REASON = "Booking expired because payment timeout was reached.";
+
+const getPaymentDeadline = () => new Date(Date.now() + PAYMENT_TIMEOUT_MS);
+
+const enrichBookingsWithRenterDetails = async (bookings) => {
+  if (!Array.isArray(bookings) || bookings.length === 0) {
+    return bookings;
+  }
+
+  const normalizedBookings = bookings.map((booking) =>
+    typeof booking?.toObject === "function" ? booking.toObject() : booking
+  );
+
+  const unresolvedUserIds = [
+    ...new Set(
+      normalizedBookings
+        .map((booking) => booking?.userId)
+        .filter((userId) => typeof userId === "string" && mongoose.Types.ObjectId.isValid(userId))
+    ),
+  ];
+
+  if (unresolvedUserIds.length === 0) {
+    return normalizedBookings;
+  }
+
+  const users = await userModel
+    .find({ _id: { $in: unresolvedUserIds } })
+    .select("_id name email")
+    .lean();
+
+  const usersById = new Map(users.map((user) => [String(user._id), user]));
+
+  return normalizedBookings.map((booking) => {
+    if (typeof booking?.userId !== "string") {
+      return booking;
+    }
+
+    const matchedUser = usersById.get(booking.userId);
+    if (!matchedUser) {
+      return booking;
+    }
+
+    return {
+      ...booking,
+      userId: {
+        _id: String(matchedUser._id),
+        name: matchedUser.name || "Unknown user",
+        email: matchedUser.email || "",
+      },
+    };
+  });
+};
+
+export const expireOverduePendingBookings = async (extraFilters = {}) => {
+  const now = new Date();
+  const fallbackCutoff = new Date(now.getTime() - PAYMENT_TIMEOUT_MS);
+
+  return Booking.updateMany(
+    {
+      status: "pending",
+      paymentStatus: "unpaid",
+      ...extraFilters,
+      $or: [
+        { paymentDueAt: { $lte: now } },
+        { paymentDueAt: { $exists: false }, createdAt: { $lte: fallbackCutoff } },
+      ],
+    },
+    {
+      $set: {
+        status: "expired",
+        expiredAt: now,
+        cancellationReason: PAYMENT_TIMEOUT_REASON,
+      },
+    }
+  );
+};
+
+export const expireBookingById = async (bookingId) => {
+  const booking = await Booking.findById(bookingId);
+  if (!booking) {
+    return null;
+  }
+
+  if (booking.status !== "pending" || booking.paymentStatus === "paid") {
+    return booking;
+  }
+
+  const dueAt = booking.paymentDueAt || new Date(booking.createdAt.getTime() + PAYMENT_TIMEOUT_MS);
+  if (new Date() < dueAt) {
+    return booking;
+  }
+
+  booking.status = "expired";
+  booking.expiredAt = new Date();
+  booking.cancellationReason = PAYMENT_TIMEOUT_REASON;
+  await booking.save();
+  return booking;
+};
 
 const getDailyRate = (property) => {
   if (property.dailyPrice != null && property.dailyPrice !== "") {
@@ -157,6 +258,10 @@ export const createBooking = async (bookingData) => {
     delete bookingData.months;
   }
 
+  if (!bookingData.paymentDueAt) {
+    bookingData.paymentDueAt = getPaymentDeadline();
+  }
+
   const booking = await Booking.create(bookingData);
   return booking;
 };
@@ -167,11 +272,14 @@ export const createBooking = async (bookingData) => {
  * @returns {Promise<Array>} - Array of booking documents
  */
 export const getAllBookings = async (filters = {}) => {
-  return Booking.find(filters)
+  await expireOverduePendingBookings();
+  const bookings = await Booking.find(filters)
     .populate("userId", "name email")
     .populate("apartmentId", "title location address")
     .populate("approvedBy", "name email")
     .sort({ createdAt: -1 });
+
+  return enrichBookingsWithRenterDetails(bookings);
 };
 
 /**
@@ -181,6 +289,7 @@ export const getAllBookings = async (filters = {}) => {
  * @returns {Promise<Array>} - Array of booking documents for the user
  */
 export const getUserBookings = async (userId) => {
+  await expireOverduePendingBookings();
   const isObjectId = mongoose.Types.ObjectId.isValid(userId) && String(userId).length === 24;
   const query = isObjectId
     ? { $or: [ { userId }, { userId: new mongoose.Types.ObjectId(userId) } ] }
@@ -198,10 +307,18 @@ export const getUserBookings = async (userId) => {
  */
 export const getBookingById = async (bookingId) => {
   try {
-    return await Booking.findById(bookingId)
+    await expireBookingById(bookingId);
+    const booking = await Booking.findById(bookingId)
       .populate("userId", "name email")
       .populate("apartmentId", "title location address price")
       .populate("approvedBy", "name email");
+
+    if (!booking) {
+      return null;
+    }
+
+    const [enrichedBooking] = await enrichBookingsWithRenterDetails([booking]);
+    return enrichedBooking;
   } catch (error) {
     // If populate fails (e.g., User model doesn't exist), return booking without populate
     return await Booking.findById(bookingId);
@@ -309,6 +426,8 @@ export const updatePaymentStatus = async (bookingId, paymentStatus) => {
   if (paymentStatus === "paid") {
     const updateDoc = {
       paymentStatus,
+      paymentDueAt: null,
+      expiredAt: null,
       ...(booking.status !== "completed" ? { status: "confirmed" } : {}),
     };
 
@@ -377,6 +496,40 @@ export const requestRefund = async (bookingId, refundReason = null) => {
 
   booking.refundStatus = "requested";
   booking.refundRequestedAt = new Date();
+  if (refundReason && String(refundReason).trim()) {
+    booking.refundReason = String(refundReason).trim();
+  }
+
+  await booking.save();
+  return booking;
+};
+
+/**
+ * Process refund by admin for a cancelled paid booking
+ * @param {string} bookingId - Booking ID
+ * @param {string} refundReason - Optional reason/notes
+ * @returns {Promise<Object|null>} - Updated booking document or null if not found
+ */
+export const processRefundByAdmin = async (bookingId, refundReason = null) => {
+  const booking = await Booking.findById(bookingId);
+  if (!booking) {
+    return null;
+  }
+
+  if (booking.paymentStatus !== "paid") {
+    throw new Error("RefundAllowedOnlyForPaidBookings");
+  }
+
+  if (booking.status !== "cancelled") {
+    throw new Error("RefundRequiresCancelledBooking");
+  }
+
+  if (booking.refundStatus === "refunded") {
+    throw new Error("RefundAlreadyCompleted");
+  }
+
+  booking.refundStatus = "refunded";
+  booking.refundRequestedAt = booking.refundRequestedAt || new Date();
   if (refundReason && String(refundReason).trim()) {
     booking.refundReason = String(refundReason).trim();
   }
