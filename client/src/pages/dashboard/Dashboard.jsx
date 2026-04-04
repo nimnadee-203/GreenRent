@@ -309,8 +309,9 @@ export default function Dashboard() {
   }, [bookings]);
 
   useEffect(() => {
+    if (!isSeller) return;
     fetchSellerAnalytics();
-  }, [fetchSellerAnalytics]);
+  }, [isSeller, fetchSellerAnalytics]);
 
   useEffect(() => {
     if (!isSeller) return undefined;
