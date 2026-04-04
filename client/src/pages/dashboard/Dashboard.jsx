@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Navbar from '../../components/Home/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { Link, Navigate } from 'react-router-dom';
-import { CalendarDays, Clock3, CreditCard, Home, MapPin, MessageSquarePlus, Pencil, Search, Star, Trash2, XCircle } from 'lucide-react';
+import { CalendarDays, Clock3, CreditCard, Eye, Home, MapPin, MessageSquarePlus, Pencil, Search, Star, Trash2, XCircle } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -56,8 +56,13 @@ const formatRemaining = (ms) => {
 export default function Dashboard() {
   const { currentUser, backendUser } = useAuth();
   const [bookings, setBookings] = useState([]);
+  const [sellerListings, setSellerListings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [sellerLoading, setSellerLoading] = useState(false);
   const [bookingsError, setBookingsError] = useState('');
+  const [sellerError, setSellerError] = useState('');
+  const [sellerTimeFilter, setSellerTimeFilter] = useState('all');
+  const [sellerLastUpdated, setSellerLastUpdated] = useState(null);
   const [bookingFilter, setBookingFilter] = useState('all');
   const [reviewedListingIds, setReviewedListingIds] = useState(new Set());
   const [myReviewsByListing, setMyReviewsByListing] = useState({});
@@ -116,6 +121,107 @@ export default function Dashboard() {
     ];
   }, [bookings, bookingCounts.all]);
 
+  const toEcoScore = (property) => {
+    const score =
+      property?.ecoScore ??
+      property?.ecoRatingId?.totalScore ??
+      property?.ecoRating?.overallScore ??
+      property?.ecoRating?.score ??
+      0;
+    const normalized = Number(score);
+    if (Number.isNaN(normalized)) return 0;
+    return Math.max(0, Math.min(100, Math.round(normalized)));
+  };
+
+  const toViewCount = (property) => {
+    const count = property?.viewCount ?? property?.views ?? property?.totalViews ?? 0;
+    const normalized = Number(count);
+    if (Number.isNaN(normalized)) return 0;
+    return Math.max(0, Math.round(normalized));
+  };
+
+  const filteredSellerListings = useMemo(() => {
+    if (sellerTimeFilter === 'all') return sellerListings;
+
+    const daysMap = {
+      '7d': 7,
+      '30d': 30,
+      '90d': 90,
+    };
+
+    const days = daysMap[sellerTimeFilter];
+    if (!days) return sellerListings;
+
+    const threshold = Date.now() - days * 24 * 60 * 60 * 1000;
+    return sellerListings.filter((listing) => {
+      const created = new Date(listing?.createdAt || 0).getTime();
+      return !Number.isNaN(created) && created >= threshold;
+    });
+  }, [sellerListings, sellerTimeFilter]);
+
+  const sellerAnalytics = useMemo(() => {
+    const totalListings = filteredSellerListings.length;
+    const activeListings = filteredSellerListings.filter(
+      (listing) => listing?.availabilityStatus === 'available' && listing?.visibilityStatus !== 'hidden'
+    ).length;
+
+    const totalEco = filteredSellerListings.reduce((sum, listing) => sum + toEcoScore(listing), 0);
+    const averageEcoScore = totalListings ? (totalEco / totalListings).toFixed(1) : '0.0';
+
+    const mostViewedProperty = filteredSellerListings.reduce((top, listing) => {
+      if (!top) return listing;
+      return toViewCount(listing) > toViewCount(top) ? listing : top;
+    }, null);
+
+    return {
+      totalListings,
+      activeListings,
+      averageEcoScore,
+      mostViewedProperty,
+      mostViewedCount: mostViewedProperty ? toViewCount(mostViewedProperty) : 0,
+    };
+  }, [filteredSellerListings]);
+
+  const sellerChartData = useMemo(() => {
+    const availability = {
+      available: 0,
+      rented: 0,
+      archived: 0,
+    };
+
+    const ecoBands = {
+      excellent: 0,
+      good: 0,
+      needsWork: 0,
+    };
+
+    filteredSellerListings.forEach((listing) => {
+      const status = listing?.availabilityStatus;
+      if (status === 'available' || status === 'rented' || status === 'archived') {
+        availability[status] += 1;
+      }
+
+      const ecoScore = toEcoScore(listing);
+      if (ecoScore >= 80) ecoBands.excellent += 1;
+      else if (ecoScore >= 50) ecoBands.good += 1;
+      else ecoBands.needsWork += 1;
+    });
+
+    const topViewed = [...filteredSellerListings]
+      .sort((a, b) => toViewCount(b) - toViewCount(a))
+      .slice(0, 5);
+
+    const maxViews = topViewed.reduce((max, listing) => Math.max(max, toViewCount(listing)), 0);
+
+    return {
+      availability,
+      ecoBands,
+      topViewed,
+      maxViews,
+      total: filteredSellerListings.length,
+    };
+  }, [filteredSellerListings]);
+
   const fetchMyReviews = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/renter-reviews/my/reviews`, {
@@ -157,6 +263,38 @@ export default function Dashboard() {
     }
   };
 
+  const fetchSellerAnalytics = useCallback(async ({ silent = false } = {}) => {
+    if (!backendUser || !isSeller) {
+      setSellerListings([]);
+      return;
+    }
+
+    try {
+      if (!silent) setSellerLoading(true);
+      setSellerError('');
+      const ownerId = backendUser?.id || backendUser?._id;
+
+      if (!ownerId) {
+        setSellerError('Could not determine seller account id.');
+        setSellerListings([]);
+        return;
+      }
+
+      const response = await axios.get(`${API_BASE_URL}/api/properties`, {
+        params: { ownerId, sortBy: 'createdAt', sortOrder: 'desc' },
+        withCredentials: true,
+      });
+
+      setSellerListings(Array.isArray(response.data) ? response.data : []);
+      setSellerLastUpdated(new Date());
+    } catch (error) {
+      setSellerError(error?.response?.data?.message || 'Failed to load seller analytics.');
+      setSellerListings([]);
+    } finally {
+      if (!silent) setSellerLoading(false);
+    }
+  }, [backendUser, isSeller]);
+
   useEffect(() => {
     fetchDashboardData();
   }, [backendUser?._id, backendUser?.id, isUserDashboard]);
@@ -168,6 +306,19 @@ export default function Dashboard() {
     const timer = setInterval(() => setClockNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [bookings]);
+    fetchSellerAnalytics();
+  }, [fetchSellerAnalytics]);
+
+  useEffect(() => {
+    if (!isSeller) return undefined;
+
+    const intervalId = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      fetchSellerAnalytics({ silent: true });
+    }, 15000);
+
+    return () => clearInterval(intervalId);
+  }, [isSeller, fetchSellerAnalytics]);
 
   const setBookingActionLoading = (bookingId, isLoading) => {
     setActionLoadingById((prev) => ({ ...prev, [bookingId]: isLoading }));
@@ -355,11 +506,7 @@ export default function Dashboard() {
     return <Navigate to="/admin/listings" replace />;
   }
 
-  if (isSeller) {
-    return <Navigate to="/my-listings" replace />;
-  }
-
-  if (!isUserDashboard) {
+  if (!isUserDashboard && !isSeller) {
     return (
       <div className="min-h-screen bg-slate-50">
         <Navbar />
@@ -373,6 +520,203 @@ export default function Dashboard() {
               <Link to="/properties" className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800">Browse Properties</Link>
             </div>
           </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (isSeller) {
+    return (
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#d1fae5_0%,_#f8fafc_45%,_#f8fafc_100%)]">
+        <Navbar />
+
+        <main className="w-full px-4 sm:px-6 lg:px-10 xl:px-14 py-8 sm:py-10">
+          <section className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-white/80 backdrop-blur-sm shadow-sm mb-8">
+            <div className="absolute -top-20 -right-12 w-64 h-64 rounded-full bg-emerald-200/50 blur-3xl" />
+            <div className="absolute -bottom-24 -left-8 w-52 h-52 rounded-full bg-teal-200/40 blur-3xl" />
+            <div className="relative p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div>
+                <p className="text-sm uppercase tracking-wider text-emerald-700 font-semibold">Seller Space</p>
+                <h1 className="text-3xl md:text-4xl font-black text-slate-900 mt-1">Listing Analytics</h1>
+                <p className="text-slate-600 mt-2">Track listing performance, eco quality, and visibility from one place.</p>
+              </div>
+              <div className="flex gap-3 flex-wrap">
+                <Link to="/add-apartment" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
+                  <Home size={16} />
+                  Add Property
+                </Link>
+                <Link to="/my-listings" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
+                  <Search size={16} />
+                  My Listings
+                </Link>
+              </div>
+            </div>
+          </section>
+
+          {sellerError && (
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{sellerError}</div>
+          )}
+
+          <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <p className="text-sm font-semibold text-slate-500">Total Listings</p>
+              <p className="text-3xl font-black text-slate-900 mt-3">{sellerLoading ? '...' : sellerAnalytics.totalListings}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <p className="text-sm font-semibold text-slate-500">Active Listings</p>
+              <p className="text-3xl font-black text-slate-900 mt-3">{sellerLoading ? '...' : sellerAnalytics.activeListings}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <p className="text-sm font-semibold text-slate-500">Avg Eco Score</p>
+              <p className="text-3xl font-black text-slate-900 mt-3">{sellerLoading ? '...' : sellerAnalytics.averageEcoScore}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <p className="text-sm font-semibold text-slate-500">Most Viewed Property</p>
+              <p className="text-lg font-black text-slate-900 mt-3 line-clamp-1">{sellerLoading ? 'Loading...' : sellerAnalytics.mostViewedProperty?.title || 'No listings yet'}</p>
+              {!sellerLoading && (
+                <p className="mt-2 text-sm text-slate-600 inline-flex items-center gap-1.5">
+                  <Eye size={14} className="text-slate-500" />
+                  {sellerAnalytics.mostViewedCount} views
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="inline-flex p-1 rounded-xl bg-white border border-slate-200 shadow-sm w-fit">
+              {[
+                { key: 'all', label: 'All Time' },
+                { key: '7d', label: '7D' },
+                { key: '30d', label: '30D' },
+                { key: '90d', label: '90D' },
+              ].map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => setSellerTimeFilter(option.key)}
+                  className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition ${
+                    sellerTimeFilter === option.key
+                      ? 'bg-emerald-600 text-white'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-slate-500">
+                Live refresh every 15s
+                {sellerLastUpdated ? ` | Last update: ${sellerLastUpdated.toLocaleTimeString()}` : ''}
+              </p>
+              <button
+                type="button"
+                onClick={() => fetchSellerAnalytics()}
+                disabled={sellerLoading}
+                className="px-3 py-1.5 rounded-lg border border-emerald-200 text-emerald-700 text-sm font-semibold hover:bg-emerald-50 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {sellerLoading ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <h2 className="text-lg font-bold text-slate-900">Listing Distribution</h2>
+              <p className="text-sm text-slate-500 mt-1">Availability and eco quality mix</p>
+
+              <div className="mt-5 space-y-4">
+                <div>
+                  <div className="flex justify-between text-sm text-slate-600 mb-1.5">
+                    <span>Available</span>
+                    <span>{sellerChartData.availability.available}</span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500"
+                      style={{ width: `${sellerChartData.total ? (sellerChartData.availability.available / sellerChartData.total) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm text-slate-600 mb-1.5">
+                    <span>Rented</span>
+                    <span>{sellerChartData.availability.rented}</span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className="h-full bg-sky-500"
+                      style={{ width: `${sellerChartData.total ? (sellerChartData.availability.rented / sellerChartData.total) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-sm text-slate-600 mb-1.5">
+                    <span>Archived</span>
+                    <span>{sellerChartData.availability.archived}</span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className="h-full bg-slate-400"
+                      style={{ width: `${sellerChartData.total ? (sellerChartData.availability.archived / sellerChartData.total) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex items-center gap-5">
+                <div
+                  className="w-24 h-24 rounded-full"
+                  style={{
+                    background: `conic-gradient(#10b981 0 ${(sellerChartData.total ? (sellerChartData.ecoBands.excellent / sellerChartData.total) * 100 : 0).toFixed(2)}%, #f59e0b ${(sellerChartData.total ? (sellerChartData.ecoBands.excellent / sellerChartData.total) * 100 : 0).toFixed(2)}% ${(
+                      (sellerChartData.total
+                        ? ((sellerChartData.ecoBands.excellent + sellerChartData.ecoBands.good) / sellerChartData.total) * 100
+                        : 0)
+                    ).toFixed(2)}%, #ef4444 ${(
+                      (sellerChartData.total
+                        ? ((sellerChartData.ecoBands.excellent + sellerChartData.ecoBands.good) / sellerChartData.total) * 100
+                        : 0)
+                    ).toFixed(2)}% 100%)`,
+                  }}
+                />
+                <div className="text-sm text-slate-600 space-y-1.5">
+                  <p><span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2" />Excellent (80+): {sellerChartData.ecoBands.excellent}</p>
+                  <p><span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 mr-2" />Good (50-79): {sellerChartData.ecoBands.good}</p>
+                  <p><span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500 mr-2" />Needs work (&lt;50): {sellerChartData.ecoBands.needsWork}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <h2 className="text-lg font-bold text-slate-900">Top Viewed Listings</h2>
+              <p className="text-sm text-slate-500 mt-1">Quick ranking by property views</p>
+
+              <div className="mt-5 space-y-4">
+                {sellerChartData.topViewed.length === 0 ? (
+                  <p className="text-sm text-slate-500">No listings available yet.</p>
+                ) : (
+                  sellerChartData.topViewed.map((listing) => {
+                    const views = toViewCount(listing);
+                    const width = sellerChartData.maxViews > 0 ? (views / sellerChartData.maxViews) * 100 : 0;
+                    return (
+                      <div key={listing._id}>
+                        <div className="flex items-center justify-between gap-3 text-sm mb-1.5">
+                          <p className="font-semibold text-slate-700 truncate">{listing.title || 'Untitled listing'}</p>
+                          <span className="text-slate-500 whitespace-nowrap">{views} views</span>
+                        </div>
+                        <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                          <div className="h-full bg-emerald-500" style={{ width: `${width}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </section>
         </main>
       </div>
     );

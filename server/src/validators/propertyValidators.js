@@ -22,6 +22,18 @@ export const validatePropertyCreate = (data) => {
         if (!data.location.address || typeof data.location.address !== "string") {
             errors.push("Location address is required");
         }
+        if (data.location.displayAddress !== undefined && data.location.displayAddress !== null && typeof data.location.displayAddress !== "string") {
+            errors.push("Location displayAddress must be a string");
+        }
+        if (data.location.city !== undefined && data.location.city !== null && typeof data.location.city !== "string") {
+            errors.push("Location city must be a string");
+        }
+        if (data.location.state !== undefined && data.location.state !== null && typeof data.location.state !== "string") {
+            errors.push("Location state must be a string");
+        }
+        if (data.location.country !== undefined && data.location.country !== null && typeof data.location.country !== "string") {
+            errors.push("Location country must be a string");
+        }
         if (data.location.coordinates !== undefined) {
             if (typeof data.location.coordinates !== "object") {
                 errors.push("Location coordinates must be an object");
@@ -110,6 +122,18 @@ export const validatePropertyUpdate = (data) => {
         } else {
             if (data.location.address !== undefined && typeof data.location.address !== "string") {
                 errors.push("Location address must be a string");
+            }
+            if (data.location.displayAddress !== undefined && data.location.displayAddress !== null && typeof data.location.displayAddress !== "string") {
+                errors.push("Location displayAddress must be a string");
+            }
+            if (data.location.city !== undefined && data.location.city !== null && typeof data.location.city !== "string") {
+                errors.push("Location city must be a string");
+            }
+            if (data.location.state !== undefined && data.location.state !== null && typeof data.location.state !== "string") {
+                errors.push("Location state must be a string");
+            }
+            if (data.location.country !== undefined && data.location.country !== null && typeof data.location.country !== "string") {
+                errors.push("Location country must be a string");
             }
             if (data.location.coordinates !== undefined) {
                 if (typeof data.location.coordinates !== "object") {

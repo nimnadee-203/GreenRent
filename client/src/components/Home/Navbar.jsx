@@ -41,11 +41,11 @@ const Navbar = () => {
                     <NavLink to="/properties" className={navClassName}>
                         Apartments
                     </NavLink>
-                    <NavLink to="/dashboard" className={navClassName}>
-                        Auxiliary
+                    <NavLink to="/contact" className={navClassName}>
+                        Contact Us
                     </NavLink>
                     <NavLink to="/about" className={navClassName}>
-                        About
+                        About Us
                     </NavLink>
                 </div>
 
