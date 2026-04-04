@@ -81,7 +81,8 @@ const bookingSchema = new mongoose.Schema(
 
 // Business rule: once a booking is paid, it must be at least confirmed.
 bookingSchema.pre("validate", function () {
-  if (this.paymentStatus === "paid" && this.status !== "completed") {
+  // Keep cancelled/completed bookings as-is. Auto-promote only active unpaid-like states.
+  if (this.paymentStatus === "paid" && ["pending", "expired"].includes(this.status)) {
     this.status = "confirmed";
     this.expiredAt = undefined;
   }

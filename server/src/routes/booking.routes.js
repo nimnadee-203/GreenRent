@@ -12,6 +12,7 @@ import {
   cancelBookingHandler,
   requestRefundHandler,
   processRefundByAdminHandler,
+  rejectRefundByAdminHandler,
   expireBookingHandler,
   deleteBookingHandler,
   checkAvailabilityHandler,
@@ -79,6 +80,7 @@ router.put(
 
 // Process refund (Admin only)
 router.put("/:id/refund", authenticate, authorize("admin"), processRefundByAdminHandler);
+router.put("/:id/refund/reject", authenticate, authorize("admin"), rejectRefundByAdminHandler);
 
 // Delete booking permanently (Admin only)
 router.delete("/:id", authenticate, authorize("admin"), deleteBookingHandler);

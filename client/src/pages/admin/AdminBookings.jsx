@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { ArrowLeft, CalendarDays, ChevronDown, ChevronUp, Eye, Mail, ShieldCheck, Trash2, XCircle } from "lucide-react";
+import { ArrowLeft, Bell, CalendarDays, ChevronDown, ChevronUp, Eye, Mail, ShieldCheck, Trash2, XCircle } from "lucide-react";
 import Navbar from "../../components/Home/Navbar";
 import { useAuth } from "../../context/AuthContext";
 
@@ -88,6 +88,7 @@ export default function AdminBookings() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [propertyFilter, setPropertyFilter] = useState("");
   const [showAllRows, setShowAllRows] = useState(false);
+  const [notificationModalOpen, setNotificationModalOpen] = useState(false);
 
   const isAdmin = backendUser?.role === "admin";
 
@@ -148,6 +149,12 @@ export default function AdminBookings() {
     [filteredBookings, showAllRows]
   );
 
+  const refundRequestNotifications = useMemo(() => {
+    return bookings
+      .filter((booking) => booking?.status === "cancelled" && booking?.paymentStatus === "paid" && booking?.refundStatus === "requested")
+      .sort((a, b) => new Date(b?.refundRequestedAt || b?.updatedAt || 0) - new Date(a?.refundRequestedAt || a?.updatedAt || 0));
+  }, [bookings]);
+
   useEffect(() => {
     setShowAllRows(false);
   }, [fromDate, toDate, userFilter, statusFilter, propertyFilter]);
@@ -195,6 +202,41 @@ export default function AdminBookings() {
     }
   };
 
+  const handleApproveRefund = async (booking) => {
+    if (!booking?._id) return;
+    try {
+      setActionLoading(booking._id, true);
+      await axios.put(
+        `${API_BASE_URL}/api/bookings/${booking._id}/refund`,
+        {},
+        { withCredentials: true }
+      );
+      await fetchBookings();
+    } catch (err) {
+      window.alert(err?.response?.data?.message || "Failed to approve refund request.");
+    } finally {
+      setActionLoading(booking._id, false);
+    }
+  };
+
+  const handleRejectRefund = async (booking) => {
+    if (!booking?._id) return;
+    const reason = window.prompt("Optional rejection reason:", "") || "";
+    try {
+      setActionLoading(booking._id, true);
+      await axios.put(
+        `${API_BASE_URL}/api/bookings/${booking._id}/refund/reject`,
+        { refundReason: reason },
+        { withCredentials: true }
+      );
+      await fetchBookings();
+    } catch (err) {
+      window.alert(err?.response?.data?.message || "Failed to reject refund request.");
+    } finally {
+      setActionLoading(booking._id, false);
+    }
+  };
+
   const resetFilters = () => {
     setFromDate("");
     setToDate("");
@@ -236,7 +278,18 @@ export default function AdminBookings() {
               <p className="text-slate-600 mt-2">Monitor bookings, process refunds, and manage renter communication.</p>
             </div>
             <div className="flex gap-3 flex-wrap">
-              <Link to="/admin/listings" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800 transition">
+              <button
+                type="button"
+                onClick={() => setNotificationModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 bg-red-50 text-red-700 font-semibold hover:bg-red-100 transition"
+              >
+                <Bell className="w-4 h-4" />
+                Notifications
+                <span className="inline-flex items-center justify-center rounded-full bg-red-600 text-white text-xs font-bold px-2 py-0.5 min-w-[1.4rem]">
+                  {refundRequestNotifications.length}
+                </span>
+              </button>
+              <Link to="/admin/listings" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
                 Listings View
               </Link>
               <Link to="/admin/reviews" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
@@ -529,6 +582,70 @@ export default function AdminBookings() {
                     </p>
                   )}
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {notificationModalOpen && (
+        <div className="fixed inset-0 z-[130] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Bell className="w-5 h-5 text-indigo-600" /> Refund Notifications
+              </h3>
+              <button
+                type="button"
+                onClick={() => setNotificationModalOpen(false)}
+                className="rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 max-h-[70vh] overflow-auto bg-slate-50 space-y-3">
+              {refundRequestNotifications.length === 0 ? (
+                <p className="text-sm text-slate-600">No pending refund notifications right now.</p>
+              ) : (
+                refundRequestNotifications.map((booking) => {
+                  const renter = getRenterDetails(booking);
+                  const property = getPropertyDetails(booking);
+                  const loadingById = Boolean(actionLoadingById[booking._id]);
+
+                  return (
+                    <div key={booking._id} className="rounded-xl border border-slate-200 bg-white p-4">
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-slate-900">{property.title}</p>
+                          <p className="text-xs text-slate-600 mt-1">
+                            {renter.name} requested refund on {toDisplayDateTime(booking.refundRequestedAt || booking.updatedAt)}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-1">Booking ID: {booking._id}</p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleApproveRefund(booking)}
+                            disabled={loadingById}
+                            className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRejectRefund(booking)}
+                            disabled={loadingById}
+                            className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>

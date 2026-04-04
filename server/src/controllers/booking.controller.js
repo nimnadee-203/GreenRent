@@ -9,6 +9,7 @@ import {
   cancelBooking,
   requestRefund,
   processRefundByAdmin,
+  rejectRefundByAdmin,
   expireBookingById,
   deleteBooking,
   checkAvailability,
@@ -19,6 +20,17 @@ import {
   validateUpdateBooking,
   handleValidationErrors,
 } from "../validators/bookingValidators.js";
+
+const getBookingOwnerId = (booking) => {
+  const rawUserId = booking?.userId;
+  if (!rawUserId) return null;
+  if (typeof rawUserId === "string") return rawUserId;
+  if (typeof rawUserId === "object") {
+    if (rawUserId._id) return String(rawUserId._id);
+    if (typeof rawUserId.toString === "function") return rawUserId.toString();
+  }
+  return String(rawUserId);
+};
 
 /**
  * Create a new booking
@@ -136,7 +148,7 @@ export const getBookingByIdHandler = async (req, res) => {
     const userRole = req.user?.role;
     
     // Users can only view their own bookings unless they're admin
-    if (userRole !== "admin" && booking.userId?.toString() !== userId) {
+    if (userRole !== "admin" && getBookingOwnerId(booking) !== userId) {
       return res.status(403).json({ 
         message: "Access denied. You can only view your own bookings." 
       });
@@ -176,7 +188,7 @@ export const updateBookingHandler = async (req, res) => {
     const userRole = req.user?.role;
 
     // Users can only update their own bookings unless they're admin
-    if (userRole !== "admin" && booking.userId?.toString() !== userId) {
+    if (userRole !== "admin" && getBookingOwnerId(booking) !== userId) {
       return res.status(403).json({ 
         message: "Access denied. You can only update your own bookings." 
       });
@@ -265,7 +277,7 @@ export const updatePaymentStatusHandler = async (req, res) => {
     const userRole = req.user?.role;
 
     // Users can only update payment status for their own bookings unless they're admin
-    if (userRole !== "admin" && booking.userId?.toString() !== userId) {
+    if (userRole !== "admin" && getBookingOwnerId(booking) !== userId) {
       return res.status(403).json({ 
         message: "Access denied. You can only update payment status for your own bookings." 
       });
@@ -301,7 +313,7 @@ export const cancelBookingHandler = async (req, res) => {
     const userRole = req.user?.role;
 
     // Users can only cancel their own bookings unless they're admin
-    if (userRole !== "admin" && booking.userId?.toString() !== userId) {
+    if (userRole !== "admin" && getBookingOwnerId(booking) !== userId) {
       return res.status(403).json({ 
         message: "Access denied. You can only cancel your own bookings." 
       });
@@ -322,8 +334,8 @@ export const cancelBookingHandler = async (req, res) => {
       booking: cancelledBooking,
     });
   } catch (error) {
-    if (error.message === "CannotCancelPaidBooking") {
-      return res.status(409).json({ message: "Paid bookings cannot be cancelled from this flow." });
+    if (error.message === "CancellationWindowExpired") {
+      return res.status(400).json({ message: "Booking can only be cancelled within 3 days of placement." });
     }
     console.error("Cancel booking error:", error);
     return res.status(500).json({ message: "Failed to cancel booking" });
@@ -347,7 +359,7 @@ export const requestRefundHandler = async (req, res) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
 
-    if (userRole !== "admin" && booking.userId?.toString() !== userId) {
+    if (userRole !== "admin" && getBookingOwnerId(booking) !== userId) {
       return res.status(403).json({
         message: "Access denied. You can only request refund for your own booking.",
       });
@@ -408,6 +420,40 @@ export const processRefundByAdminHandler = async (req, res) => {
 };
 
 /**
+ * Reject refund for a booking (Admin only)
+ * PUT /api/bookings/:id/refund/reject
+ */
+export const rejectRefundByAdminHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { refundReason } = req.body;
+
+    const booking = await getBookingById(id);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    const updatedBooking = await rejectRefundByAdmin(id, refundReason);
+    return res.status(200).json({
+      message: "Refund request rejected successfully",
+      booking: updatedBooking,
+    });
+  } catch (error) {
+    if (error.message === "RefundAllowedOnlyForPaidBookings") {
+      return res.status(400).json({ message: "Refund can only be processed for paid bookings." });
+    }
+    if (error.message === "RefundRequiresCancelledBooking") {
+      return res.status(400).json({ message: "Only cancelled bookings can be refunded." });
+    }
+    if (error.message === "RefundAlreadyCompleted") {
+      return res.status(400).json({ message: "Refund has already been completed for this booking." });
+    }
+    console.error("Reject refund error:", error);
+    return res.status(500).json({ message: "Failed to reject refund request" });
+  }
+};
+
+/**
  * Expire booking when payment timeout has passed
  * PUT /api/bookings/:id/expire
  */
@@ -421,7 +467,7 @@ export const expireBookingHandler = async (req, res) => {
 
     const userId = req.user?.id;
     const userRole = req.user?.role;
-    if (userRole !== "admin" && booking.userId?.toString() !== userId) {
+    if (userRole !== "admin" && getBookingOwnerId(booking) !== userId) {
       return res.status(403).json({
         message: "Access denied. You can only expire your own bookings.",
       });
