@@ -56,15 +56,39 @@ export default function PropertyListing() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [properties, setProperties] = useState([]);
+  const [compareIds, setCompareIds] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [wishlistingIds, setWishlistingIds] = useState([]);
 
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem("comparePropertyIds") || "[]");
+      if (Array.isArray(saved)) {
+        setCompareIds(saved.filter((id) => typeof id === "string").slice(0, 3));
+      }
+    } catch {
+      setCompareIds([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    sessionStorage.setItem("comparePropertyIds", JSON.stringify(compareIds));
+  }, [compareIds]);
+
   const requestParams = useMemo(() => {
+    const serverSortBy =
+      filters.sortBy === "ecoScore" || filters.sortBy === "newestEco"
+        ? "createdAt"
+        : filters.sortBy;
+
+    const serverSortOrder =
+      serverSortBy === "price" || serverSortBy === "title" ? "asc" : "desc";
+
     const params = {
-      sortBy: filters.sortBy,
-      sortOrder: filters.sortOrder,
+      sortBy: serverSortBy,
+      sortOrder: serverSortOrder,
     };
 
     if (filters.search.trim()) params.search = filters.search.trim();
@@ -105,11 +129,7 @@ export default function PropertyListing() {
   };
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchProperties();
-    }, 250);
-
-    return () => clearTimeout(timeoutId);
+    fetchProperties();
   }, [requestParams]);
 
   const updateFilter = (field) => (event) => {
@@ -143,6 +163,37 @@ export default function PropertyListing() {
     }
   };
 
+  const toggleCompareSelection = (event, propertyId) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    setCompareIds((prev) => {
+      if (prev.includes(propertyId)) {
+        return prev.filter((id) => id !== propertyId);
+      }
+
+      if (prev.length >= 3) {
+        alert("You can compare up to 3 properties at a time.");
+        return prev;
+      }
+
+      return [...prev, propertyId];
+    });
+  };
+
+  const clearCompareSelection = () => {
+    setCompareIds([]);
+  };
+
+  const goToComparePage = () => {
+    if (compareIds.length < 2) {
+      alert("Select at least 2 properties to compare.");
+      return;
+    }
+
+    navigate(`/properties/compare?ids=${compareIds.join(",")}`);
+  };
+
   const activeFilters = useMemo(() => {
     const labels = [];
     if (filters.search.trim()) labels.push(`Search: ${filters.search.trim()}`);
@@ -160,22 +211,11 @@ export default function PropertyListing() {
     setCurrentPage(1);
   };
 
-  const filteredProperties = useMemo(() => properties, [properties]);
-
-  const totalVisible = filteredProperties.length;
-
-  const totalPages = Math.max(1, Math.ceil(filteredProperties.length / ITEMS_PER_PAGE));
-
-  const pagedProperties = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredProperties.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredProperties, currentPage]);
-
   const toLocationLabel = (property) => {
     if (typeof property.location === "string") return property.location;
     if (!property.location) return "Location unavailable";
 
-    const parts = [property.location.city, property.location.state, property.location.country].filter(Boolean);
+    const parts = [property.location.displayAddress, property.location.city, property.location.state, property.location.country].filter(Boolean);
     if (parts.length > 0) return parts.join(", ");
     return property.location.address || "Location unavailable";
   };
@@ -237,9 +277,74 @@ export default function PropertyListing() {
     return { value, unit: "/month" };
   };
 
+  const toCreatedAtTimestamp = (property) => {
+    const value = new Date(property?.createdAt || 0).getTime();
+    return Number.isNaN(value) ? 0 : value;
+  };
+
+  const filteredProperties = useMemo(() => {
+    const next = [...properties];
+
+    if (filters.sortBy === "ecoScore") {
+      next.sort((a, b) => {
+        const ecoDiff = toEcoScore(b) - toEcoScore(a);
+        if (ecoDiff !== 0) return ecoDiff;
+        return toCreatedAtTimestamp(b) - toCreatedAtTimestamp(a);
+      });
+      return next;
+    }
+
+    if (filters.sortBy === "newestEco") {
+      next.sort((a, b) => {
+        const createdDiff = toCreatedAtTimestamp(b) - toCreatedAtTimestamp(a);
+        if (createdDiff !== 0) return createdDiff;
+        return toEcoScore(b) - toEcoScore(a);
+      });
+      return next;
+    }
+
+    return next;
+  }, [properties, filters.sortBy]);
+
+  const totalVisible = filteredProperties.length;
+
+  const totalPages = Math.max(1, Math.ceil(filteredProperties.length / ITEMS_PER_PAGE));
+
+  const pagedProperties = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredProperties.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredProperties, currentPage]);
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
+
+      {compareIds.length > 0 && (
+        <section className="sticky top-16 z-30 border-y border-emerald-200 bg-emerald-50/95 backdrop-blur-sm">
+          <div className="w-full px-4 md:px-8 xl:px-12 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="text-sm font-semibold text-emerald-800">
+              {compareIds.length} / 3 selected for comparison
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={clearCompareSelection}
+                className="px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-800 text-sm font-semibold hover:bg-emerald-100"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={goToComparePage}
+                disabled={compareIds.length < 2}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Compare Now
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       <PropertyFilterBar
         filters={filters}
@@ -261,6 +366,8 @@ export default function PropertyListing() {
             <option value="createdAt">Newest Listings</option>
             <option value="price">Lowest Price</option>
             <option value="title">Name A-Z</option>
+            <option value="ecoScore">Sort by Eco Score</option>
+            <option value="newestEco">Sort by Newest + Eco</option>
           </select>
         </div>
 
@@ -317,6 +424,7 @@ export default function PropertyListing() {
                 const ecoScore = toEcoScore(property);                  const airQuality = toAirQuality(property);                const bedrooms = property.bedrooms ?? property.beds ?? 1;
                 const bathrooms = property.bathrooms ?? property.baths ?? 1;
                 const { value: displayPrice, unit: priceUnit } = getPrimaryPriceInfo(property);
+                const selectedForCompare = compareIds.includes(property._id);
 
                 return (
                   <Link
@@ -332,6 +440,18 @@ export default function PropertyListing() {
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                           loading="lazy"
                         />
+
+                        <button
+                          type="button"
+                          onClick={(e) => toggleCompareSelection(e, property._id)}
+                          className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-semibold border z-10 transition-colors ${
+                            selectedForCompare
+                              ? "bg-emerald-600 text-white border-emerald-600"
+                              : "bg-white/90 text-slate-700 border-slate-200 hover:bg-white"
+                          }`}
+                        >
+                          {selectedForCompare ? "Selected" : "Compare"}
+                        </button>
 
                         <button
                           type="button"

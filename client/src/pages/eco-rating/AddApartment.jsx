@@ -10,6 +10,10 @@ const INITIAL_FORM = {
   title: '',
   description: '',
   address: '',
+  displayAddress: '',
+  city: '',
+  state: '',
+  country: '',
   price: '',
   stayType: 'long',
   monthlyPrice: '',
@@ -196,7 +200,13 @@ export default function AddApartment() {
       const payload = {
         title: form.title,
         description: form.description,
-        location: { address: form.address },
+        location: {
+          address: form.address,
+          displayAddress: form.displayAddress,
+          city: form.city,
+          state: form.state,
+          country: form.country,
+        },
         // Keep legacy price for existing screens (fallback display value)
         price:
           form.stayType === 'short'
@@ -338,6 +348,12 @@ export default function AddApartment() {
                     <div className="space-y-7 lg:col-span-7">
                       <InputWithIcon icon={Home} label="Property Title" value={form.title} onChange={onFieldChange('title')} required />
                       <InputWithIcon icon={MapPin} label="Address" value={form.address} onChange={onFieldChange('address')} required />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <InputWithIcon icon={MapPin} label="Display Address" value={form.displayAddress} onChange={onFieldChange('displayAddress')} placeholder="e.g., No. 12, Palm Grove Residences" />
+                        <InputWithIcon icon={MapPin} label="City" value={form.city} onChange={onFieldChange('city')} placeholder="e.g., Colombo" />
+                        <InputWithIcon icon={MapPin} label="State / Province" value={form.state} onChange={onFieldChange('state')} placeholder="e.g., Western Province" />
+                        <InputWithIcon icon={MapPin} label="Country" value={form.country} onChange={onFieldChange('country')} placeholder="e.g., Sri Lanka" />
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="flex flex-col">
                           <label className="mb-1.5 block text-sm font-semibold text-slate-700">Stay Type</label>

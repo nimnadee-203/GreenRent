@@ -23,6 +23,7 @@ import {
   ChevronRight,
   X,
   Heart,
+  Share2,
   MessageCircle,
   SendHorizontal
 } from "lucide-react";
@@ -31,11 +32,14 @@ import Footer from "../../components/Home/Footer";
 import { useAuth } from "../../context/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const IMAGE_AUTOPLAY_MS = 4000;
 
 const PropertyDetails = () => {
   const { backendUser } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
+  
+  // All state must be defined at the top of the component (React Rules of Hooks)
   const [property, setProperty] = useState(null);
   const [ecoRating, setEcoRating] = useState(null);
   const [reviewsData, setReviewsData] = useState({ reviews: [], summary: null });
@@ -43,6 +47,42 @@ const PropertyDetails = () => {
   const [replySubmittingByReview, setReplySubmittingByReview] = useState({});
   const [replyError, setReplyError] = useState("");
   const [reviewActionLoadingById, setReviewActionLoadingById] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [mapCoords, setMapCoords] = useState(null);
+  const [mapLoading, setMapLoading] = useState(false);
+  const [mapError, setMapError] = useState("");
+  const [showStayTypeModal, setShowStayTypeModal] = useState(false);
+  const [showDatePickerModal, setShowDatePickerModal] = useState(false);
+  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const [stayType, setStayType] = useState("");
+  const [checkInDate, setCheckInDate] = useState("");
+  const [checkOutDate, setCheckOutDate] = useState("");
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilityResult, setAvailabilityResult] = useState(null);
+  const [availabilityError, setAvailabilityError] = useState("");
+  const [selectedAvailability, setSelectedAvailability] = useState(null);
+  const [fromMonth, setFromMonth] = useState("");
+  const [fromYear, setFromYear] = useState("");
+  const [toMonth, setToMonth] = useState("");
+  const [toYear, setToYear] = useState("");
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState("");
+  const [nearbyPlaces, setNearbyPlaces] = useState(null);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [nearbySource, setNearbySource] = useState("unavailable");
+  const [autoplayEnabled, setAutoplayEnabled] = useState(() => {
+    try {
+      const storedValue = localStorage.getItem("propertyDetailsAutoplayEnabled");
+      return storedValue === null ? true : storedValue === "true";
+    } catch {
+      return true;
+    }
+  });
 
   const fetchReviews = async (listingId) => {
     try {
@@ -105,30 +145,7 @@ const PropertyDetails = () => {
       setReviewActionLoadingById((prev) => ({ ...prev, [reviewId]: false }));
     }
   };
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-  const [mapCoords, setMapCoords] = useState(null);
-  const [mapLoading, setMapLoading] = useState(false);
-  const [mapError, setMapError] = useState("");
-  const [showStayTypeModal, setShowStayTypeModal] = useState(false);
-  const [showDatePickerModal, setShowDatePickerModal] = useState(false);
-  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
-  const [stayType, setStayType] = useState(""); // "long" or "short"
-  const [checkInDate, setCheckInDate] = useState("");
-  const [checkOutDate, setCheckOutDate] = useState("");
-  const [availabilityLoading, setAvailabilityLoading] = useState(false);
-  const [availabilityResult, setAvailabilityResult] = useState(null);
-  const [availabilityError, setAvailabilityError] = useState("");
-  const [selectedAvailability, setSelectedAvailability] = useState(null);
-  const [fromMonth, setFromMonth] = useState("");
-  const [fromYear, setFromYear] = useState("");
-  const [toMonth, setToMonth] = useState("");
-  const [toYear, setToYear] = useState("");
-  const [isWishlisted, setIsWishlisted] = useState(false);
-  const [wishlistLoading, setWishlistLoading] = useState(false);
+
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -272,10 +289,10 @@ const PropertyDetails = () => {
         return;
       }
 
-      const address = property.location?.address;
-      if (!address) {
+      const locationQuery = toMapLocationQuery(property.location);
+      if (!locationQuery) {
         setMapCoords(null);
-        setMapError("No location address available for this listing.");
+                setMapError("No location information available for this listing.");
         return;
       }
 
@@ -285,7 +302,7 @@ const PropertyDetails = () => {
       try {
         const response = await axios.get("https://nominatim.openstreetmap.org/search", {
           params: {
-            q: address,
+            q: locationQuery,
             format: "json",
             limit: 1,
           },
@@ -302,7 +319,7 @@ const PropertyDetails = () => {
           setMapCoords({ lat: geoLat, lng: geoLng });
         } else {
           setMapCoords(null);
-          setMapError("Could not locate this address on OpenStreetMap.");
+          setMapError("Could not locate this location on OpenStreetMap.");
         }
       } catch (geoErr) {
         setMapCoords(null);
@@ -332,17 +349,231 @@ const PropertyDetails = () => {
     checkWishlistStatus();
   }, [id]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem("propertyDetailsAutoplayEnabled", String(autoplayEnabled));
+    } catch {
+      // Ignore storage errors and keep in-memory preference.
+    }
+  }, [autoplayEnabled]);
+
   const toEmbedMapUrl = (lat, lng) => {
-    const delta = 0.01;
-    const left = lng - delta;
-    const right = lng + delta;
-    const top = lat + delta;
-    const bottom = lat - delta;
-    const bbox = encodeURIComponent(`${left},${bottom},${right},${top}`);
-    const marker = encodeURIComponent(`${lat},${lng}`);
+    const delta = 0.003;
+    const left = Math.max(-180, lng - delta);
+    const right = Math.min(180, lng + delta);
+    const top = Math.min(90, lat + delta);
+    const bottom = Math.max(-90, lat - delta);
+    const bbox = `${left},${bottom},${right},${top}`;
+    const marker = `${lat},${lng}`;
 
     return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${marker}`;
   };
+
+  const toLocationLabel = (location) => {
+    if (!location) return "Address not provided";
+    if (typeof location === "string") return location;
+
+    const displayParts = [location.displayAddress, location.city, location.state, location.country].filter(Boolean);
+    if (displayParts.length > 0) return displayParts.join(", ");
+
+    return location.address || "Address not provided";
+  };
+
+  const toGeocodeQuery = (location) => {
+    if (!location || typeof location === "string") return typeof location === "string" ? location : "";
+
+    return [location.address, location.displayAddress, location.city, location.state, location.country]
+      .filter(Boolean)
+      .join(", ");
+  };
+
+  const toMapLocationQuery = (location) => {
+    if (!location) return "";
+    if (typeof location === "string") return location.trim();
+
+    const broadParts = [location.city, location.state, location.country]
+      .filter((part) => typeof part === "string" && part.trim())
+      .map((part) => part.trim());
+
+    if (broadParts.length > 0) return broadParts.join(", ");
+
+    const fallbackRaw =
+      (typeof location.address === "string" && location.address.trim()) ||
+      (typeof location.displayAddress === "string" && location.displayAddress.trim()) ||
+      "";
+
+    if (!fallbackRaw) return "";
+
+    const tokens = fallbackRaw.split(",").map((token) => token.trim()).filter(Boolean);
+    if (tokens.length >= 3) {
+      return tokens.slice(-3).join(", ");
+    }
+
+    return fallbackRaw;
+  };
+
+  const staticNearbyPlacesByCategory = {
+    busStops: [
+      { name: "Main Street Bus Stop", distanceKm: 0.3, note: "5 min walk" },
+      { name: "City Line Exchange", distanceKm: 1.1, note: "Frequent routes" },
+    ],
+    groceries: [
+      { name: "Green Basket Supermarket", distanceKm: 0.7, note: "Fresh produce" },
+      { name: "Daily Needs Mini Mart", distanceKm: 1.2, note: "Open till 10 PM" },
+    ],
+    hospitals: [
+      { name: "City General Hospital", distanceKm: 2.4, note: "24/7 emergency" },
+      { name: "Lakeside Medical Center", distanceKm: 3.1, note: "OPD + pharmacy" },
+    ],
+    schools: [
+      { name: "Sunrise International School", distanceKm: 1.8, note: "Primary to A/L" },
+      { name: "Green Valley College", distanceKm: 2.9, note: "Public transport access" },
+    ],
+  };
+
+  const toRadians = (value) => (value * Math.PI) / 180;
+  const distanceInKm = (lat1, lon1, lat2, lon2) => {
+    const earthRadiusKm = 6371;
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return earthRadiusKm * c;
+  };
+
+  useEffect(() => {
+    const fetchNearbyPlaces = async () => {
+      const locationQuery = toMapLocationQuery(property?.location);
+      if (!locationQuery) {
+        setNearbyPlaces(null);
+        setNearbySource("unavailable");
+        return;
+      }
+
+      setNearbyLoading(true);
+
+      let targetCoords = null;
+
+      try {
+        const geocodeResponse = await axios.get("https://nominatim.openstreetmap.org/search", {
+          params: {
+            q: locationQuery,
+            format: "json",
+            limit: 1,
+          },
+          headers: {
+            "User-Agent": "GreenRent/1.0",
+          },
+        });
+
+        const geoResult = Array.isArray(geocodeResponse.data) ? geocodeResponse.data[0] : null;
+        const geoLat = geoResult ? parseFloat(geoResult.lat) : NaN;
+        const geoLng = geoResult ? parseFloat(geoResult.lon) : NaN;
+
+        if (!Number.isFinite(geoLat) || !Number.isFinite(geoLng)) {
+          setNearbyPlaces(null);
+          setNearbySource("unavailable");
+          setNearbyLoading(false);
+          return;
+        }
+
+        targetCoords = { lat: geoLat, lng: geoLng };
+      } catch {
+        setNearbyPlaces(null);
+        setNearbySource("unavailable");
+        setNearbyLoading(false);
+        return;
+      }
+
+      const query = `
+        [out:json][timeout:20];
+        (
+          node["highway"="bus_stop"](around:2500,${targetCoords.lat},${targetCoords.lng});
+          node["shop"~"supermarket|convenience|grocery"](around:2500,${targetCoords.lat},${targetCoords.lng});
+          node["amenity"="hospital"](around:4000,${targetCoords.lat},${targetCoords.lng});
+          node["amenity"="school"](around:3500,${targetCoords.lat},${targetCoords.lng});
+          way["shop"~"supermarket|convenience|grocery"](around:2500,${targetCoords.lat},${targetCoords.lng});
+          way["amenity"="hospital"](around:4000,${targetCoords.lat},${targetCoords.lng});
+          way["amenity"="school"](around:3500,${targetCoords.lat},${targetCoords.lng});
+        );
+        out center tags;
+      `;
+
+      try {
+        const response = await axios.post("https://overpass-api.de/api/interpreter", query, {
+          headers: { "Content-Type": "text/plain" },
+          timeout: 12000,
+        });
+
+        const mapped = {
+          busStops: [],
+          groceries: [],
+          hospitals: [],
+          schools: [],
+        };
+
+        const elements = Array.isArray(response.data?.elements) ? response.data.elements : [];
+
+        elements.forEach((element) => {
+          const tags = element.tags || {};
+          const lat = element.lat ?? element.center?.lat;
+          const lng = element.lon ?? element.center?.lon;
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+          const distanceKm = distanceInKm(targetCoords.lat, targetCoords.lng, lat, lng);
+          const place = {
+            name: tags.name || tags.brand || "Unnamed place",
+            distanceKm,
+            note: tags.operator || tags.amenity || tags.shop || "Nearby",
+          };
+
+          if (tags.highway === "bus_stop") mapped.busStops.push(place);
+          else if (tags.shop === "supermarket" || tags.shop === "convenience" || tags.shop === "grocery") mapped.groceries.push(place);
+          else if (tags.amenity === "hospital") mapped.hospitals.push(place);
+          else if (tags.amenity === "school") mapped.schools.push(place);
+        });
+
+        const normalize = (items) => {
+          const uniqueByName = new Map();
+          items.forEach((item) => {
+            const key = item.name.toLowerCase();
+            if (!uniqueByName.has(key) || item.distanceKm < uniqueByName.get(key).distanceKm) {
+              uniqueByName.set(key, item);
+            }
+          });
+
+          return Array.from(uniqueByName.values())
+            .sort((a, b) => a.distanceKm - b.distanceKm)
+            .slice(0, 4);
+        };
+
+        const liveNearby = {
+          busStops: normalize(mapped.busStops),
+          groceries: normalize(mapped.groceries),
+          hospitals: normalize(mapped.hospitals),
+          schools: normalize(mapped.schools),
+        };
+
+        const hasLiveData = Object.values(liveNearby).some((items) => items.length > 0);
+        if (hasLiveData) {
+          setNearbyPlaces(liveNearby);
+          setNearbySource("live");
+        } else {
+          setNearbyPlaces(null);
+          setNearbySource("unavailable");
+        }
+      } catch (nearbyErr) {
+        setNearbyPlaces(null);
+        setNearbySource("unavailable");
+      } finally {
+        setNearbyLoading(false);
+      }
+    };
+
+    fetchNearbyPlaces();
+  }, [property]);
 
   const today = new Date().toISOString().split("T")[0];
   const propertyStayType = property?.stayType || "long";
@@ -356,6 +587,16 @@ const PropertyDetails = () => {
     const percent = totalReviewCount ? Math.round((count / totalReviewCount) * 100) : 0;
     return { star, count, percent };
   });
+
+  const nearbyPlacesByCategory =
+    nearbyPlaces || { busStops: [], groceries: [], hospitals: [], schools: [] };
+
+  const nearbyPlaceSections = [
+    { key: "busStops", title: "Bus Stops" },
+    { key: "groceries", title: "Groceries" },
+    { key: "hospitals", title: "Hospitals" },
+    { key: "schools", title: "Schools" },
+  ];
 
   const handleCheckAvailabilityClick = (event) => {
     event.stopPropagation();
@@ -390,6 +631,45 @@ const PropertyDetails = () => {
     } finally {
       setWishlistLoading(false);
     }
+  };
+
+  const handleShareListing = async (event) => {
+    event.stopPropagation();
+
+    const shareUrl = window.location.href;
+    const shareTitle = property?.title || "GreenRent Property";
+    const shareText = `Check out this property on GreenRent: ${shareTitle}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+        setShareFeedback("Shared successfully.");
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareFeedback("Link copied to clipboard.");
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = shareUrl;
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        setShareFeedback("Link copied to clipboard.");
+      }
+    } catch (shareError) {
+      setShareFeedback("Unable to share right now.");
+    }
+
+    window.setTimeout(() => {
+      setShareFeedback("");
+    }, 2200);
   };
 
   const handleSelectStayType = (type) => {
@@ -501,10 +781,79 @@ const PropertyDetails = () => {
     setStayType("");
   };
 
+  const images = property?.images && property.images.length > 0
+    ? property.images
+    : ["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"];
+
+  useEffect(() => {
+    if (!property || !autoplayEnabled || images.length <= 1) return undefined;
+
+    const intervalId = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % images.length);
+    }, IMAGE_AUTOPLAY_MS);
+
+    return () => clearInterval(intervalId);
+  }, [property, autoplayEnabled, images.length]);
+
+  useEffect(() => {
+    if (currentImageIndex < images.length) return;
+    setCurrentImageIndex(0);
+  }, [currentImageIndex, images.length]);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+      <div className="min-h-screen bg-slate-50">
+        <Navbar />
+        <main className="w-full mx-auto px-4 md:px-8 xl:px-12 py-8 animate-pulse">
+          <div className="h-5 w-36 bg-slate-200 rounded-md mb-6" />
+
+          <div className="w-full h-[400px] md:h-[500px] rounded-2xl bg-slate-200 mb-8" />
+
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="lg:col-span-3 space-y-8">
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                <div className="flex flex-wrap gap-4">
+                  <div className="h-16 flex-1 min-w-[160px] bg-slate-100 rounded-xl" />
+                  <div className="h-16 flex-1 min-w-[160px] bg-slate-100 rounded-xl" />
+                  <div className="h-16 flex-1 min-w-[160px] bg-slate-100 rounded-xl" />
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+                <div className="h-6 w-48 bg-slate-200 rounded-md" />
+                <div className="h-4 w-full bg-slate-100 rounded" />
+                <div className="h-4 w-11/12 bg-slate-100 rounded" />
+                <div className="h-4 w-9/12 bg-slate-100 rounded" />
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+                <div className="h-6 w-40 bg-slate-200 rounded-md" />
+                <div className="h-[320px] bg-slate-100 rounded-xl" />
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="rounded-2xl p-6 bg-slate-200 h-[300px]" />
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+                <div className="h-6 w-40 bg-slate-200 rounded-md" />
+                <div className="h-24 bg-slate-100 rounded-xl" />
+                <div className="h-11 bg-slate-200 rounded-xl" />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 bg-white rounded-2xl border border-slate-200 p-6 lg:p-10 shadow-sm space-y-4">
+            <div className="h-7 w-64 bg-slate-200 rounded-md" />
+            <div className="h-4 w-80 bg-slate-100 rounded" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-2">
+              <div className="h-56 bg-slate-100 rounded-xl" />
+              <div className="h-56 bg-slate-100 rounded-xl" />
+              <div className="h-56 bg-slate-100 rounded-xl hidden md:block" />
+              <div className="h-56 bg-slate-100 rounded-xl hidden xl:block" />
+            </div>
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }
@@ -520,10 +869,6 @@ const PropertyDetails = () => {
       </div>
     );
   }
-
-  const images = property.images && property.images.length > 0 
-      ? property.images 
-      : ["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"];
 
   const primaryImage = images[currentImageIndex];
   const hasMonthlyPrice = property.monthlyPrice !== null && property.monthlyPrice !== undefined;
@@ -548,78 +893,97 @@ const PropertyDetails = () => {
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to apartments
         </Link>
         
-        {/* Hero Image Section */}
-        <div 
-          className="w-full h-[400px] md:h-[500px] rounded-2xl overflow-hidden shadow-lg relative group cursor-pointer"
-          onClick={() => setIsLightboxOpen(true)}
-        >
-          <img src={primaryImage} alt={property.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent pointer-events-none"></div>
-          
-          {images.length > 1 && (
-            <>
-              <button 
-                onClick={handlePrevImage}
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/30 hover:bg-white/50 backdrop-blur-md text-white p-2 rounded-full transition opacity-0 group-hover:opacity-100 z-10"
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </button>
-              <button 
-                onClick={handleNextImage}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/30 hover:bg-white/50 backdrop-blur-md text-white p-2 rounded-full transition opacity-0 group-hover:opacity-100 z-10"
-              >
-                <ChevronRight className="w-6 h-6" />
-              </button>
-              
-              <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-semibold tracking-wider z-10 pointer-events-none">
-                {currentImageIndex + 1} / {images.length}
-              </div>
-            </>
-          )}
+        {/* Hero Section */}
+        <section className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch">
+          <div
+            className="xl:col-span-9 w-full h-[400px] md:h-[500px] rounded-2xl overflow-hidden shadow-lg relative group cursor-pointer"
+            onClick={() => setIsLightboxOpen(true)}
+          >
+            <img src={primaryImage} alt={property.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent pointer-events-none"></div>
 
-          <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end gap-4">
-            <div className="text-white">
-              <span className="inline-block px-3 py-1 bg-emerald-500/90 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider mb-3">
-                {property.propertyType || "Apartment"}
-              </span>
-              <h1 className="text-3xl md:text-5xl font-bold mb-2 text-white shadow-sm">{property.title}</h1>
-              <div className="flex items-center text-slate-200">
-                <MapPin className="w-4 h-4 mr-1.5" />
-                <span className="text-sm md:text-base">{property.location?.address || "Address not provided"}</span>
+            {images.length > 1 && (
+              <>
+                <button
+                  onClick={handlePrevImage}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/30 hover:bg-white/50 backdrop-blur-md text-white p-2 rounded-full transition opacity-0 group-hover:opacity-100 z-10"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={handleNextImage}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/30 hover:bg-white/50 backdrop-blur-md text-white p-2 rounded-full transition opacity-0 group-hover:opacity-100 z-10"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+
+                <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-semibold tracking-wider z-10 pointer-events-none">
+                  {currentImageIndex + 1} / {images.length}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAutoplayEnabled((prev) => !prev);
+                  }}
+                  className="absolute top-4 left-4 bg-black/50 hover:bg-black/65 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-semibold tracking-wider z-10"
+                  aria-pressed={autoplayEnabled}
+                  aria-label={autoplayEnabled ? "Turn autoplay off" : "Turn autoplay on"}
+                >
+                  Auto-play: {autoplayEnabled ? "On" : "Off"}
+                </button>
+              </>
+            )}
+
+            <div className="absolute bottom-6 left-6 right-6">
+              <div className="text-white max-w-3xl">
+                <span className="inline-block px-3 py-1 bg-emerald-500/90 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider mb-3">
+                  {property.propertyType || "Apartment"}
+                </span>
+                <h1 className="text-3xl md:text-5xl font-bold mb-2 text-white shadow-sm">{property.title}</h1>
+                <div className="flex items-center text-slate-200">
+                  <MapPin className="w-4 h-4 mr-1.5" />
+                  <span className="text-sm md:text-base">{toLocationLabel(property.location)}</span>
+                </div>
               </div>
             </div>
-            <div className="flex flex-col gap-3 flex-shrink-0">
-              <div className="bg-white/90 backdrop-blur-md rounded-xl p-4 shadow-lg text-slate-900 text-center min-w-[140px]">
-                {propertyStayType === "both" ? (
-                  <>
-                    <p className="text-[10px] font-semibold text-slate-500 uppercase">Long Stay (Monthly)</p>
-                    <p className="text-xl md:text-2xl font-bold text-emerald-600 mb-2">
-                      Rs {Number(hasMonthlyPrice ? property.monthlyPrice : property.price).toLocaleString("en-LK")}
-                    </p>
-                    <p className="text-[10px] font-semibold text-slate-500 uppercase">Short Stay (Daily)</p>
-                    <p className="text-lg md:text-xl font-bold text-emerald-700">
-                      Rs {Number(hasDailyPrice ? property.dailyPrice : property.price).toLocaleString("en-LK")}
-                    </p>
-                  </>
-                ) : propertyStayType === "short" ? (
-                  <>
-                    <p className="text-xs font-semibold text-slate-500 uppercase">Daily Rent</p>
-                    <p className="text-2xl md:text-3xl font-bold text-emerald-600">
-                      Rs {Number(hasDailyPrice ? property.dailyPrice : property.price).toLocaleString("en-LK")}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-xs font-semibold text-slate-500 uppercase">Monthly Rent</p>
-                    <p className="text-2xl md:text-3xl font-bold text-emerald-600">
-                      Rs {Number(hasMonthlyPrice ? property.monthlyPrice : property.price).toLocaleString("en-LK")}
-                    </p>
-                  </>
-                )}
-              </div>
+          </div>
+
+          <aside className="xl:col-span-3 rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm flex flex-col gap-3 h-full">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 text-slate-900 text-center">
+              {propertyStayType === "both" ? (
+                <>
+                  <p className="text-[10px] font-semibold text-slate-500 uppercase">Long Stay (Monthly)</p>
+                  <p className="text-xl md:text-2xl font-bold text-emerald-600 mb-2">
+                    Rs {Number(hasMonthlyPrice ? property.monthlyPrice : property.price).toLocaleString("en-LK")}
+                  </p>
+                  <p className="text-[10px] font-semibold text-slate-500 uppercase">Short Stay (Daily)</p>
+                  <p className="text-lg md:text-xl font-bold text-emerald-700">
+                    Rs {Number(hasDailyPrice ? property.dailyPrice : property.price).toLocaleString("en-LK")}
+                  </p>
+                </>
+              ) : propertyStayType === "short" ? (
+                <>
+                  <p className="text-xs font-semibold text-slate-500 uppercase">Daily Rent</p>
+                  <p className="text-2xl md:text-3xl font-bold text-emerald-600">
+                    Rs {Number(hasDailyPrice ? property.dailyPrice : property.price).toLocaleString("en-LK")}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-semibold text-slate-500 uppercase">Monthly Rent</p>
+                  <p className="text-2xl md:text-3xl font-bold text-emerald-600">
+                    Rs {Number(hasMonthlyPrice ? property.monthlyPrice : property.price).toLocaleString("en-LK")}
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-3 mt-1">
               <button
                 onClick={handleCheckAvailabilityClick}
-                className="bg-white/90 backdrop-blur-md rounded-xl px-4 py-3 shadow-lg text-slate-900 font-semibold hover:bg-white transition-all flex items-center justify-center gap-2 min-w-[140px] whitespace-nowrap"
+                className="rounded-xl px-4 py-3 border border-emerald-200 bg-emerald-50 text-emerald-800 font-semibold hover:bg-emerald-100 transition-all flex items-center justify-center gap-2 min-w-[170px]"
               >
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                 Check Availability
@@ -627,18 +991,30 @@ const PropertyDetails = () => {
               <button
                 onClick={handleWishlistToggle}
                 disabled={wishlistLoading}
-                className={`backdrop-blur-md rounded-xl px-4 py-3 shadow-lg font-semibold transition-all flex items-center justify-center gap-2 min-w-[140px] whitespace-nowrap ${
+                className={`rounded-xl px-4 py-3 border font-semibold transition-all flex items-center justify-center gap-2 min-w-[170px] ${
                   isWishlisted
-                    ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
-                    : "bg-white/90 text-slate-900 hover:bg-white"
+                    ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
+                    : "bg-white text-slate-900 border-slate-200 hover:bg-slate-50"
                 } ${wishlistLoading ? "opacity-70 cursor-not-allowed" : ""}`}
               >
                 <Heart className={`w-5 h-5 ${isWishlisted ? "fill-rose-500 text-rose-500" : "text-rose-500"}`} />
                 {wishlistLoading ? "Saving..." : isWishlisted ? "Wishlisted" : "Add to Wishlist"}
               </button>
+              <button
+                onClick={handleShareListing}
+                className="rounded-xl px-4 py-3 border border-slate-200 bg-white text-slate-900 font-semibold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 min-w-[140px]"
+              >
+                <Share2 className="w-5 h-5 text-slate-700" />
+                Share
+              </button>
             </div>
-          </div>
-        </div>
+          {shareFeedback && (
+            <p className="mt-3 text-xs text-center font-medium text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 border border-emerald-100">
+              {shareFeedback}
+            </p>
+          )}
+          </aside>
+        </section>
 
         <div className="mt-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
           
@@ -682,7 +1058,7 @@ const PropertyDetails = () => {
                 <MapPin className="w-5 h-5 mr-2 text-emerald-600" />
                 Location Map
               </h2>
-              <p className="text-sm text-slate-500 mb-4">{property.location?.address || "Address not provided"}</p>
+              <p className="text-sm text-slate-500 mb-4">{toMapLocationQuery(property.location) || "Location not provided"}</p>
 
               {mapLoading && (
                 <div className="h-[320px] rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center">
@@ -719,6 +1095,58 @@ const PropertyDetails = () => {
                   <p className="text-sm text-amber-800">{mapError || "Map is unavailable for this property location."}</p>
                 </div>
               )}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-5 gap-3">
+                <h2 className="text-xl font-bold text-slate-900">Nearby Places</h2>
+                <span className={`text-[11px] font-semibold px-2 py-1 rounded-full border ${
+                  nearbySource === "live"
+                    ? "text-emerald-700 bg-emerald-50 border-emerald-100"
+                    : "text-amber-700 bg-amber-50 border-amber-100"
+                }`}>
+                  {nearbySource === "live" ? "Live API" : "Live API unavailable"}
+                </span>
+              </div>
+              <p className="text-sm text-slate-500 mb-5">
+                Nearby essentials to help with daily commute, groceries, health, and schooling.
+              </p>
+
+              {nearbyLoading && (
+                <p className="text-sm text-slate-500 mb-4">Fetching nearby places...</p>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {nearbyPlaceSections.map((section) => {
+                  const places = nearbyPlacesByCategory[section.key] || [];
+
+                  return (
+                    <div key={section.key} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                      <h3 className="text-sm font-bold text-slate-800 mb-3">{section.title}</h3>
+
+                      {places.length === 0 ? (
+                        <p className="text-xs text-slate-500">No nearby data yet.</p>
+                      ) : (
+                        <div className="space-y-2.5">
+                          {places.slice(0, 3).map((place) => (
+                            <div key={place.name} className="rounded-lg bg-white border border-slate-200 px-3 py-2">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-slate-800 truncate">{place.name}</p>
+                                  <p className="text-xs text-slate-500 mt-0.5">{place.note}</p>
+                                </div>
+                                <span className="text-xs font-semibold text-emerald-700 whitespace-nowrap">
+                                  {place.distanceKm.toFixed(1)} km
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Eco Features directly on property model */}
