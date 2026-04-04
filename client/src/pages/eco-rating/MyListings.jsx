@@ -35,6 +35,10 @@ export default function MyListings() {
     monthlyPrice: '',
     dailyPrice: '',
     address: '',
+    displayAddress: '',
+    city: '',
+    state: '',
+    country: '',
     bedrooms: '',
     bathrooms: '',
     maxGuests: '',
@@ -114,6 +118,10 @@ export default function MyListings() {
       monthlyPrice: property.monthlyPrice ?? ((initialStayType === 'long' || initialStayType === 'both') ? (property.price || '') : ''),
       dailyPrice: property.dailyPrice ?? ((initialStayType === 'short' || initialStayType === 'both') ? (property.price || '') : ''),
       address: property.location?.address || '',
+      displayAddress: property.location?.displayAddress || '',
+      city: property.location?.city || '',
+      state: property.location?.state || '',
+      country: property.location?.country || '',
       bedrooms: property.bedrooms || '',
       bathrooms: property.bathrooms || '',
       maxGuests: property.maxGuests || '',
@@ -187,7 +195,13 @@ export default function MyListings() {
         stayType: updateForm.stayType,
         monthlyPrice: (updateForm.stayType === 'long' || updateForm.stayType === 'both') ? Number(updateForm.monthlyPrice) : null,
         dailyPrice: (updateForm.stayType === 'short' || updateForm.stayType === 'both') ? Number(updateForm.dailyPrice) : null,
-        location: { address: updateForm.address },
+        location: {
+          address: updateForm.address,
+          displayAddress: updateForm.displayAddress,
+          city: updateForm.city,
+          state: updateForm.state,
+          country: updateForm.country,
+        },
         images: compressedImages,
         parking: Boolean(updateForm.parking),
       };
@@ -225,6 +239,10 @@ export default function MyListings() {
   };
 
   const onUpdateFieldChange = (field) => (event) => setUpdateForm((prev) => ({ ...prev, [field]: event.target.type === 'checkbox' ? event.target.checked : event.target.value }));
+
+  const existingUpdateImages = Array.isArray(activeProperty?.images)
+    ? activeProperty.images.filter((img) => typeof img === 'string' && img.trim().length > 0)
+    : [];
 
   const onUpdateImageFilesChange = (event) => {
     const selectedFiles = Array.from(event.target.files || []);
@@ -692,8 +710,26 @@ export default function MyListings() {
                     <input type="number" value={updateForm.area} onChange={onUpdateFieldChange('area')} placeholder="e.g., 1200" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Address</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Location</label>
                     <input type="text" value={updateForm.address} onChange={onUpdateFieldChange('address')} className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" required />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Display Address</label>
+                    <input type="text" value={updateForm.displayAddress} onChange={onUpdateFieldChange('displayAddress')} placeholder="No. 12, Palm Grove Residences" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">City</label>
+                    <input type="text" value={updateForm.city} onChange={onUpdateFieldChange('city')} placeholder="Colombo" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">State / Province</label>
+                    <input type="text" value={updateForm.state} onChange={onUpdateFieldChange('state')} placeholder="Western Province" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Country</label>
+                    <input type="text" value={updateForm.country} onChange={onUpdateFieldChange('country')} placeholder="Sri Lanka" className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500" />
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
@@ -730,6 +766,20 @@ export default function MyListings() {
                       Add images
                       <input type="file" accept="image/*" multiple className="hidden" onChange={onUpdateImageFilesChange} />
                     </label>
+                  </div>
+                  <div className="mb-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Existing images</p>
+                    {existingUpdateImages.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {existingUpdateImages.map((image, index) => (
+                          <div key={`existing-${index}`} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <img src={image} alt={`Existing property ${index + 1}`} className="h-24 w-full object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-500">No existing images found for this listing.</p>
+                    )}
                   </div>
                   <div className="space-y-3 max-h-[200px] overflow-y-auto">
                     {updateForm.imageFiles.length === 0 && <p className="text-xs text-slate-500">No new images selected. Existing images will be kept.</p>}

@@ -8,6 +8,10 @@ const INITIAL_FORM = {
   title: "",
   description: "",
   address: "",
+  displayAddress: "",
+  city: "",
+  state: "",
+  country: "",
   price: "",
   propertyType: "apartment",
   imageUrls: [""],
@@ -135,6 +139,10 @@ export default function AddApartment() {
       description: form.description,
       location: {
         address: form.address,
+        displayAddress: form.displayAddress,
+        city: form.city,
+        state: form.state,
+        country: form.country,
       },
       price: Number(form.price),
       propertyType: form.propertyType,
@@ -213,6 +221,12 @@ export default function AddApartment() {
               placeholder="Add highlights about your apartment"
             />
             <Input label="Address" value={form.address} onChange={onFieldChange("address")} placeholder="Street, city, state" />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Input label="Display Address" value={form.displayAddress} onChange={onFieldChange("displayAddress")} placeholder="No. 12, Palm Grove Residences" />
+              <Input label="City" value={form.city} onChange={onFieldChange("city")} placeholder="Colombo" />
+              <Input label="State / Province" value={form.state} onChange={onFieldChange("state")} placeholder="Western Province" />
+              <Input label="Country" value={form.country} onChange={onFieldChange("country")} placeholder="Sri Lanka" />
+            </div>
             <Input
               label="Monthly Rent (INR)"
               value={form.price}

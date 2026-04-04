@@ -18,6 +18,26 @@ const propertySchema = new mongoose.Schema(
         required: true,
         trim: true,
       },
+      displayAddress: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+      city: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+      state: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+      country: {
+        type: String,
+        default: null,
+        trim: true,
+      },
       coordinates: {
         lat: {
           type: Number,
@@ -113,12 +133,17 @@ const propertySchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    viewCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   { timestamps: true }
 );
 
 // Index for search functionality
-propertySchema.index({ title: "text", description: "text", "location.address": "text" });
+propertySchema.index({ title: "text", description: "text", "location.address": "text", "location.displayAddress": "text", "location.city": "text", "location.state": "text", "location.country": "text" });
 
 const Property = mongoose.model("Property", propertySchema);
 

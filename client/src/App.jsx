@@ -6,6 +6,7 @@ import Dashboard from './pages/dashboard/Dashboard';
 import PropertyListing from './pages/property/PropertyListing';
 import PropertyDetails from './pages/property/PropertyDetails';
 import PropertyMap from './pages/property/PropertyMap';
+import PropertyCompare from './pages/property/PropertyCompare';
 import Wishlist from './pages/property/Wishlist';
 import BookingPage from './pages/booking/BookingPage';
 import PaymentPage from './pages/booking/PaymentPage';
@@ -33,6 +34,7 @@ function App() {
         <Route path='/dashboard' element={<Dashboard />} />
         <Route path='/properties' element={<PropertyListing />} />
         <Route path='/properties/map' element={<PropertyMap />} />
+        <Route path='/properties/compare' element={<PropertyCompare />} />
         <Route path='/properties/:id' element={<PropertyDetails />} />
         <Route path='/wishlist' element={<Wishlist />} />
          <Route path='/booking/:id' element={<BookingPage />} />

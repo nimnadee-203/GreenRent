@@ -5,6 +5,7 @@ import {
   updateProperty,
   deleteProperty,
 } from "../services/propertyService.js";
+import Property from "../models/Property.js";
 import {
   validatePropertyCreate,
   validatePropertyUpdate,
@@ -95,7 +96,12 @@ export const listPropertiesHandler = async (req, res) => {
 
 export const getPropertyByIdHandler = async (req, res) => {
   try {
-    const property = await getPropertyById(req.params.id);
+    const property = await Property.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { viewCount: 1 } },
+      { new: true }
+    ).populate("ecoRatingId");
+
     if (!property) {
       return res.status(404).json({ message: "Property not found" });
     }
