@@ -189,7 +189,7 @@ export const updateProperty = async (id, data) => {
   const property = await Property.findByIdAndUpdate(
     id,
     { $set: payload },
-    { new: true, runValidators: true }
+    { returnDocument: "after", runValidators: true }
   );
   return property;
 };

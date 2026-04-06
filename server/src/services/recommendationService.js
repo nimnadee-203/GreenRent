@@ -80,7 +80,7 @@ export const updatePreferences = async (userId, preferences) => {
     const user = await userModel.findByIdAndUpdate(
         userId,
         { $set: { preferences } },
-        { new: true, runValidators: true }
+        { returnDocument: "after", runValidators: true }
     ).select("-password");
 
     if (!user) {
@@ -102,7 +102,7 @@ export const resetPreferences = async (userId) => {
                 propertyType: "any",
             },
         },
-        { new: true }
+        { returnDocument: "after" }
     ).select("preferences");
 
     if (!updatedUser) {

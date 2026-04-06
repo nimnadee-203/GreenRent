@@ -435,14 +435,14 @@ export const updatePaymentStatus = async (bookingId, paymentStatus) => {
     return Booking.findByIdAndUpdate(
       bookingId,
       { $set: updateDoc, $unset: { cancellationReason: 1 } },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     );
   }
 
   return Booking.findByIdAndUpdate(
     bookingId,
     { $set: { paymentStatus } },
-    { new: true, runValidators: true }
+    { returnDocument: "after", runValidators: true }
   );
 };
 
