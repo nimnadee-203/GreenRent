@@ -33,9 +33,13 @@ const userSchema = new mongoose.Schema(
     },
 
     sellerApplication: {
+      sellerName: String,
       businessName: String,
       contactNumber: String,
-      reason: String,
+      sellingPlan: {
+        type: String,
+        enum: ["personal_property", "business_property"],
+      },
     },
     avatar: {
       type: String,

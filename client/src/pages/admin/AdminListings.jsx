@@ -143,6 +143,9 @@ export default function AdminListings() {
               <p className="text-slate-600 mt-2">Complete property database, including records hidden from public listing pages.</p>
             </div>
             <div className="flex gap-3 flex-wrap">
+              <Link to="/admin/sellers" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800 transition">
+                Seller Management
+              </Link>
               <Link to="/admin/reviews" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
                 Review Management
               </Link>

@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Link, Navigate } from 'react-router-dom';
 import { CalendarDays, Clock3, CreditCard, Eye, Home, MapPin, MessageSquarePlus, Pencil, Search, Star, Trash2, XCircle } from 'lucide-react';
 import axios from 'axios';
+import SellerApplicationModal from '../../components/seller/SellerApplicationModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
@@ -55,13 +56,16 @@ const formatRemaining = (ms) => {
 };
 
 export default function Dashboard() {
-  const { currentUser, backendUser } = useAuth();
+  const { currentUser, backendUser, fetchBackendUser } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [sellerListings, setSellerListings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [sellerLoading, setSellerLoading] = useState(false);
   const [bookingsError, setBookingsError] = useState('');
   const [sellerError, setSellerError] = useState('');
+  const [sellerUpgradeError, setSellerUpgradeError] = useState('');
+  const [sellerUpgradeSuccess, setSellerUpgradeSuccess] = useState('');
+  const [isSellerFormOpen, setIsSellerFormOpen] = useState(false);
   const [sellerTimeFilter, setSellerTimeFilter] = useState('all');
   const [sellerLastUpdated, setSellerLastUpdated] = useState(null);
   const [bookingFilter, setBookingFilter] = useState('all');
@@ -89,6 +93,7 @@ export default function Dashboard() {
   const isAdmin = userRole === 'admin';
   const isSeller = userRole === 'seller';
   const isUserDashboard = !isAdmin && !isSeller;
+  const hasPendingSellerRequest = Boolean(backendUser?.sellerRequest);
   const userName =
     backendUser?.name ||
     backendUser?.fullName ||
@@ -385,6 +390,12 @@ export default function Dashboard() {
     } finally {
       setBookingActionLoading(booking._id, false);
     }
+  };
+
+  const handleSellerApplicationSubmitted = async () => {
+    setSellerUpgradeError('');
+    await fetchBackendUser();
+    setSellerUpgradeSuccess('Seller application submitted successfully. We will review your request soon.');
   };
 
   const openReviewModal = async (booking, existingReview = null) => {
@@ -741,6 +752,19 @@ export default function Dashboard() {
               <p className="text-slate-600 mt-2">Track bookings, revisit your stays, and submit reviews only for properties you have booked.</p>
             </div>
             <div className="flex gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  setSellerUpgradeError('');
+                  setSellerUpgradeSuccess('');
+                  setIsSellerFormOpen(true);
+                }}
+                disabled={hasPendingSellerRequest}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-200 bg-white text-emerald-700 font-semibold hover:bg-emerald-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <Home size={16} />
+                {hasPendingSellerRequest ? 'Application Pending' : 'Become a Seller'}
+              </button>
               <Link to="/properties" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
                 <Search size={16} />
                 Find Properties
@@ -752,6 +776,18 @@ export default function Dashboard() {
             </div>
           </div>
         </section>
+
+        {sellerUpgradeError && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{sellerUpgradeError}</div>
+        )}
+        {sellerUpgradeSuccess && (
+          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{sellerUpgradeSuccess}</div>
+        )}
+        {hasPendingSellerRequest && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Your seller application is pending review. You will be able to add listings after approval.
+          </div>
+        )}
 
         <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
           {dashboardStats.map((stat) => (
@@ -1108,6 +1144,12 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <SellerApplicationModal
+        isOpen={isSellerFormOpen}
+        onClose={() => setIsSellerFormOpen(false)}
+        onSubmitted={handleSellerApplicationSubmitted}
+      />
     </div>
   );
 }

@@ -292,6 +292,9 @@ export default function AdminBookings() {
               <Link to="/admin/listings" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
                 Listings View
               </Link>
+              <Link to="/admin/sellers" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
+                Seller Management
+              </Link>
               <Link to="/admin/reviews" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
                 Review Management
               </Link>

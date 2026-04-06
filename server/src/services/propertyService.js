@@ -2,6 +2,10 @@ import Property from "../models/Property.js";
 import { geocodeAddress } from "./openStreetMapService.js";
 
 const buildGeocodeQuery = (location = {}) => {
+  if (!location || typeof location !== "object") {
+    return "";
+  }
+
   const parts = [
     location.displayAddress,
     location.address,

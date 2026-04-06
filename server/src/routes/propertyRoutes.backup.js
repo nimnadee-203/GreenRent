@@ -5,6 +5,7 @@ import {
     createPropertyHandler,
     listPropertiesHandler,
     getPropertyByIdHandler,
+    getPropertyNearbyPlacesHandler,
     updatePropertyHandler,
     deletePropertyHandler,
     deleteAllPropertiesHandler,
@@ -19,6 +20,13 @@ const router = Router();
  * @access  Public
  */
 router.get("/", listPropertiesHandler);
+
+/**
+ * @route   GET /api/properties/:id/nearby
+ * @desc    Get nearby places for a property
+ * @access  Public
+ */
+router.get("/:id/nearby", getPropertyNearbyPlacesHandler);
 
 /**
  * @route   GET /api/properties/:id

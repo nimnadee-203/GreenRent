@@ -34,18 +34,24 @@ export const validateLogin = (payload) => {
 
 export const validateSellerRequest = (payload) => {
     const errors = [];
-    const { businessName, contactNumber, reason } = payload;
+    const { sellerName, businessName, contactNumber, sellingPlan } = payload;
 
-    if (!businessName || typeof businessName !== "string") {
-        errors.push("Business name is required");
+    if (!sellerName || typeof sellerName !== "string" || sellerName.trim().length === 0) {
+        errors.push("Seller name is required");
+    }
+
+    if (businessName !== undefined && businessName !== null && typeof businessName !== "string") {
+        errors.push("Business name must be a string");
     }
 
     if (!contactNumber || typeof contactNumber !== "string") {
         errors.push("Contact number is required");
     }
 
-    if (!reason || typeof reason !== "string") {
-        errors.push("Reason is required");
+    if (!sellingPlan || typeof sellingPlan !== "string") {
+        errors.push("Selling plan is required");
+    } else if (!["personal_property", "business_property"].includes(sellingPlan)) {
+        errors.push("Selling plan must be either personal_property or business_property");
     }
 
     return errors;

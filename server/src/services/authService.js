@@ -61,9 +61,10 @@ export const processSellerRequest = async (user, businessData) => {
 
     user.sellerRequest = true;
     user.sellerApplication = {
-        businessName: businessData.businessName,
-        contactNumber: businessData.contactNumber,
-        reason: businessData.reason,
+        sellerName: String(businessData.sellerName || "").trim(),
+        businessName: String(businessData.businessName || "").trim(),
+        contactNumber: String(businessData.contactNumber || "").trim(),
+        sellingPlan: String(businessData.sellingPlan || "").trim(),
     };
 
     await user.save();
