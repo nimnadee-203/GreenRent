@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import axios from "axios";
 import {
   ArrowLeft,
@@ -35,9 +35,11 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000
 const IMAGE_AUTOPLAY_MS = 4000;
 
 const PropertyDetails = () => {
-  const { backendUser } = useAuth();
+  const { currentUser, backendUser } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isAuthenticated = Boolean(currentUser || backendUser);
   
   // All state must be defined at the top of the component (React Rules of Hooks)
   const [property, setProperty] = useState(null);
@@ -59,6 +61,7 @@ const PropertyDetails = () => {
   const [showStayTypeModal, setShowStayTypeModal] = useState(false);
   const [showDatePickerModal, setShowDatePickerModal] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const [showAuthChoiceModal, setShowAuthChoiceModal] = useState(false);
   const [stayType, setStayType] = useState("");
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
@@ -199,6 +202,11 @@ const PropertyDetails = () => {
 
   const handleBookNow = () => {
     const availability = selectedAvailability || availabilityResult;
+
+    if (!isAuthenticated) {
+      setShowAuthChoiceModal(true);
+      return;
+    }
 
     if (!property || property.availabilityStatus !== 'available') {
       alert('This property is not currently available for booking.');
@@ -628,6 +636,50 @@ const PropertyDetails = () => {
     { key: "schools", title: "Schools" },
   ];
 
+  useEffect(() => {
+    if (!property || !location.state?.resumeAvailabilityFlow) return;
+
+    const preserved = location.state?.preservedBookingFlow;
+
+    if (preserved) {
+      setStayType(preserved.stayType || "");
+      setCheckInDate(preserved.checkInDate || "");
+      setCheckOutDate(preserved.checkOutDate || "");
+      setFromMonth(preserved.fromMonth || "");
+      setFromYear(preserved.fromYear || "");
+      setToMonth(preserved.toMonth || "");
+      setToYear(preserved.toYear || "");
+      // Force the user back through date confirmation after auth.
+      setAvailabilityResult(null);
+      setSelectedAvailability(null);
+      setAvailabilityError("");
+      setShowStayTypeModal(false);
+      setShowAvailabilityModal(false);
+
+      if (preserved.stayType) {
+        setShowDatePickerModal(true);
+      } else if (availableStayTypes.length === 1) {
+        setStayType(availableStayTypes[0]);
+        setShowDatePickerModal(true);
+      } else {
+        setShowDatePickerModal(false);
+        setShowStayTypeModal(true);
+      }
+
+      navigate(location.pathname, { replace: true, state: {} });
+      return;
+    }
+
+    if (availableStayTypes.length === 1) {
+      setStayType(availableStayTypes[0]);
+      setShowDatePickerModal(true);
+    } else {
+      setShowStayTypeModal(true);
+    }
+
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [property, location.state, location.pathname, availableStayTypes, navigate]);
+
   const handleCheckAvailabilityClick = (event) => {
     event.stopPropagation();
     if (availableStayTypes.length === 1) {
@@ -707,6 +759,34 @@ const PropertyDetails = () => {
     setStayType(type);
     setShowStayTypeModal(false);
     setShowDatePickerModal(true);
+  };
+
+  const handleChooseAuthAction = (mode) => {
+    const preservedBookingFlow = {
+      stayType,
+      checkInDate,
+      checkOutDate,
+      fromMonth,
+      fromYear,
+      toMonth,
+      toYear,
+      availabilityResult,
+      selectedAvailability,
+    };
+
+    setShowAuthChoiceModal(false);
+    setShowAvailabilityModal(false);
+    navigate("/login", {
+      state: {
+        from: `/properties/${id}`,
+        mode,
+        message: "To continue booking this apartment, please login or sign up first.",
+        postLoginState: {
+          resumeAvailabilityFlow: true,
+          preservedBookingFlow,
+        },
+      },
+    });
   };
 
   const handleContinueToAvailability = async () => {
@@ -1812,6 +1892,53 @@ const PropertyDetails = () => {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAuthChoiceModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-slate-900">Continue Booking</h2>
+              <button
+                onClick={() => setShowAuthChoiceModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-5">
+              <div className="rounded-xl p-4 bg-amber-50 border border-amber-200 text-amber-900 text-sm">
+                To continue booking this apartment, please login or sign up first.
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleChooseAuthAction("login")}
+                  className="w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition"
+                >
+                  Login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleChooseAuthAction("signup")}
+                  className="w-full bg-slate-100 text-slate-800 font-semibold py-3 rounded-xl hover:bg-slate-200 transition"
+                >
+                  Sign up
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowAuthChoiceModal(false)}
+                className="w-full text-sm text-slate-500 hover:text-slate-700 transition"
+              >
+                Not now
+              </button>
             </div>
           </div>
         </div>

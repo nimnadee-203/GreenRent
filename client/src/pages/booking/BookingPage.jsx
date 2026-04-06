@@ -21,6 +21,7 @@ const BookingPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { currentUser, backendUser } = useAuth();
+  const isAuthenticated = Boolean(currentUser || backendUser);
   const [checkInDate, setCheckInDate] = useState(location.state?.checkInDate || "");
   const [checkOutDate, setCheckOutDate] = useState(location.state?.checkOutDate || "");
   const [stayType, setStayType] = useState(location.state?.stayType || null);
@@ -365,7 +366,9 @@ const BookingPage = () => {
                             <p className="text-[16px] font-bold text-slate-800">{option.pricePerMonth}</p>
                             <p className="text-[11px] text-slate-500">Includes taxes and charges</p>
                             <p className="text-[12px] text-slate-700 mt-2 font-bold bg-amber-50 p-2 rounded border border-amber-100">
-                              Total (short): {option.priceForNights}
+                              {propertyStayType === "long"
+                                ? `Total (long): ${longRentFromDates != null ? formatLkr(longRentFromDates) : option.pricePerMonth}`
+                                : `Total (short): ${formatLkr(shortStayWithGuestTotal)}`}
                             </p>
                           </>
                         ) : (
@@ -417,11 +420,13 @@ const BookingPage = () => {
       {showDetailModal && selectedOption && (
         <BookingDetailsModal
           property={property}
+          propertyId={id}
           selectedOption={selectedOption}
           checkInDate={checkInDate}
           checkOutDate={checkOutDate}
           backendUser={backendUser}
           currentUser={currentUser}
+          isAuthenticated={isAuthenticated}
           onClose={() => setShowDetailModal(false)}
           navigate={navigate}
           defaultStayType={propertyStayType}
@@ -437,7 +442,7 @@ const BookingPage = () => {
   );
 };
 
-const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDate, backendUser, currentUser, onClose, navigate, defaultStayType, defaultMonths, editMode = false, existingBookingData = null, userDetails = null }) => {
+const BookingDetailsModal = ({ property, propertyId, selectedOption, checkInDate, checkOutDate, backendUser, currentUser, isAuthenticated, onClose, navigate, defaultStayType, defaultMonths, editMode = false, existingBookingData = null, userDetails = null }) => {
   const [fullName, setFullName] = useState(userDetails?.fullName || backendUser?.name || currentUser?.displayName || "");
   const [email, setEmail] = useState(userDetails?.email || backendUser?.email || currentUser?.email || "");
   const [phone, setPhone] = useState(userDetails?.phone || "");
@@ -492,6 +497,22 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!isAuthenticated) {
+      const authMessage = "Please login or sign up to continue your booking.";
+      setError(authMessage);
+      navigate("/login", {
+        state: {
+          from: `/properties/${propertyId}`,
+          mode: "login",
+          message: authMessage,
+          postLoginState: {
+            resumeAvailabilityFlow: true,
+          },
+        },
+      });
+      return;
+    }
 
     const normalizedPhone = phone.replace(/\D/g, "");
     if (!/^\d{10}$/.test(normalizedPhone)) {
@@ -595,7 +616,16 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
       if (err.response?.status === 401 || msg.toLowerCase().includes("no token")) {
         setError("You must be logged in to book. Redirecting to login...");
         setTimeout(() => {
-          navigate('/login', { state: { from: `/booking/${property?._id}` } });
+          navigate('/login', {
+            state: {
+              from: `/properties/${property?._id || propertyId}`,
+              mode: "login",
+              message: "Please login or sign up to continue your booking.",
+              postLoginState: {
+                resumeAvailabilityFlow: true,
+              },
+            },
+          });
         }, 1000);
       } else {
         setError(msg);
@@ -662,6 +692,28 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
             </div>
           )}
         </div>
+
+        {!isAuthenticated && (
+          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900 shadow-sm">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <p>Please login or sign up to continue this booking.</p>
+              <Link
+                to="/login"
+                state={{
+                  from: `/properties/${propertyId}`,
+                  mode: "login",
+                  message: "Please login or sign up to continue your booking.",
+                  postLoginState: {
+                    resumeAvailabilityFlow: true,
+                  },
+                }}
+                className="inline-flex items-center justify-center rounded-lg bg-amber-600 px-4 py-2 font-semibold text-white transition hover:bg-amber-700"
+              >
+                Login / Sign up
+              </Link>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {backendUser && (
@@ -761,10 +813,14 @@ const BookingDetailsModal = ({ property, selectedOption, checkInDate, checkOutDa
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !isAuthenticated}
             className="w-full rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
           >
-            {submitting ? "Saving..." : (editMode ? "Update Booking" : "Confirm Booking")}
+            {!isAuthenticated
+              ? "Login to Continue"
+              : submitting
+                ? "Saving..."
+                : (editMode ? "Update Booking" : "Confirm Booking")}
           </button>
         </form>
       </div>

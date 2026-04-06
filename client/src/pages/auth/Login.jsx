@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   signInWithEmailAndPassword,
@@ -7,7 +7,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { Eye, EyeOff, Mail, Lock, UserRound } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import Navbar from "../../components/Home/Navbar";
 import { auth, googleProvider, hasFirebaseConfig } from "../../config/firebase";
 import { useAuth } from "../../context/AuthContext";
@@ -16,8 +16,12 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { fetchBackendUser } = useAuth();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const redirectTarget = location.state?.from || "/";
+  const redirectState = location.state?.postLoginState || null;
+  const bookingNotice = location.state?.message || "";
+  const [isSignUp, setIsSignUp] = useState(() => location.state?.mode === "signup");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -33,6 +37,11 @@ export default function Login() {
       ? "Create your GreenRent account"
       : "Welcome back to GreenRent";
   }, [isSignUp]);
+
+  useEffect(() => {
+    if (location.state?.mode === "signup") setIsSignUp(true);
+    if (location.state?.mode === "login") setIsSignUp(false);
+  }, [location.state]);
 
   const updateField = (field) => (event) => {
     setForm((previous) => ({
@@ -133,7 +142,7 @@ export default function Login() {
         setSuccess("Login successful.");
       }
 
-      navigate("/");
+      navigate(redirectTarget, { replace: true, state: redirectState });
     } catch (authError) {
       setError(getApiErrorMessage(authError));
     } finally {
@@ -155,7 +164,7 @@ export default function Login() {
     try {
       await signInWithPopup(auth, googleProvider);
       setSuccess("Google login successful for browsing. Use Email Login for Add Apartment/My Listings.");
-      navigate("/");
+      navigate(redirectTarget, { replace: true, state: redirectState });
     } catch (authError) {
       setError(normalizeFirebaseError(authError?.message));
     } finally {
@@ -190,6 +199,12 @@ export default function Login() {
           <p className="mt-1 text-sm text-slate-500">
             {isSignUp ? "Register once, then sign in anytime." : "Use your credentials to continue."}
           </p>
+
+          {bookingNotice && (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              {bookingNotice}
+            </div>
+          )}
 
           <form className="mt-6 space-y-4" onSubmit={handleEmailAuth}>
             {isSignUp && (
