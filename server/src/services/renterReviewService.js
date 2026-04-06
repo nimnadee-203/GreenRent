@@ -213,7 +213,7 @@ export const markReviewHelpful = async (reviewId) => {
   return RenterReview.findByIdAndUpdate(
     reviewId,
     { $inc: { helpfulCount: 1 } },
-    { new: true }
+    { returnDocument: "after" }
   );
 };
 

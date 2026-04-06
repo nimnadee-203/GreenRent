@@ -99,7 +99,7 @@ export const getPropertyByIdHandler = async (req, res) => {
     const property = await Property.findByIdAndUpdate(
       req.params.id,
       { $inc: { viewCount: 1 } },
-      { new: true }
+      { returnDocument: "after" }
     ).populate("ecoRatingId");
 
     if (!property) {
@@ -202,7 +202,7 @@ export const clearEcoRatingHandler = async (req, res) => {
           ecoRatingClearedAt: new Date(),
         },
       },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     return res.status(200).json(updatedProperty); 

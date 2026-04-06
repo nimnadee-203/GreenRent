@@ -18,7 +18,7 @@ export const addToWishlist = async (userId, propertyId) => {
     const user = await userModel.findByIdAndUpdate(
         userId,
         { $addToSet: { wishlist: propertyId } },
-        { new: true }
+        { returnDocument: "after" }
     ).select("wishlist");
 
     if (!user) {
@@ -32,7 +32,7 @@ export const removeFromWishlist = async (userId, propertyId) => {
     const user = await userModel.findByIdAndUpdate(
         userId,
         { $pull: { wishlist: propertyId } },
-        { new: true }
+        { returnDocument: "after" }
     ).select("wishlist");
 
     if (!user) {
