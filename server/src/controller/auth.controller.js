@@ -109,7 +109,7 @@ export const requestSeller = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "You are now a seller",
+            message: "Seller application submitted successfully",
         });
     } catch (error) {
         const statusCode = error.message === "You are already a seller" ? 400 : 500;

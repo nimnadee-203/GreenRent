@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Home/Navbar';
 import { Home, MapPin, AlignLeft, Image as ImageIcon, Banknote, Leaf, CheckCircle2, Sun, Zap, Wind, Droplets, Recycle, BatteryCharging, Loader2, ArrowLeft, Trash2 } from 'lucide-react';
+import SellerApplicationModal from '../../components/seller/SellerApplicationModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
@@ -38,7 +39,7 @@ export default function AddApartment() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [ecoForm, setEcoForm] = useState(INITIAL_ECO_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isSellerFormOpen, setIsSellerFormOpen] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -155,17 +156,10 @@ export default function AddApartment() {
     });
   };
 
-  const handleBecomeSeller = async () => {
-    setError(''); setSuccess(''); setIsUpgrading(true);
-    try {
-      await axios.post(`${API_BASE_URL}/api/auth/request-seller`, {}, { withCredentials: true });
-      await fetchUser();
-      setSuccess('Seller access enabled. You can now add apartments.');
-    } catch (err) {
-      setError(err?.response?.data?.message || 'Could not upgrade seller role.');
-    } finally {
-      setIsUpgrading(false);
-    }
+  const handleSellerApplicationSubmitted = async () => {
+    setError('');
+    await fetchUser();
+    setSuccess('Seller application submitted successfully. We will review your request soon.');
   };
 
   const handleStage1Submit = async (event) => {
@@ -289,6 +283,7 @@ export default function AddApartment() {
   };
 
   const canAddProperty = user && (user.role === 'seller' || user.role === 'admin');
+  const hasPendingSellerRequest = Boolean(user?.sellerRequest);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -303,8 +298,25 @@ export default function AddApartment() {
            </div>
         ) : !canAddProperty ? (
            <div className="rounded-3xl border border-emerald-200 bg-white p-8 text-center max-w-2xl mx-auto shadow-sm overflow-hidden relative">
-             <h3 className="text-2xl font-bold text-slate-900">Become a Landlord</h3>
-             <button onClick={handleBecomeSeller} disabled={isUpgrading} className="mt-8 rounded-xl bg-emerald-600 px-8 py-3.5 text-base font-semibold text-white hover:bg-emerald-700 disabled:opacity-70 transition-all">{isUpgrading ? 'Upgrading...' : 'Upgrade Now'}</button>
+             <h3 className="text-2xl font-bold text-slate-900">Want to List Your Property?</h3>
+             <p className="mt-3 text-sm text-slate-600">
+               {hasPendingSellerRequest
+                 ? 'Your seller application is pending review. You will be able to list apartments after approval.'
+                 : 'Complete the seller application to start listing apartments on GreenRent.'}
+             </p>
+             {error && <p className="mt-4 text-sm font-medium text-red-600 bg-red-50 py-2 px-4 rounded-lg">{error}</p>}
+             {success && <p className="mt-4 text-sm font-medium text-emerald-600 bg-emerald-50 py-2 px-4 rounded-lg">{success}</p>}
+             <button
+               onClick={() => {
+                 setError('');
+                 setSuccess('');
+                 setIsSellerFormOpen(true);
+               }}
+               disabled={hasPendingSellerRequest}
+               className="mt-8 rounded-xl bg-emerald-600 px-8 py-3.5 text-base font-semibold text-white hover:bg-emerald-700 disabled:opacity-70 transition-all"
+             >
+               {hasPendingSellerRequest ? 'Application Pending' : 'Become a Seller'}
+             </button>
            </div>
         ) : (
           <>
@@ -581,6 +593,11 @@ export default function AddApartment() {
           </>
         )}
       </main>
+      <SellerApplicationModal
+        isOpen={isSellerFormOpen}
+        onClose={() => setIsSellerFormOpen(false)}
+        onSubmitted={handleSellerApplicationSubmitted}
+      />
     </div>
   );
 }

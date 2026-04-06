@@ -23,6 +23,39 @@ export const getUserData = async (req, res) => {
   }
 };
 
+export const getPendingSellerRequests = async (req, res) => {
+  try {
+    const requests = await userService.getPendingSellerRequests();
+
+    return res.status(200).json({
+      success: true,
+      requests,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch seller requests",
+    });
+  }
+};
+
+export const getPublicSellerProfile = async (req, res) => {
+  try {
+    const profile = await userService.getPublicSellerProfile(req.params.userId);
+
+    return res.status(200).json({
+      success: true,
+      profile,
+    });
+  } catch (error) {
+    const statusCode = error.message === "User not found" ? 404 : 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || "Failed to fetch seller profile",
+    });
+  }
+};
+
 export const updatePreferences = async (req, res) => {
   const errors = recommendationValidators.validatePreferences(req.body);
   if (errors.length > 0) {

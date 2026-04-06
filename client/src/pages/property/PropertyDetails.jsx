@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import axios from "axios";
 import {
@@ -43,6 +43,7 @@ const PropertyDetails = () => {
   
   // All state must be defined at the top of the component (React Rules of Hooks)
   const [property, setProperty] = useState(null);
+  const [sellerInfo, setSellerInfo] = useState(null);
   const [ecoRating, setEcoRating] = useState(null);
   const [reviewsData, setReviewsData] = useState({ reviews: [], summary: null });
   const [canReviewApartment, setCanReviewApartment] = useState(false);
@@ -52,6 +53,7 @@ const PropertyDetails = () => {
   const [reviewActionLoadingById, setReviewActionLoadingById] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sellerInfoError, setSellerInfoError] = useState("");
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -76,9 +78,12 @@ const PropertyDetails = () => {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [shareFeedback, setShareFeedback] = useState("");
+  const [summaryGuests, setSummaryGuests] = useState(1);
   const [nearbyPlaces, setNearbyPlaces] = useState(null);
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [nearbySource, setNearbySource] = useState("unavailable");
+  const mapSectionRef = useRef(null);
+  const reviewsSectionRef = useRef(null);
   const [autoplayEnabled, setAutoplayEnabled] = useState(() => {
     try {
       const storedValue = localStorage.getItem("propertyDetailsAutoplayEnabled");
@@ -286,6 +291,28 @@ const PropertyDetails = () => {
   }, [id]);
 
   useEffect(() => {
+    const fetchSellerInfo = async () => {
+      const ownerId = property?.ownerId;
+      if (!ownerId) {
+        setSellerInfo(null);
+        setSellerInfoError("");
+        return;
+      }
+
+      try {
+        setSellerInfoError("");
+        const response = await axios.get(`${API_BASE_URL}/api/user/public/${ownerId}`);
+        setSellerInfo(response.data?.profile || null);
+      } catch (sellerError) {
+        setSellerInfo(null);
+        setSellerInfoError(sellerError?.response?.data?.message || "Failed to load seller information.");
+      }
+    };
+
+    fetchSellerInfo();
+  }, [property?.ownerId]);
+
+  useEffect(() => {
     const checkReviewEligibility = async () => {
       if (!backendUser?.id && !backendUser?._id) {
         setCanReviewApartment(false);
@@ -450,41 +477,9 @@ const PropertyDetails = () => {
     return fallbackRaw;
   };
 
-  const staticNearbyPlacesByCategory = {
-    busStops: [
-      { name: "Main Street Bus Stop", distanceKm: 0.3, note: "5 min walk" },
-      { name: "City Line Exchange", distanceKm: 1.1, note: "Frequent routes" },
-    ],
-    groceries: [
-      { name: "Green Basket Supermarket", distanceKm: 0.7, note: "Fresh produce" },
-      { name: "Daily Needs Mini Mart", distanceKm: 1.2, note: "Open till 10 PM" },
-    ],
-    hospitals: [
-      { name: "City General Hospital", distanceKm: 2.4, note: "24/7 emergency" },
-      { name: "Lakeside Medical Center", distanceKm: 3.1, note: "OPD + pharmacy" },
-    ],
-    schools: [
-      { name: "Sunrise International School", distanceKm: 1.8, note: "Primary to A/L" },
-      { name: "Green Valley College", distanceKm: 2.9, note: "Public transport access" },
-    ],
-  };
-
-  const toRadians = (value) => (value * Math.PI) / 180;
-  const distanceInKm = (lat1, lon1, lat2, lon2) => {
-    const earthRadiusKm = 6371;
-    const dLat = toRadians(lat2 - lat1);
-    const dLon = toRadians(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return earthRadiusKm * c;
-  };
-
   useEffect(() => {
     const fetchNearbyPlaces = async () => {
-      const locationQuery = toMapLocationQuery(property?.location);
-      if (!locationQuery) {
+      if (!property?._id) {
         setNearbyPlaces(null);
         setNearbySource("unavailable");
         return;
@@ -492,116 +487,13 @@ const PropertyDetails = () => {
 
       setNearbyLoading(true);
 
-      let targetCoords = null;
-
       try {
-        const geocodeResponse = await axios.get("https://nominatim.openstreetmap.org/search", {
-          params: {
-            q: locationQuery,
-            format: "json",
-            limit: 1,
-          },
-          headers: {
-            "User-Agent": "GreenRent/1.0",
-          },
-        });
+        const response = await axios.get(`${API_BASE_URL}/api/properties/${property._id}/nearby`);
+        const places = response.data?.places;
+        const hasLiveData = Object.values(places || {}).some((items) => Array.isArray(items) && items.length > 0);
 
-        const geoResult = Array.isArray(geocodeResponse.data) ? geocodeResponse.data[0] : null;
-        const geoLat = geoResult ? parseFloat(geoResult.lat) : NaN;
-        const geoLng = geoResult ? parseFloat(geoResult.lon) : NaN;
-
-        if (!Number.isFinite(geoLat) || !Number.isFinite(geoLng)) {
-          setNearbyPlaces(null);
-          setNearbySource("unavailable");
-          setNearbyLoading(false);
-          return;
-        }
-
-        targetCoords = { lat: geoLat, lng: geoLng };
-      } catch {
-        setNearbyPlaces(null);
-        setNearbySource("unavailable");
-        setNearbyLoading(false);
-        return;
-      }
-
-      const query = `
-        [out:json][timeout:20];
-        (
-          node["highway"="bus_stop"](around:2500,${targetCoords.lat},${targetCoords.lng});
-          node["shop"~"supermarket|convenience|grocery"](around:2500,${targetCoords.lat},${targetCoords.lng});
-          node["amenity"="hospital"](around:4000,${targetCoords.lat},${targetCoords.lng});
-          node["amenity"="school"](around:3500,${targetCoords.lat},${targetCoords.lng});
-          way["shop"~"supermarket|convenience|grocery"](around:2500,${targetCoords.lat},${targetCoords.lng});
-          way["amenity"="hospital"](around:4000,${targetCoords.lat},${targetCoords.lng});
-          way["amenity"="school"](around:3500,${targetCoords.lat},${targetCoords.lng});
-        );
-        out center tags;
-      `;
-
-      try {
-        const response = await axios.post("https://overpass-api.de/api/interpreter", query, {
-          headers: { "Content-Type": "text/plain" },
-          timeout: 12000,
-        });
-
-        const mapped = {
-          busStops: [],
-          groceries: [],
-          hospitals: [],
-          schools: [],
-        };
-
-        const elements = Array.isArray(response.data?.elements) ? response.data.elements : [];
-
-        elements.forEach((element) => {
-          const tags = element.tags || {};
-          const lat = element.lat ?? element.center?.lat;
-          const lng = element.lon ?? element.center?.lon;
-          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-
-          const distanceKm = distanceInKm(targetCoords.lat, targetCoords.lng, lat, lng);
-          const place = {
-            name: tags.name || tags.brand || "Unnamed place",
-            distanceKm,
-            note: tags.operator || tags.amenity || tags.shop || "Nearby",
-          };
-
-          if (tags.highway === "bus_stop") mapped.busStops.push(place);
-          else if (tags.shop === "supermarket" || tags.shop === "convenience" || tags.shop === "grocery") mapped.groceries.push(place);
-          else if (tags.amenity === "hospital") mapped.hospitals.push(place);
-          else if (tags.amenity === "school") mapped.schools.push(place);
-        });
-
-        const normalize = (items) => {
-          const uniqueByName = new Map();
-          items.forEach((item) => {
-            const key = item.name.toLowerCase();
-            if (!uniqueByName.has(key) || item.distanceKm < uniqueByName.get(key).distanceKm) {
-              uniqueByName.set(key, item);
-            }
-          });
-
-          return Array.from(uniqueByName.values())
-            .sort((a, b) => a.distanceKm - b.distanceKm)
-            .slice(0, 4);
-        };
-
-        const liveNearby = {
-          busStops: normalize(mapped.busStops),
-          groceries: normalize(mapped.groceries),
-          hospitals: normalize(mapped.hospitals),
-          schools: normalize(mapped.schools),
-        };
-
-        const hasLiveData = Object.values(liveNearby).some((items) => items.length > 0);
-        if (hasLiveData) {
-          setNearbyPlaces(liveNearby);
-          setNearbySource("live");
-        } else {
-          setNearbyPlaces(null);
-          setNearbySource("unavailable");
-        }
+        setNearbyPlaces(hasLiveData ? places : null);
+        setNearbySource(response.data?.source === "live" && hasLiveData ? "live" : "unavailable");
       } catch (nearbyErr) {
         setNearbyPlaces(null);
         setNearbySource("unavailable");
@@ -615,6 +507,8 @@ const PropertyDetails = () => {
 
   const today = new Date().toISOString().split("T")[0];
   const propertyStayType = property?.stayType || "long";
+  const includedGuests = property?.maxGuests ?? property?.guests ?? 3;
+  const summaryPrefersShortStay = propertyStayType === "short" || propertyStayType === "both";
   const availableStayTypes = propertyStayType === "both" ? ["short", "long"] : [propertyStayType];
   const displayReviews = Array.isArray(reviewsData.reviews) ? reviewsData.reviews : [];
   const averageScoreOutOfTen = reviewsData.summary ? Number(reviewsData.summary.averageTotalScore || 0) : 0;
@@ -910,6 +804,10 @@ const PropertyDetails = () => {
     setCurrentImageIndex(0);
   }, [currentImageIndex, images.length]);
 
+  useEffect(() => {
+    setSummaryGuests(summaryPrefersShortStay ? includedGuests : 1);
+  }, [summaryPrefersShortStay, includedGuests, property?._id]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50">
@@ -983,6 +881,16 @@ const PropertyDetails = () => {
   const primaryImage = images[currentImageIndex];
   const hasMonthlyPrice = property.monthlyPrice !== null && property.monthlyPrice !== undefined;
   const hasDailyPrice = property.dailyPrice !== null && property.dailyPrice !== undefined;
+  const summaryRate = Number(
+    summaryPrefersShortStay
+      ? (hasDailyPrice ? property.dailyPrice : property.price)
+      : (hasMonthlyPrice ? property.monthlyPrice : property.price)
+  );
+  const summaryGuestCount = summaryPrefersShortStay ? Math.max(1, Number(summaryGuests) || 1) : 1;
+  const summaryExtraGuestFee = 1000;
+  const summaryExtraGuests = summaryPrefersShortStay ? Math.max(0, summaryGuestCount - includedGuests) : 0;
+  const summaryAdditionalFee = summaryExtraGuests * summaryExtraGuestFee;
+  const formatCurrency = (value) => `Rs ${Number(value || 0).toLocaleString("en-LK")}`;
 
   const handlePrevImage = (e) => {
     e.stopPropagation();
@@ -992,6 +900,10 @@ const PropertyDetails = () => {
   const handleNextImage = (e) => {
     e.stopPropagation();
     setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  };
+
+  const scrollToSection = (sectionRef) => {
+    sectionRef?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -1060,43 +972,58 @@ const PropertyDetails = () => {
             </div>
           </div>
 
-          <aside className="xl:col-span-3 rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm flex flex-col gap-3 h-full">
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 text-slate-900 text-center">
-              {propertyStayType === "both" ? (
-                <>
-                  <p className="text-[10px] font-semibold text-slate-500 uppercase">Long Stay (Monthly)</p>
-                  <p className="text-xl md:text-2xl font-bold text-emerald-600 mb-2">
-                    Rs {Number(hasMonthlyPrice ? property.monthlyPrice : property.price).toLocaleString("en-LK")}
-                  </p>
-                  <p className="text-[10px] font-semibold text-slate-500 uppercase">Short Stay (Daily)</p>
-                  <p className="text-lg md:text-xl font-bold text-emerald-700">
-                    Rs {Number(hasDailyPrice ? property.dailyPrice : property.price).toLocaleString("en-LK")}
-                  </p>
-                </>
-              ) : propertyStayType === "short" ? (
-                <>
-                  <p className="text-xs font-semibold text-slate-500 uppercase">Daily Rent</p>
-                  <p className="text-2xl md:text-3xl font-bold text-emerald-600">
-                    Rs {Number(hasDailyPrice ? property.dailyPrice : property.price).toLocaleString("en-LK")}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-xs font-semibold text-slate-500 uppercase">Monthly Rent</p>
-                  <p className="text-2xl md:text-3xl font-bold text-emerald-600">
-                    Rs {Number(hasMonthlyPrice ? property.monthlyPrice : property.price).toLocaleString("en-LK")}
-                  </p>
-                </>
-              )}
-            </div>
+          <div className="xl:col-span-3">
+            <aside className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm flex flex-col gap-3">
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 text-slate-900 text-center">
+                {propertyStayType === "both" ? (
+                  <>
+                    <p className="text-[10px] font-semibold text-slate-500 uppercase">Long Stay (Monthly)</p>
+                    <p className="text-xl md:text-2xl font-bold text-emerald-600 mb-2">
+                      Rs {Number(hasMonthlyPrice ? property.monthlyPrice : property.price).toLocaleString("en-LK")}
+                    </p>
+                    <p className="text-[10px] font-semibold text-slate-500 uppercase">Short Stay (Daily)</p>
+                    <p className="text-lg md:text-xl font-bold text-emerald-700">
+                      Rs {Number(hasDailyPrice ? property.dailyPrice : property.price).toLocaleString("en-LK")}
+                    </p>
+                  </>
+                ) : propertyStayType === "short" ? (
+                  <>
+                    <p className="text-xs font-semibold text-slate-500 uppercase">Daily Rent</p>
+                    <p className="text-2xl md:text-3xl font-bold text-emerald-600">
+                      Rs {Number(hasDailyPrice ? property.dailyPrice : property.price).toLocaleString("en-LK")}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs font-semibold text-slate-500 uppercase">Monthly Rent</p>
+                    <p className="text-2xl md:text-3xl font-bold text-emerald-600">
+                      Rs {Number(hasMonthlyPrice ? property.monthlyPrice : property.price).toLocaleString("en-LK")}
+                    </p>
+                  </>
+                )}
+              </div>
 
-            <div className="flex flex-col gap-3 mt-1">
+              <div className="flex flex-col gap-3 mt-1">
               <button
                 onClick={handleCheckAvailabilityClick}
                 className="rounded-xl px-4 py-3 border border-emerald-200 bg-emerald-50 text-emerald-800 font-semibold hover:bg-emerald-100 transition-all flex items-center justify-center gap-2 min-w-[170px]"
               >
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                 Check Availability
+              </button>
+              <button
+                onClick={() => scrollToSection(mapSectionRef)}
+                className="rounded-xl px-4 py-3 border border-slate-200 bg-white text-slate-900 font-semibold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 min-w-[170px]"
+              >
+                <MapPin className="w-5 h-5 text-emerald-600" />
+                View on Map
+              </button>
+              <button
+                onClick={() => scrollToSection(reviewsSectionRef)}
+                className="rounded-xl px-4 py-3 border border-slate-200 bg-white text-slate-900 font-semibold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 min-w-[170px]"
+              >
+                <MessageCircle className="w-5 h-5 text-emerald-600" />
+                View Reviews
               </button>
               <button
                 onClick={handleWishlistToggle}
@@ -1117,16 +1044,17 @@ const PropertyDetails = () => {
                 <Share2 className="w-5 h-5 text-slate-700" />
                 Share
               </button>
-            </div>
-          {shareFeedback && (
-            <p className="mt-3 text-xs text-center font-medium text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 border border-emerald-100">
-              {shareFeedback}
-            </p>
-          )}
-          </aside>
+              </div>
+              {shareFeedback && (
+                <p className="mt-3 text-xs text-center font-medium text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 border border-emerald-100">
+                  {shareFeedback}
+                </p>
+              )}
+            </aside>
+          </div>
         </section>
 
-        <div className="mt-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="mt-0 grid grid-cols-1 lg:grid-cols-4 gap-8">
           
           {/* Main Content Column */}
           <div className="lg:col-span-3 space-y-8">
@@ -1163,7 +1091,7 @@ const PropertyDetails = () => {
               </p>
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div ref={mapSectionRef} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
               <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
                 <MapPin className="w-5 h-5 mr-2 text-emerald-600" />
                 Location Map
@@ -1282,6 +1210,124 @@ const PropertyDetails = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="p-4 md:p-5">
+                <h3 className="text-xl font-bold text-slate-900">Your price summary</h3>
+                <div className="mt-5 flex items-center justify-between gap-4 text-sm text-slate-700">
+                  <span>{summaryPrefersShortStay ? "Rate per night" : "Rate per month"}</span>
+                  <span className="text-base font-semibold text-slate-900">{formatCurrency(summaryRate)}</span>
+                </div>
+
+                <div className="mt-5 rounded-xl border border-slate-200 p-4">
+                  <p className="text-sm font-semibold text-slate-800">
+                    {summaryPrefersShortStay ? "Number of guests (short stay)" : "Occupancy"}
+                  </p>
+                  <div className="mt-3 flex items-start gap-3">
+                    {summaryPrefersShortStay ? (
+                      <input
+                        type="number"
+                        min="1"
+                        max="15"
+                        value={summaryGuestCount}
+                        onChange={(e) => {
+                          const nextValue = Number(e.target.value);
+                          if (!Number.isFinite(nextValue)) {
+                            setSummaryGuests(1);
+                            return;
+                          }
+                          setSummaryGuests(Math.max(1, Math.min(15, nextValue)));
+                        }}
+                        className="w-20 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-center text-base font-semibold text-slate-900 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+                        aria-label="Number of guests for price summary"
+                      />
+                    ) : (
+                      <div className="min-w-[56px] rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-center text-base font-semibold text-slate-900">
+                        {summaryGuestCount}
+                      </div>
+                    )}
+                    <p className="text-sm leading-5 text-slate-500">
+                      {summaryPrefersShortStay
+                        ? `First ${includedGuests} guest${includedGuests > 1 ? "s" : ""} included; each extra guest + Rs ${summaryExtraGuestFee.toLocaleString("en-LK")}/night.`
+                        : "Monthly rentals are priced per month for the full property."}
+                    </p>
+                  </div>
+                  {summaryPrefersShortStay && (
+                    <p className="mt-3 text-sm text-slate-600">
+                      Extra guests: {summaryExtraGuests} (additional fee: {formatCurrency(summaryAdditionalFee)})
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-emerald-100 bg-emerald-50/60 px-4 py-4 md:px-5">
+                <div className="flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                      {summaryPrefersShortStay ? "Price" : "Monthly Price"}
+                    </p>
+                    <p className="mt-1 text-3xl font-bold text-slate-900">
+                      {formatCurrency(summaryRate + summaryAdditionalFee)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-slate-500">Includes taxes and charges</p>
+                    <p className="mt-1 text-base font-semibold text-slate-700">
+                      In property currency: LKR {Number(summaryRate + summaryAdditionalFee).toLocaleString("en-LK")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h3 className="font-bold text-lg text-slate-900">Seller Information</h3>
+                <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                  {sellerInfo?.role === "admin" ? "Admin Listing" : "Verified Seller"}
+                </span>
+              </div>
+
+              {sellerInfo ? (
+                <div className="space-y-3 text-sm text-slate-700">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Seller Name</p>
+                    <p className="mt-1 font-semibold text-slate-900">
+                      {sellerInfo?.sellerApplication?.sellerName || sellerInfo?.name || "-"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Email</p>
+                    <p className="mt-1 break-all">{sellerInfo?.email || "-"}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Contact Number</p>
+                    <p className="mt-1">{sellerInfo?.sellerApplication?.contactNumber || "-"}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Business Name</p>
+                    <p className="mt-1">{sellerInfo?.sellerApplication?.businessName || "Personal Property Seller"}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Selling Plan</p>
+                    <p className="mt-1">
+                      {sellerInfo?.sellerApplication?.sellingPlan === "business_property"
+                        ? "Business Property"
+                        : sellerInfo?.sellerApplication?.sellingPlan === "personal_property"
+                          ? "Personal Property"
+                          : "-"}
+                    </p>
+                  </div>
+                </div>
+              ) : sellerInfoError ? (
+                <p className="text-sm text-red-600">{sellerInfoError}</p>
+              ) : (
+                <p className="text-sm text-slate-500">Loading seller information...</p>
+              )}
+            </div>
             
             {/* Official Eco Rating */}
             <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
@@ -1415,7 +1461,7 @@ const PropertyDetails = () => {
         </div>
 
         {/* Reviews List Section */}
-        <div className="mt-8 bg-white rounded-2xl border border-slate-200 p-6 lg:p-10 shadow-sm">
+        <div ref={reviewsSectionRef} className="mt-8 bg-white rounded-2xl border border-slate-200 p-6 lg:p-10 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
             <div>
               <h2 className="text-2xl font-bold text-slate-900">Renter Reviews & Confirmations</h2>

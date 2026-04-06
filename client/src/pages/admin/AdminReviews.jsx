@@ -116,6 +116,9 @@ export default function AdminReviews() {
               <Link to="/admin/bookings" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800 transition">
                 Booking Dashboard
               </Link>
+              <Link to="/admin/sellers" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
+                Seller Management
+              </Link>
               <Link to="/admin/listings" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
                 Listings View
               </Link>
