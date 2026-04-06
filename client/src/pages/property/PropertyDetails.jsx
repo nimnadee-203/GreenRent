@@ -43,6 +43,7 @@ const PropertyDetails = () => {
   const [property, setProperty] = useState(null);
   const [ecoRating, setEcoRating] = useState(null);
   const [reviewsData, setReviewsData] = useState({ reviews: [], summary: null });
+  const [canReviewApartment, setCanReviewApartment] = useState(false);
   const [replyDrafts, setReplyDrafts] = useState({});
   const [replySubmittingByReview, setReplySubmittingByReview] = useState({});
   const [replyError, setReplyError] = useState("");
@@ -275,6 +276,35 @@ const PropertyDetails = () => {
     };
     fetchData();
   }, [id]);
+
+  useEffect(() => {
+    const checkReviewEligibility = async () => {
+      if (!backendUser?.id && !backendUser?._id) {
+        setCanReviewApartment(false);
+        return;
+      }
+
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/bookings/my`, { withCredentials: true });
+        const bookings = Array.isArray(response.data?.bookings) ? response.data.bookings : [];
+        const eligibleStatuses = new Set(["confirmed", "completed"]);
+
+        const hasEligibleBooking = bookings.some((booking) => {
+          const apartmentId = typeof booking?.apartmentId === "object"
+            ? booking.apartmentId?._id
+            : booking?.apartmentId;
+
+          return String(apartmentId || "") === String(id) && eligibleStatuses.has(booking?.status);
+        });
+
+        setCanReviewApartment(hasEligibleBooking);
+      } catch (bookingError) {
+        setCanReviewApartment(false);
+      }
+    };
+
+    checkReviewEligibility();
+  }, [backendUser?._id, backendUser?.id, id]);
 
   useEffect(() => {
     const loadMapCoordinates = async () => {
@@ -1290,13 +1320,15 @@ const PropertyDetails = () => {
                   <p className="text-sm text-slate-500 italic pb-2">No renter reviews yet. Be the first to verify this property!</p>
                 )}
 
-                <button 
-                  onClick={() => setShowReviewModal(true)}
-                  className="w-full mt-4 bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center"
-                >
-                  <ShieldCheck className="w-4 h-4 mr-2" />
-                  Review Apartment
-                </button>
+                {canReviewApartment && (
+                  <button 
+                    onClick={() => setShowReviewModal(true)}
+                    className="w-full mt-4 bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center"
+                  >
+                    <ShieldCheck className="w-4 h-4 mr-2" />
+                    Review Apartment
+                  </button>
+                )}
              </div>
 
           </div>
@@ -1494,7 +1526,7 @@ const PropertyDetails = () => {
       )}
 
       {/* Review Modal */}
-      {showReviewModal && (
+      {showReviewModal && canReviewApartment && (
         <ReviewModal 
           propertyId={id} 
           ecoRatingId={ecoRating?._id}
