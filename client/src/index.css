@@ -14,3 +14,131 @@
     }
   }
 }
+
+@keyframes heroGridShift {
+  0% {
+    background-position: 0 0, 0 0;
+  }
+  100% {
+    background-position: 32px 32px, 32px 32px;
+  }
+}
+
+@keyframes auroraFlow {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate3d(0, -16px, 0) scale(1.06);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.55;
+  }
+}
+
+@keyframes orbFloat {
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
+  }
+  50% {
+    transform: translateY(-24px) translateX(12px) scale(1.08);
+  }
+  100% {
+    transform: translateY(0) translateX(0) scale(1);
+  }
+}
+
+@keyframes heroImageZoom {
+  0% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: scale(1.08) translate3d(0, -10px, 0);
+  }
+  100% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes navGradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.hero-image-bg {
+  background-image: url('https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=2200&q=80');
+  background-size: cover;
+  background-position: center;
+  animation: heroImageZoom 16s ease-in-out infinite;
+  will-change: transform;
+}
+
+.nav-ambient {
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0.78), rgba(236, 253, 245, 0.72), rgba(224, 242, 254, 0.72), rgba(255, 255, 255, 0.78));
+  background-size: 240% 240%;
+  animation: navGradientShift 10s ease infinite;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(to right, rgba(148, 163, 184, 0.16) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.16) 1px, transparent 1px);
+  background-size: 24px 24px;
+  animation: heroGridShift 18s linear infinite;
+}
+
+.hero-aurora {
+  background:
+    radial-gradient(circle at 25% 20%, rgba(16, 185, 129, 0.2), transparent 45%),
+    radial-gradient(circle at 80% 30%, rgba(34, 197, 94, 0.16), transparent 42%),
+    radial-gradient(circle at 50% 75%, rgba(59, 130, 246, 0.12), transparent 40%);
+  animation: auroraFlow 9s ease-in-out infinite;
+}
+
+.hero-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  pointer-events: none;
+  z-index: 0;
+  animation: orbFloat 11s ease-in-out infinite;
+}
+
+.hero-orb-left {
+  width: 260px;
+  height: 260px;
+  left: 14%;
+  top: 10%;
+  background: rgba(16, 185, 129, 0.28);
+}
+
+.hero-orb-right {
+  width: 220px;
+  height: 220px;
+  right: 12%;
+  top: 18%;
+  background: rgba(14, 165, 233, 0.24);
+  animation-delay: -4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-ambient,
+  .hero-image-bg,
+  .hero-grid,
+  .hero-aurora,
+  .hero-orb {
+    animation: none;
+  }
+}

@@ -10,15 +10,49 @@ export const getUserData = async (req, res) => {
     return res.status(200).json({
       success: true,
       userData: {
+        id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        sellerRequest: user.sellerRequest,
       }
     });
-
   } catch (error) {
     const statusCode = error.message === "User not found" ? 404 : 500;
     return res.status(statusCode).json({ success: false, message: error.message });
+  }
+};
+
+export const getPendingSellerRequests = async (req, res) => {
+  try {
+    const requests = await userService.getPendingSellerRequests();
+
+    return res.status(200).json({
+      success: true,
+      requests,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch seller requests",
+    });
+  }
+};
+
+export const getPublicSellerProfile = async (req, res) => {
+  try {
+    const profile = await userService.getPublicSellerProfile(req.params.userId);
+
+    return res.status(200).json({
+      success: true,
+      profile,
+    });
+  } catch (error) {
+    const statusCode = error.message === "User not found" ? 404 : 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || "Failed to fetch seller profile",
+    });
   }
 };
 
@@ -36,6 +70,85 @@ export const updatePreferences = async (req, res) => {
       success: true,
       message: "Preferences updated",
       user,
+    });
+  } catch (error) {
+    const statusCode = error.message === "User not found" ? 404 : 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const addToWishlist = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { propertyId } = req.params;
+
+    const wishlist = await userService.addToWishlist(userId, propertyId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Property added to wishlist",
+      wishlist,
+    });
+  } catch (error) {
+    const statusCode = error.message === "Property not found" ? 404 : error.message === "User not found" ? 404 : 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const removeFromWishlist = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { propertyId } = req.params;
+
+    const wishlist = await userService.removeFromWishlist(userId, propertyId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Property removed from wishlist",
+      wishlist,
+    });
+  } catch (error) {
+    const statusCode = error.message === "User not found" ? 404 : 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getWishlist = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const wishlist = await userService.getWishlist(userId);
+
+    return res.status(200).json({
+      success: true,
+      wishlist,
+    });
+  } catch (error) {
+    const statusCode = error.message === "User not found" ? 404 : 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const checkWishlist = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { propertyId } = req.params;
+    const isWishlisted = await userService.isInWishlist(userId, propertyId);
+
+    return res.status(200).json({
+      success: true,
+      isWishlisted,
     });
   } catch (error) {
     const statusCode = error.message === "User not found" ? 404 : 500;

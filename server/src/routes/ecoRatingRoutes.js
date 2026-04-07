@@ -14,9 +14,10 @@ const router = Router();
 router.get("/", listEcoRatingsHandler);
 router.get("/:id", getEcoRatingByIdHandler);
 
-// Protected routes - Only landlords and admins can create/modify eco ratings
-router.post("/", authenticate, authorize("landlord", "admin"), createEcoRatingHandler);
-router.put("/:id", authenticate, authorize("landlord", "admin"), updateEcoRatingHandler);
+// Protected routes - Sellers/Admins can create/modify eco ratings
+// Keep "landlord" for backward compatibility with older tokens/role naming.
+router.post("/", authenticate, authorize("seller", "landlord", "admin"), createEcoRatingHandler);
+router.put("/:id", authenticate, authorize("seller", "landlord", "admin"), updateEcoRatingHandler);
 router.delete("/:id", authenticate, authorize("admin"), deleteEcoRatingHandler);
 
 export default router;

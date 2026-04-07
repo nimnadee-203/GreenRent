@@ -11,10 +11,6 @@ export const authenticate = (req, res, next) => {
         message: "Access denied. No token provided."
       });
     }
-
-    const token = authHeader.substring(7); // Remove "Bearer " prefix
-
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
 
     // Attach user info to request

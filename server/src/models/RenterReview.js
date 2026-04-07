@@ -36,6 +36,34 @@ const renterCriteriaSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const reviewReplySchema = new mongoose.Schema(
+  {
+    userId: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    userName: {
+      type: String,
+      required: true,
+      trim: true,
+      default: "Anonymous",
+    },
+    userRole: {
+      type: String,
+      enum: ["user", "seller", "admin", "renter"],
+      default: "user",
+    },
+    text: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 500,
+    },
+  },
+  { timestamps: true }
+);
+
 const renterReviewSchema = new mongoose.Schema(
   {
     ecoRatingId: {
@@ -83,6 +111,48 @@ const renterReviewSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    verification: {
+      solarPanels: {
+        type: Boolean,
+        default: null,
+      },
+      ledLighting: {
+        type: Boolean,
+        default: null,
+      },
+      efficientAc: {
+        type: Boolean,
+        default: null,
+      },
+      waterSavingTaps: {
+        type: Boolean,
+        default: null,
+      },
+      rainwaterHarvesting: {
+        type: Boolean,
+        default: null,
+      },
+      waterMeter: {
+        type: Boolean,
+        default: null,
+      },
+      recyclingAvailable: {
+        type: Boolean,
+        default: null,
+      },
+      compostAvailable: {
+        type: Boolean,
+        default: null,
+      },
+      evCharging: {
+        type: Boolean,
+        default: null,
+      },
+      goodVentilationSunlight: {
+        type: Boolean,
+        default: null,
+      },
+    },
     verified: {
       type: Boolean,
       default: false,
@@ -100,7 +170,11 @@ const renterReviewSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],
-      default: "pending",
+      default: "approved",
+    },
+    replies: {
+      type: [reviewReplySchema],
+      default: [],
     },
   },
   { timestamps: true }

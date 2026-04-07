@@ -1,11 +1,15 @@
 import { Router } from "express";
-import { authenticate, authorize } from "../middleware/auth.js";
+import userAuth from "../middleware/user.auth.js";
+import { isSeller } from "../middleware/role.middleware.js";
 import {
     createPropertyHandler,
     listPropertiesHandler,
     getPropertyByIdHandler,
+    getPropertyNearbyPlacesHandler,
     updatePropertyHandler,
     deletePropertyHandler,
+    deleteAllPropertiesHandler,
+    clearEcoRatingHandler,
 } from "../controllers/propertyController.js";
 
 const router = Router();
@@ -18,6 +22,13 @@ const router = Router();
 router.get("/", listPropertiesHandler);
 
 /**
+ * @route   GET /api/properties/:id/nearby
+ * @desc    Get nearby places for a property
+ * @access  Public
+ */
+router.get("/:id/nearby", getPropertyNearbyPlacesHandler);
+
+/**
  * @route   GET /api/properties/:id
  * @desc    Get detailed property information
  * @access  Public
@@ -27,22 +38,36 @@ router.get("/:id", getPropertyByIdHandler);
 /**
  * @route   POST /api/properties
  * @desc    Create a new property listing
- * @access  Protected (Landlord/Admin)
+ * @access  Protected (Seller/Admin)
  */
-router.post("/", authenticate, authorize("landlord", "admin"), createPropertyHandler);
+router.post("/", userAuth, isSeller, createPropertyHandler);
+
+/**
+ * @route   DELETE /api/properties/delete-all
+ * @desc    Delete all properties
+ * @access  Protected (Admin)
+ */
+router.delete("/delete-all", userAuth, deleteAllPropertiesHandler);
+
+/**
+ * @route   PUT /api/properties/:id/clear-eco-rating
+ * @desc    Clear a property's eco rating
+ * @access  Protected (Owner/Admin)
+ */
+router.put("/:id/clear-eco-rating", userAuth, clearEcoRatingHandler);
 
 /**
  * @route   PUT /api/properties/:id
  * @desc    Update a property listing
  * @access  Protected (Owner/Admin)
  */
-router.put("/:id", authenticate, updatePropertyHandler);
+router.put("/:id", userAuth, updatePropertyHandler);
 
 /**
  * @route   DELETE /api/properties/:id
  * @desc    Delete or archive a property listing
  * @access  Protected (Owner/Admin)
  */
-router.delete("/:id", authenticate, deletePropertyHandler);
+router.delete("/:id", userAuth, deletePropertyHandler);
 
 export default router;

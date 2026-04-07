@@ -14,7 +14,20 @@ const VALID_LIVING_DURATIONS = [
   "> 2 years",
 ];
 
-const VALID_STATUSES = ["pending", "approved", "rejected"];
+const VALID_STATUSES = ["pending", "approved", "rejected", "hidden"];
+
+const VERIFICATION_FIELDS = [
+  "solarPanels",
+  "ledLighting",
+  "efficientAc",
+  "waterSavingTaps",
+  "rainwaterHarvesting",
+  "waterMeter",
+  "recyclingAvailable",
+  "compostAvailable",
+  "evCharging",
+  "goodVentilationSunlight",
+];
 
 const isNumberBetween = (value, min, max) => {
   const numeric = Number(value);
@@ -45,6 +58,26 @@ const validateCriteria = (criteria, requireAll) => {
 
 const isValidMongoId = (id) => {
   return /^[0-9a-fA-F]{24}$/.test(id);
+};
+
+const validateVerification = (verification) => {
+  if (verification === undefined) {
+    return [];
+  }
+
+  if (!verification || typeof verification !== "object") {
+    return ["verification must be an object"];
+  }
+
+  const errors = [];
+
+  VERIFICATION_FIELDS.forEach((key) => {
+    if (verification[key] !== undefined && typeof verification[key] !== "boolean") {
+      errors.push(`verification.${key} must be a boolean`);
+    }
+  });
+
+  return errors;
 };
 
 export const validateRenterReviewCreate = (payload) => {
@@ -90,6 +123,9 @@ export const validateRenterReviewCreate = (payload) => {
     }
   }
 
+  // Validate verification (optional)
+  errors.push(...validateVerification(payload.verification));
+
   return errors;
 };
 
@@ -126,6 +162,9 @@ export const validateRenterReviewUpdate = (payload) => {
     }
   }
 
+  // Validate verification (optional)
+  errors.push(...validateVerification(payload.verification));
+
   return errors;
 };
 
@@ -136,6 +175,28 @@ export const validateStatusUpdate = (payload) => {
     errors.push("status is required");
   } else if (!VALID_STATUSES.includes(payload.status)) {
     errors.push(`status must be one of: ${VALID_STATUSES.join(", ")}`);
+  }
+
+  return errors;
+};
+
+export const validateReviewReply = (payload) => {
+  const errors = [];
+
+  if (!payload || typeof payload !== "object") {
+    return ["payload must be an object"];
+  }
+
+  if (!payload.text || typeof payload.text !== "string") {
+    errors.push("text is required and must be a string");
+  } else {
+    const trimmed = payload.text.trim();
+    if (!trimmed.length) {
+      errors.push("text cannot be empty");
+    }
+    if (trimmed.length > 500) {
+      errors.push("text must be 500 characters or less");
+    }
   }
 
   return errors;

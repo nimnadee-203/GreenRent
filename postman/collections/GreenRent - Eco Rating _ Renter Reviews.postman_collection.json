@@ -1,0 +1,465 @@
+{
+  "info": {
+    "_postman_id": "c361cf5a-9207-40c3-a98c-810c2a9e622a",
+    "name": "GreenRent - Eco Rating & Renter Reviews",
+    "description": "Final corrected collection for Eco Ratings and Renter Reviews",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Eco Ratings (Landlord/Admin)",
+      "item": [
+        {
+          "name": "List Eco Ratings (Public)",
+          "id": "ffe6c640-7026-452b-8263-0e378b11ea0d",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/eco-ratings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "eco-ratings"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Eco Rating by ID (Public)",
+          "id": "206812a1-cafe-443a-a7d6-dde8e6e5265d",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/eco-ratings/{{ecoRatingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "eco-ratings",
+                "{{ecoRatingId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Eco Rating (Landlord/Admin)",
+          "id": "b00f3d49-f893-457b-95e6-2481842c143f",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{landlordToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listingId\": \"{{listingId}}\",\n  \"location\": {\n    \"latitude\": 7.9271,\n    \"longitude\": 79.8612,\n    \"address\": \"Maharagama\"\n  },\n  \"criteria\": {\n    \"energyRating\": \"C\",\n    \"solarPanels\": true,\n    \"ledLighting\": true,\n    \"efficientAc\": true,\n    \"waterSavingTaps\": true,\n    \"rainwaterHarvesting\": false,\n    \"waterMeter\": true,\n    \"recyclingAvailable\": true,\n    \"compostAvailable\": false,\n    \"transportDistance\": \"1-3 km\",\n    \"evCharging\": false,\n    \"goodVentilationSunlight\": true\n  },\n  \"reviewSummary\": \"Good eco-friendly apartment with strong water and energy setup.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/eco-ratings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "eco-ratings"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Eco Rating (Landlord/Admin)",
+          "id": "b6b49848-cc1a-4424-bea5-318b54a92a28",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{landlordToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": {\n    \"latitude\": 6.9271,\n    \"longitude\": 79.8612,\n    \"address\": \"Hettipola\"\n  },\n  \"criteria\": {\n    \"energyRating\": \"A\",\n    \"solarPanels\": true,\n    \"ledLighting\": true,\n    \"efficientAc\": true,\n    \"waterSavingTaps\": true,\n    \"rainwaterHarvesting\": true,\n    \"waterMeter\": true,\n    \"recyclingAvailable\": true,\n    \"compostAvailable\": true,\n    \"transportDistance\": \"< 1 km\",\n    \"evCharging\": true,\n    \"goodVentilationSunlight\": true\n  },\n  \"reviewSummary\": \"Updated after sustainability improvements\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/eco-ratings/{{ecoRatingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "eco-ratings",
+                "{{ecoRatingId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Eco Rating (Admin)",
+          "id": "081f5748-811c-4d13-88f2-1a813069337b",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/eco-ratings/{{ecoRatingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "eco-ratings",
+                "{{ecoRatingId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "d4f49109-b967-4adc-a2fc-632808c055fe"
+    },
+    {
+      "name": "Renter Reviews",
+      "item": [
+        {
+          "name": "Get Listing Reviews (Public)",
+          "id": "baffe752-d862-426e-a022-e9b8a487b1b4",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/renter-reviews/listing/{{listingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "renter-reviews",
+                "listing",
+                "{{listingId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Listing Averages (Public)",
+          "id": "c22d9a3b-52ae-4cab-9d3d-0f21e99ffcca",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/renter-reviews/listing/{{listingId}}/averages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "renter-reviews",
+                "listing",
+                "{{listingId}}",
+                "averages"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Eco Rating Reviews (Public)",
+          "id": "1a5c2137-8af4-4103-8ffa-2aaedb5c678a",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/renter-reviews/eco-rating/{{ecoRatingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "renter-reviews",
+                "eco-rating",
+                "{{ecoRatingId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Review by ID (Public)",
+          "id": "fd885063-4efe-4b33-9b12-342d73adab81",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/renter-reviews/{{reviewId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "renter-reviews",
+                "{{reviewId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Review Helpful (Public)",
+          "id": "6e3e4676-4efe-4bc6-a696-578cbe09efac",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/renter-reviews/{{reviewId}}/helpful",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "renter-reviews",
+                "{{reviewId}}",
+                "helpful"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Review (Renter)",
+          "id": "789dfa8e-230a-4a44-bdec-e9df6d199a85",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{renterToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listingId\": \"{{listingId}}\",\n  \"ecoRatingId\": \"{{ecoRatingId}}\",\n  \"criteria\": {\n    \"energyEfficiency\": 8,\n    \"waterEfficiency\": 7,\n    \"wasteManagement\": 6,\n    \"transitAccess\": 9,\n    \"greenAmenities\": 7\n  },\n  \"review\": \"Great eco features.\",\n  \"livingDuration\": \"1-2 years\",\n  \"wouldRecommend\": true,\n  \"verification\": {\n    \"verified\": false,\n    \"verifiedBy\": \"\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/renter-reviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "renter-reviews"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Reviews (Renter)",
+          "id": "023e7fb5-c668-4287-a198-4d5eb62f52c5",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{renterToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/renter-reviews/my/reviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "renter-reviews",
+                "my",
+                "reviews"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Review (Renter/Admin)",
+          "id": "9f0df01c-b75e-4ceb-b589-90623926516b",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{renterToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"criteria\": {\n    \"energyRating\": \"B\",\n    \"solarPanels\": true,\n    \"ledLighting\": false,\n    \"efficientAc\": true,\n    \"waterSavingTaps\": true,\n    \"rainwaterHarvesting\": true,\n    \"waterMeter\": true,\n    \"recyclingAvailable\": true,\n    \"compostAvailable\": true,\n    \"transportDistance\": \"< 1 km\",\n    \"evCharging\": true,\n    \"goodVentilationSunlight\": true\n  },\n  \"review\": \"Updated review\",\n  \"livingDuration\": \"1-2 years\",\n  \"wouldRecommend\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/renter-reviews/{{reviewId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "renter-reviews",
+                "{{reviewId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Review (Renter/Admin)",
+          "id": "e0071925-2e55-4549-88bf-de5e209f73ed",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{renterToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/renter-reviews/{{reviewId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "renter-reviews",
+                "{{reviewId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Review Status (Admin)",
+          "id": "cae22679-fd2a-40ee-8617-3506710a5a32",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/renter-reviews/{{reviewId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "renter-reviews",
+                "{{reviewId}}",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "8e7362e7-b9f3-405e-a91d-657ac5324f92"
+    }
+  ],
+  "variable": [
+    {
+      "id": "cec43a51-71e3-4026-b074-9a29f144f200",
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "id": "205daea0-dbf4-4b64-a27c-65b685c26744",
+      "key": "landlordToken",
+      "value": ""
+    },
+    {
+      "id": "d8db9822-e482-40aa-8c0d-4162ef1ee6d8",
+      "key": "renterToken",
+      "value": ""
+    },
+    {
+      "id": "754db41f-afad-47e5-b73d-bfff400d6b81",
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "id": "5637c5cf-487b-4207-8115-73adfacd69a1",
+      "key": "ecoRatingId",
+      "value": ""
+    },
+    {
+      "id": "676e4b92-74e0-41fa-90e7-33e30f22bfcb",
+      "key": "reviewId",
+      "value": ""
+    },
+    {
+      "id": "80ca676e-f614-443b-bc76-e7d24a81da23",
+      "key": "listingId",
+      "value": "6990338ce644a4f43dd5846d"
+    }
+  ]
+}

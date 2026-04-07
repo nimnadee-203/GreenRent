@@ -9,11 +9,15 @@ import {
   updateReviewStatus,
   markReviewHelpful,
   getAverageRenterScores,
+  getReviewsForAdmin,
+  addReplyToReview,
+  deleteReplyFromReview,
 } from "../services/renterReviewService.js";
 import {
   validateRenterReviewCreate,
   validateRenterReviewUpdate,
   validateStatusUpdate,
+  validateReviewReply,
 } from "../validators/renterReviewValidators.js";
 
 /**
@@ -33,13 +37,18 @@ export const createRenterReviewHandler = async (req, res) => {
     );
 
     return res.status(201).json({
-      message: "Review submitted successfully and is pending approval",
+      message: "Review submitted successfully",
       review,
     });
   } catch (error) {
     if (error.code === 11000) {
       return res.status(400).json({
         message: "You have already reviewed this listing",
+      });
+    }
+    if (error.message === "ReviewNotAllowedForUnbookedListing") {
+      return res.status(403).json({
+        message: "You can review only properties you have booked.",
       });
     }
     console.error("Create review error:", error);
@@ -149,6 +158,11 @@ export const updateRenterReviewHandler = async (req, res) => {
     if (error.message === "Unauthorized to update this review") {
       return res.status(403).json({ message: error.message });
     }
+    if (error.message === "ReviewNotAllowedForUnbookedListing") {
+      return res.status(403).json({
+        message: "You can update reviews only for properties you currently use or used previously.",
+      });
+    }
     console.error("Update review error:", error);
     return res.status(500).json({ message: "Failed to update review" });
   }
@@ -173,6 +187,11 @@ export const deleteRenterReviewHandler = async (req, res) => {
   } catch (error) {
     if (error.message === "Unauthorized to delete this review") {
       return res.status(403).json({ message: error.message });
+    }
+    if (error.message === "ReviewNotAllowedForUnbookedListing") {
+      return res.status(403).json({
+        message: "You can delete reviews only for properties you currently use or used previously.",
+      });
     }
     console.error("Delete review error:", error);
     return res.status(500).json({ message: "Failed to delete review" });
@@ -200,7 +219,7 @@ export const updateReviewStatusHandler = async (req, res) => {
     }
 
     return res.status(200).json({
-      message: `Review ${req.body.status} successfully`,
+      message: `Review ${req.body.status === "hidden" ? "hidden" : req.body.status} successfully`,
       review,
     });
   } catch (error) {
@@ -249,5 +268,63 @@ export const getListingAveragesHandler = async (req, res) => {
   } catch (error) {
     console.error("Get averages error:", error);
     return res.status(500).json({ message: "Failed to calculate averages" });
+  }
+};
+
+export const getAdminReviewsHandler = async (req, res) => {
+  try {
+    const { status } = req.query;
+    const reviews = await getReviewsForAdmin({ status });
+
+    return res.status(200).json({
+      reviews,
+      notificationCount: reviews.length,
+      hiddenCount: reviews.filter((review) => review.status === "rejected").length,
+    });
+  } catch (error) {
+    console.error("Get admin reviews error:", error);
+    return res.status(500).json({ message: "Failed to fetch admin review list" });
+  }
+};
+
+export const addReviewReplyHandler = async (req, res) => {
+  try {
+    const errors = validateReviewReply(req.body);
+    if (errors.length) {
+      return res.status(400).json({ errors });
+    }
+
+    const updatedReview = await addReplyToReview(req.params.id, req.body, req.user);
+    if (!updatedReview) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    return res.status(201).json({
+      message: "Reply added successfully",
+      review: updatedReview,
+    });
+  } catch (error) {
+    console.error("Add review reply error:", error);
+    return res.status(500).json({ message: "Failed to add reply" });
+  }
+};
+
+export const deleteReviewReplyHandler = async (req, res) => {
+  try {
+    const updatedReview = await deleteReplyFromReview(req.params.id, req.params.replyId, req.user);
+    if (!updatedReview) {
+      return res.status(404).json({ message: "Review or reply not found" });
+    }
+
+    return res.status(200).json({
+      message: "Reply deleted successfully",
+      review: updatedReview,
+    });
+  } catch (error) {
+    if (error.message === "Unauthorized to delete this reply") {
+      return res.status(403).json({ message: error.message });
+    }
+    console.error("Delete review reply error:", error);
+    return res.status(500).json({ message: "Failed to delete reply" });
   }
 };

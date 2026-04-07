@@ -1,0 +1,566 @@
+import React, { useEffect, useMemo, useState } from "react";
+// Forced HMR update 
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import {
+  Bath,
+  Bed,
+  Heart,
+  Leaf,
+  MapPin,
+  RefreshCw,
+  Maximize2,
+} from "lucide-react";
+import Navbar from "../../components/Home/Navbar";
+import Footer from "../../components/Home/Footer";
+import PropertyFilterBar from "../../components/PropertyListing/PropertyFilterBar";
+import { useAuth } from "../../context/AuthContext";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
+const DEFAULT_FILTERS = {
+  search: "",
+  propertyType: "",
+  availabilityStatus: "",
+  minPrice: "",
+  maxPrice: "",
+  sortBy: "createdAt",
+  sortOrder: "desc",
+};
+
+const TYPE_OPTIONS = ["apartment", "house", "studio", "townhouse", "other"];
+
+const AVAILABILITY_OPTIONS = ["available", "rented", "archived"];
+
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1200&q=80";
+
+const ITEMS_PER_PAGE = 10;
+
+const formatPrice = (value) => {
+  if (typeof value !== "number") return "N/A";
+  return new Intl.NumberFormat("en-LK", {
+    style: "currency",
+    currency: "LKR",
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+const capitalize = (value) => {
+  if (!value) return "";
+  return value[0].toUpperCase() + value.slice(1);
+};
+
+export default function PropertyListing() {
+  const { backendUser } = useAuth();
+  const navigate = useNavigate();
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [properties, setProperties] = useState([]);
+  const [compareIds, setCompareIds] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [wishlistingIds, setWishlistingIds] = useState([]);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem("comparePropertyIds") || "[]");
+      if (Array.isArray(saved)) {
+        setCompareIds(saved.filter((id) => typeof id === "string").slice(0, 3));
+      }
+    } catch {
+      setCompareIds([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    sessionStorage.setItem("comparePropertyIds", JSON.stringify(compareIds));
+  }, [compareIds]);
+
+  const requestParams = useMemo(() => {
+    const serverSortBy =
+      filters.sortBy === "ecoScore" || filters.sortBy === "newestEco"
+        ? "createdAt"
+        : filters.sortBy;
+
+    const serverSortOrder =
+      serverSortBy === "price" || serverSortBy === "title" ? "asc" : "desc";
+
+    const params = {
+      sortBy: serverSortBy,
+      sortOrder: serverSortOrder,
+    };
+
+    if (filters.search.trim()) params.search = filters.search.trim();
+    if (filters.propertyType) params.propertyType = filters.propertyType;
+    if (filters.availabilityStatus) params.availabilityStatus = filters.availabilityStatus;
+    if (filters.minPrice) params.minPrice = Number(filters.minPrice);
+    if (filters.maxPrice) params.maxPrice = Number(filters.maxPrice);
+    if (backendUser?.role === "admin") params.includeHidden = "true";
+
+    return params;
+  }, [
+    filters.search,
+    filters.propertyType,
+    filters.availabilityStatus,
+    filters.minPrice,
+    filters.maxPrice,
+    filters.sortBy,
+    filters.sortOrder,
+    backendUser?.role,
+  ]);
+
+  const fetchProperties = async () => {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/properties`, {
+        params: requestParams,
+        withCredentials: true,
+      });
+      setProperties(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to load properties.");
+      setProperties([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProperties();
+  }, [requestParams]);
+
+  const updateFilter = (field) => (event) => {
+    setFilters((previous) => ({
+      ...previous,
+      [field]: event.target.value,
+    }));
+    setCurrentPage(1);
+  };
+
+  const resetFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+    setCurrentPage(1);
+  };
+
+  const handleAddToWishlist = async (event, propertyId) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (wishlistingIds.includes(propertyId)) return;
+
+    try {
+      setWishlistingIds((prev) => [...prev, propertyId]);
+      await axios.post(`${API_BASE_URL}/api/user/wishlist/${propertyId}`, {}, { withCredentials: true });
+      navigate("/wishlist");
+    } catch (err) {
+      const message = err?.response?.data?.message || "Please login to add items to wishlist.";
+      alert(message);
+    } finally {
+      setWishlistingIds((prev) => prev.filter((id) => id !== propertyId));
+    }
+  };
+
+  const toggleCompareSelection = (event, propertyId) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    setCompareIds((prev) => {
+      if (prev.includes(propertyId)) {
+        return prev.filter((id) => id !== propertyId);
+      }
+
+      if (prev.length >= 3) {
+        alert("You can compare up to 3 properties at a time.");
+        return prev;
+      }
+
+      return [...prev, propertyId];
+    });
+  };
+
+  const clearCompareSelection = () => {
+    setCompareIds([]);
+  };
+
+  const goToComparePage = () => {
+    if (compareIds.length < 2) {
+      alert("Select at least 2 properties to compare.");
+      return;
+    }
+
+    navigate(`/properties/compare?ids=${compareIds.join(",")}`);
+  };
+
+  const activeFilters = useMemo(() => {
+    const labels = [];
+    if (filters.search.trim()) labels.push(`Search: ${filters.search.trim()}`);
+    if (filters.propertyType) labels.push(`Type: ${capitalize(filters.propertyType)}`);
+    if (filters.minPrice) labels.push(`Min: ${formatPrice(Number(filters.minPrice))}`);
+    if (filters.maxPrice) labels.push(`Max: ${formatPrice(Number(filters.maxPrice))}`);
+    return labels;
+  }, [filters]);
+
+  const removeFilterChip = (label) => {
+    if (label.startsWith("Search:")) setFilters((prev) => ({ ...prev, search: "" }));
+    if (label.startsWith("Type:")) setFilters((prev) => ({ ...prev, propertyType: "" }));
+    if (label.startsWith("Min:")) setFilters((prev) => ({ ...prev, minPrice: "" }));
+    if (label.startsWith("Max:")) setFilters((prev) => ({ ...prev, maxPrice: "" }));
+    setCurrentPage(1);
+  };
+
+  const toLocationLabel = (property) => {
+    if (typeof property.location === "string") return property.location;
+    if (!property.location) return "Location unavailable";
+
+    const parts = [property.location.displayAddress, property.location.city, property.location.state, property.location.country].filter(Boolean);
+    if (parts.length > 0) return parts.join(", ");
+    return property.location.address || "Location unavailable";
+  };
+
+  const toEcoScore = (property) => {
+    const score =
+      property.ecoScore ??
+      property.ecoRatingId?.totalScore ??
+      property.ecoRating?.overallScore ??
+      property.ecoRating?.score ??
+      0;
+    const normalized = Number(score);
+    if (Number.isNaN(normalized)) return 0;
+    return Math.max(0, Math.min(100, Math.round(normalized)));
+  };
+
+  const toAirQuality = (property) => {
+    return property.ecoRatingId?.airQualityScore ?? null;
+  };
+
+  const ecoBadgeClass = (score) => {
+    if (score >= 80) return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    if (score >= 50) return "bg-amber-50 text-amber-700 border-amber-200";
+    if (score > 0) return "bg-red-50 text-red-700 border-red-200";
+    return "bg-slate-100 text-slate-700 border-slate-200";
+  };
+
+  const getPrimaryPriceInfo = (property) => {
+    const stayType = property.stayType || "long";
+    const monthlyPrice =
+      typeof property.monthlyPrice === "number"
+        ? property.monthlyPrice
+        : stayType !== "short" && typeof property.price === "number"
+        ? property.price
+        : null;
+    const dailyPrice =
+      typeof property.dailyPrice === "number"
+        ? property.dailyPrice
+        : stayType === "short" && typeof property.price === "number"
+        ? property.price
+        : null;
+
+    if (stayType === "short") {
+      const value = dailyPrice ?? monthlyPrice ?? property.price ?? 0;
+      return { value, unit: "/night" };
+    }
+
+    if (stayType === "both") {
+      // Prefer showing the short-stay (daily) rate if available
+      if (dailyPrice != null) {
+        return { value: dailyPrice, unit: "/night" };
+      }
+      const value = monthlyPrice ?? property.price ?? 0;
+      return { value, unit: "/month" };
+    }
+
+    // Default: long stay
+    const value = monthlyPrice ?? property.price ?? 0;
+    return { value, unit: "/month" };
+  };
+
+  const toCreatedAtTimestamp = (property) => {
+    const value = new Date(property?.createdAt || 0).getTime();
+    return Number.isNaN(value) ? 0 : value;
+  };
+
+  const filteredProperties = useMemo(() => {
+    const next = [...properties];
+
+    if (filters.sortBy === "ecoScore") {
+      next.sort((a, b) => {
+        const ecoDiff = toEcoScore(b) - toEcoScore(a);
+        if (ecoDiff !== 0) return ecoDiff;
+        return toCreatedAtTimestamp(b) - toCreatedAtTimestamp(a);
+      });
+      return next;
+    }
+
+    if (filters.sortBy === "newestEco") {
+      next.sort((a, b) => {
+        const createdDiff = toCreatedAtTimestamp(b) - toCreatedAtTimestamp(a);
+        if (createdDiff !== 0) return createdDiff;
+        return toEcoScore(b) - toEcoScore(a);
+      });
+      return next;
+    }
+
+    return next;
+  }, [properties, filters.sortBy]);
+
+  const totalVisible = filteredProperties.length;
+
+  const totalPages = Math.max(1, Math.ceil(filteredProperties.length / ITEMS_PER_PAGE));
+
+  const pagedProperties = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredProperties.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredProperties, currentPage]);
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <Navbar />
+
+      {compareIds.length > 0 && (
+        <section className="sticky top-16 z-30 border-y border-emerald-200 bg-emerald-50/95 backdrop-blur-sm">
+          <div className="w-full px-4 md:px-8 xl:px-12 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="text-sm font-semibold text-emerald-800">
+              {compareIds.length} / 3 selected for comparison
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={clearCompareSelection}
+                className="px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-800 text-sm font-semibold hover:bg-emerald-100"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={goToComparePage}
+                disabled={compareIds.length < 2}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Compare Now
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      <PropertyFilterBar
+        filters={filters}
+        updateFilter={updateFilter}
+        typeOptions={TYPE_OPTIONS}
+        activeFilters={activeFilters}
+        removeFilterChip={removeFilterChip}
+        resetFilters={resetFilters}
+      />
+
+      <main className="w-full px-4 md:px-8 xl:px-12 py-8">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">{totalVisible} Apartments found</h1>
+          <select
+            value={filters.sortBy}
+            onChange={updateFilter("sortBy")}
+            className="bg-transparent border-none text-sm font-medium text-slate-600 focus:ring-0 cursor-pointer"
+          >
+            <option value="createdAt">Newest Listings</option>
+            <option value="price">Lowest Price</option>
+            <option value="title">Name A-Z</option>
+            <option value="ecoScore">Sort by Eco Score</option>
+            <option value="newestEco">Sort by Newest + Eco</option>
+          </select>
+        </div>
+
+        {isLoading && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
+              <div key={index} className="animate-pulse rounded-xl border border-slate-200 bg-white overflow-hidden">
+                <div className="aspect-[16/10] bg-slate-200" />
+                <div className="p-4 space-y-2.5">
+                  <div className="h-6 w-3/4 rounded bg-slate-200" />
+                  <div className="h-4 w-1/2 rounded bg-slate-100" />
+                  <div className="h-4 w-2/3 rounded bg-slate-100" />
+                  <div className="h-8 w-1/3 rounded bg-slate-200 mt-4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-red-700">
+            <p className="font-semibold">Could not fetch apartments.</p>
+            <p className="mt-1 text-sm">{error}</p>
+            <button
+              onClick={fetchProperties}
+              type="button"
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
+            >
+              <RefreshCw size={16} /> Retry
+            </button>
+          </div>
+        )}
+
+        {!isLoading && !error && filteredProperties.length === 0 && (
+          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
+            <p className="text-lg font-semibold text-slate-800">No apartments matched your filters.</p>
+            <p className="mt-2 text-sm text-slate-500">Try broadening your search or clear all filters.</p>
+            <button
+              onClick={resetFilters}
+              type="button"
+              className="mt-4 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            >
+              Reset Filters
+            </button>
+          </div>
+        )}
+
+        {!isLoading && !error && filteredProperties.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {pagedProperties.map((property) => {
+                const primaryImage = property.images?.[0] || FALLBACK_IMAGE;
+                const location = toLocationLabel(property);
+                const ecoScore = toEcoScore(property);                  const airQuality = toAirQuality(property);                const bedrooms = property.bedrooms ?? property.beds ?? 1;
+                const bathrooms = property.bathrooms ?? property.baths ?? 1;
+                const { value: displayPrice, unit: priceUnit } = getPrimaryPriceInfo(property);
+                const selectedForCompare = compareIds.includes(property._id);
+
+                return (
+                  <Link
+                    to={`/properties/${property._id}`}
+                    key={property._id}
+                    className="block group h-full rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md hover:border-emerald-200"
+                  >
+                    <article className="h-full flex flex-col">
+                      <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
+                        <img
+                          src={primaryImage}
+                          alt={property.title}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          loading="lazy"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={(e) => toggleCompareSelection(e, property._id)}
+                          className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-semibold border z-10 transition-colors ${
+                            selectedForCompare
+                              ? "bg-emerald-600 text-white border-emerald-600"
+                              : "bg-white/90 text-slate-700 border-slate-200 hover:bg-white"
+                          }`}
+                        >
+                          {selectedForCompare ? "Selected" : "Compare"}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={wishlistingIds.includes(property._id)}
+                          className="absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-sm text-slate-400 hover:text-red-500 hover:bg-white transition-colors z-10 disabled:opacity-60 disabled:cursor-not-allowed"
+                          onClick={(e) => handleAddToWishlist(e, property._id)}
+                        >
+                        <Heart className="w-5 h-5" />
+                      </button>
+
+                        <div className="absolute bottom-3 left-3 flex items-center gap-2 flex-wrap">
+                          <div className={`inline-flex items-center border rounded-full px-2.5 py-1 text-sm ${ecoBadgeClass(ecoScore)}`}>
+                            <Leaf className="w-4 h-4 mr-1.5" />
+                            <span className="font-bold">{ecoScore}</span>
+                          </div>
+                          {airQuality !== null && (
+                            <div className="inline-flex items-center border rounded-full px-2.5 py-1 text-sm bg-sky-50 text-sky-700 border-sky-200" title="Air Quality Score">
+                              <span className="font-bold mr-1">{airQuality}</span>
+                              <span className="text-[10px] uppercase font-semibold">/ 10 AQ</span>
+                            </div>
+                          )}
+                      </div>
+                    </div>
+
+                    <div className="p-4">
+                      <h3 className="font-semibold text-lg leading-tight text-slate-900 line-clamp-1">{property.title}</h3>
+
+                      <div className="flex items-center text-slate-500 text-sm mt-1">
+                        <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                        <span className="truncate">{location}</span>
+                      </div>
+
+                      <div className="flex items-center gap-3 mt-3 text-xs text-slate-600 flex-wrap">
+                        <div className="flex items-center">
+                          <Bed className="w-4 h-4 mr-1.5 text-slate-400" />
+                          <span>{bedrooms} Beds</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Bath className="w-4 h-4 mr-1.5 text-slate-400" />
+                          <span>{bathrooms} Baths</span>
+                        </div>
+                        {property.area && (
+                          <div className="flex items-center">
+                            <Maximize2 className="w-4 h-4 mr-1.5 text-slate-400" />
+                            <span>{Number(property.area).toLocaleString('en-LK')} sq.ft</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-baseline">
+                        <span className="text-xl font-bold text-slate-900">Rs {Number(displayPrice || 0).toLocaleString('en-LK')}</span>
+                        <span className="text-slate-500 text-xs ml-1">{priceUnit}</span>
+                      </div>
+                    </div>
+                  </article>
+                </Link>
+                );
+              })}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="mt-12 flex justify-center">
+                <nav className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    className="h-10 px-4 rounded-lg border border-slate-200 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+                  >
+                    Previous
+                  </button>
+
+                  {Array.from({ length: totalPages }).slice(0, 3).map((_, idx) => {
+                    const pageNumber = idx + 1;
+                    const isActive = pageNumber === currentPage;
+                    return (
+                      <button
+                        key={pageNumber}
+                        type="button"
+                        onClick={() => setCurrentPage(pageNumber)}
+                        className={`h-10 w-10 rounded-lg text-sm font-medium ${
+                          isActive
+                            ? "bg-emerald-600 text-white"
+                            : "text-slate-600 hover:bg-slate-100"
+                        }`}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  })}
+
+                  {totalPages > 3 && <span className="text-slate-400 px-2">...</span>}
+
+                  <button
+                    type="button"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    className="h-10 px-4 rounded-lg border border-slate-200 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+                  >
+                    Next
+                  </button>
+                </nav>
+              </div>
+            )}
+          </>
+        )}
+      </main>
+
+      <Footer />
+    </div>
+  );
+}

@@ -1,5 +1,7 @@
 const PROPERTY_TYPES = ["apartment", "house", "studio", "townhouse", "other"];
 const AVAILABILITY_STATUSES = ["available", "rented", "archived"];
+const VISIBILITY_STATUSES = ["auto", "visible", "hidden"];
+const STAY_TYPES = ["long", "short", "both"];
 
 const isNumber = (value) => typeof value === "number" && !isNaN(value);
 
@@ -20,15 +22,29 @@ export const validatePropertyCreate = (data) => {
         if (!data.location.address || typeof data.location.address !== "string") {
             errors.push("Location address is required");
         }
-        if (!data.location.coordinates || typeof data.location.coordinates !== "object") {
-            errors.push("Location coordinates are required");
-        } else {
-            const { lat, lng } = data.location.coordinates;
-            if (!isNumber(lat) || lat < -90 || lat > 90) {
-                errors.push("Latitude must be a number between -90 and 90");
-            }
-            if (!isNumber(lng) || lng < -180 || lng > 180) {
-                errors.push("Longitude must be a number between -180 and 180");
+        if (data.location.displayAddress !== undefined && data.location.displayAddress !== null && typeof data.location.displayAddress !== "string") {
+            errors.push("Location displayAddress must be a string");
+        }
+        if (data.location.city !== undefined && data.location.city !== null && typeof data.location.city !== "string") {
+            errors.push("Location city must be a string");
+        }
+        if (data.location.state !== undefined && data.location.state !== null && typeof data.location.state !== "string") {
+            errors.push("Location state must be a string");
+        }
+        if (data.location.country !== undefined && data.location.country !== null && typeof data.location.country !== "string") {
+            errors.push("Location country must be a string");
+        }
+        if (data.location.coordinates !== undefined) {
+            if (typeof data.location.coordinates !== "object") {
+                errors.push("Location coordinates must be an object");
+            } else {
+                const { lat, lng } = data.location.coordinates;
+                if (lat !== undefined && lat !== null && (!isNumber(lat) || lat < -90 || lat > 90)) {
+                    errors.push("Latitude must be a number between -90 and 90");
+                }
+                if (lng !== undefined && lng !== null && (!isNumber(lng) || lng < -180 || lng > 180)) {
+                    errors.push("Longitude must be a number between -180 and 180");
+                }
             }
         }
     }
@@ -37,8 +53,45 @@ export const validatePropertyCreate = (data) => {
         errors.push("Price must be a positive number");
     }
 
+    if (data.stayType !== undefined && !STAY_TYPES.includes(data.stayType)) {
+        errors.push(`Stay type must be one of: ${STAY_TYPES.join(", ")}`);
+    }
+
+    const createStayType = data.stayType || "long";
+    if ((createStayType === "long" || createStayType === "both") && (!isNumber(data.monthlyPrice) || data.monthlyPrice < 0)) {
+        errors.push("Monthly price must be a positive number for long stay listings");
+    }
+
+    if ((createStayType === "short" || createStayType === "both") && (!isNumber(data.dailyPrice) || data.dailyPrice < 0)) {
+        errors.push("Daily price must be a positive number for short stay listings");
+    }
+
+    if (data.area !== undefined && data.area !== null && (!isNumber(data.area) || data.area < 0)) {
+        errors.push("Area must be a positive number");
+    }
+
+    if (data.bedrooms !== undefined && data.bedrooms !== null && (!isNumber(data.bedrooms) || data.bedrooms < 0)) {
+        errors.push("Bedrooms must be a positive number");
+    }
+
+    if (data.bathrooms !== undefined && data.bathrooms !== null && (!isNumber(data.bathrooms) || data.bathrooms < 0)) {
+        errors.push("Bathrooms must be a positive number");
+    }
+
+    if (data.maxGuests !== undefined && data.maxGuests !== null && (!isNumber(data.maxGuests) || data.maxGuests < 1)) {
+        errors.push("Maximum guests must be at least 1");
+    }
+
+    if (data.parking !== undefined && typeof data.parking !== "boolean") {
+        errors.push("Parking must be a boolean");
+    }
+
     if (!PROPERTY_TYPES.includes(data.propertyType)) {
         errors.push(`Property type must be one of: ${PROPERTY_TYPES.join(", ")}`);
+    }
+
+    if (data.visibilityStatus !== undefined && !VISIBILITY_STATUSES.includes(data.visibilityStatus)) {
+        errors.push(`Visibility status must be one of: ${VISIBILITY_STATUSES.join(", ")}`);
     }
 
     if (!data.ecoFeatures || typeof data.ecoFeatures !== "object") {
@@ -70,15 +123,27 @@ export const validatePropertyUpdate = (data) => {
             if (data.location.address !== undefined && typeof data.location.address !== "string") {
                 errors.push("Location address must be a string");
             }
+            if (data.location.displayAddress !== undefined && data.location.displayAddress !== null && typeof data.location.displayAddress !== "string") {
+                errors.push("Location displayAddress must be a string");
+            }
+            if (data.location.city !== undefined && data.location.city !== null && typeof data.location.city !== "string") {
+                errors.push("Location city must be a string");
+            }
+            if (data.location.state !== undefined && data.location.state !== null && typeof data.location.state !== "string") {
+                errors.push("Location state must be a string");
+            }
+            if (data.location.country !== undefined && data.location.country !== null && typeof data.location.country !== "string") {
+                errors.push("Location country must be a string");
+            }
             if (data.location.coordinates !== undefined) {
                 if (typeof data.location.coordinates !== "object") {
                     errors.push("Location coordinates must be an object");
                 } else {
                     const { lat, lng } = data.location.coordinates;
-                    if (lat !== undefined && (!isNumber(lat) || lat < -90 || lat > 90)) {
+                    if (lat !== undefined && lat !== null && (!isNumber(lat) || lat < -90 || lat > 90)) {
                         errors.push("Latitude must be a number between -90 and 90");
                     }
-                    if (lng !== undefined && (!isNumber(lng) || lng < -180 || lng > 180)) {
+                    if (lng !== undefined && lng !== null && (!isNumber(lng) || lng < -180 || lng > 180)) {
                         errors.push("Longitude must be a number between -180 and 180");
                     }
                 }
@@ -90,12 +155,48 @@ export const validatePropertyUpdate = (data) => {
         errors.push("Price must be a positive number");
     }
 
+    if (data.stayType !== undefined && !STAY_TYPES.includes(data.stayType)) {
+        errors.push(`Stay type must be one of: ${STAY_TYPES.join(", ")}`);
+    }
+
+    if (data.monthlyPrice !== undefined && data.monthlyPrice !== null && (!isNumber(data.monthlyPrice) || data.monthlyPrice < 0)) {
+        errors.push("Monthly price must be a positive number");
+    }
+
+    if (data.dailyPrice !== undefined && data.dailyPrice !== null && (!isNumber(data.dailyPrice) || data.dailyPrice < 0)) {
+        errors.push("Daily price must be a positive number");
+    }
+
+    if (data.area !== undefined && data.area !== null && (!isNumber(data.area) || data.area < 0)) {
+        errors.push("Area must be a positive number");
+    }
+
+    if (data.bedrooms !== undefined && data.bedrooms !== null && (!isNumber(data.bedrooms) || data.bedrooms < 0)) {
+        errors.push("Bedrooms must be a positive number");
+    }
+
+    if (data.bathrooms !== undefined && data.bathrooms !== null && (!isNumber(data.bathrooms) || data.bathrooms < 0)) {
+        errors.push("Bathrooms must be a positive number");
+    }
+
+    if (data.maxGuests !== undefined && data.maxGuests !== null && (!isNumber(data.maxGuests) || data.maxGuests < 1)) {
+        errors.push("Maximum guests must be at least 1");
+    }
+
+    if (data.parking !== undefined && typeof data.parking !== "boolean") {
+        errors.push("Parking must be a boolean");
+    }
+
     if (data.propertyType !== undefined && !PROPERTY_TYPES.includes(data.propertyType)) {
         errors.push(`Property type must be one of: ${PROPERTY_TYPES.join(", ")}`);
     }
 
     if (data.availabilityStatus !== undefined && !AVAILABILITY_STATUSES.includes(data.availabilityStatus)) {
         errors.push(`Availability status must be one of: ${AVAILABILITY_STATUSES.join(", ")}`);
+    }
+
+    if (data.visibilityStatus !== undefined && !VISIBILITY_STATUSES.includes(data.visibilityStatus)) {
+        errors.push(`Visibility status must be one of: ${VISIBILITY_STATUSES.join(", ")}`);
     }
 
     if (data.ecoFeatures !== undefined && typeof data.ecoFeatures !== "object") {

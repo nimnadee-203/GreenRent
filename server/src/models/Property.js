@@ -18,16 +18,36 @@ const propertySchema = new mongoose.Schema(
         required: true,
         trim: true,
       },
+      displayAddress: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+      city: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+      state: {
+        type: String,
+        default: null,
+        trim: true,
+      },
+      country: {
+        type: String,
+        default: null,
+        trim: true,
+      },
       coordinates: {
         lat: {
           type: Number,
-          required: true,
+          default: null,
           min: -90,
           max: 90,
         },
         lng: {
           type: Number,
-          required: true,
+          default: null,
           min: -180,
           max: 180,
         },
@@ -37,6 +57,45 @@ const propertySchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 0,
+    },
+    stayType: {
+      type: String,
+      enum: ["long", "short", "both"],
+      default: "long",
+    },
+    monthlyPrice: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+    dailyPrice: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+    area: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+    bedrooms: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+    bathrooms: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+    maxGuests: {
+      type: Number,
+      default: null,
+      min: 1,
+    },
+    parking: {
+      type: Boolean,
+      default: false,
     },
     propertyType: {
       type: String,
@@ -56,6 +115,12 @@ const propertySchema = new mongoose.Schema(
       enum: ["available", "rented", "archived"],
       default: "available",
     },
+    // auto: follow eco visibility rules, visible: force-show publicly, hidden: force-hide publicly
+    visibilityStatus: {
+      type: String,
+      enum: ["auto", "visible", "hidden"],
+      default: "auto",
+    },
     ownerId: {
       type: String,
       required: true,
@@ -64,12 +129,21 @@ const propertySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "EcoRating",
     },
+    ecoRatingClearedAt: {
+      type: Date,
+      default: null,
+    },
+    viewCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   { timestamps: true }
 );
 
 // Index for search functionality
-propertySchema.index({ title: "text", description: "text", "location.address": "text" });
+propertySchema.index({ title: "text", description: "text", "location.address": "text", "location.displayAddress": "text", "location.city": "text", "location.state": "text", "location.country": "text" });
 
 const Property = mongoose.model("Property", propertySchema);
 

@@ -66,6 +66,12 @@ export const createEcoRating = async (data) => {
     },
   });
 
+  const { default: Property } = await import("../models/Property.js");
+  await Property.findByIdAndUpdate(data.listingId, { 
+    ecoRatingId: ecoRating._id,
+    ecoRatingClearedAt: null 
+  });
+
   return ecoRating;
 };
 

@@ -33,9 +33,13 @@ const userSchema = new mongoose.Schema(
     },
 
     sellerApplication: {
+      sellerName: String,
       businessName: String,
       contactNumber: String,
-      reason: String,
+      sellingPlan: {
+        type: String,
+        enum: ["personal_property", "business_property"],
+      },
     },
     avatar: {
       type: String,
@@ -64,6 +68,10 @@ const userSchema = new mongoose.Schema(
         enum: ["apartment", "house", "studio", "townhouse", "any"],
         default: "any"
       }
+    },
+    wishlist: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Property" }],
+      default: [],
     },
   },
   { timestamps: true }

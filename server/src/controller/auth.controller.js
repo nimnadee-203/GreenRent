@@ -2,10 +2,12 @@ import * as authService from '../services/authService.js';
 import * as authValidators from '../validators/authValidators.js';
 
 // Helper for cookie options
+// Production: cross-site needs SameSite=None + Secure
+// Local dev: to avoid Chrome reject with SameSite=None+Secure requirement on HTTP, use SameSite=Lax
 const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000
 };
 
@@ -46,8 +48,9 @@ export const login = async (req, res) => {
     }
 
     const { email, password } = req.body;
-
+    
     try {
+        
         const { token } = await authService.loginUser(email, password);
 
         res.cookie('token', token, cookieOptions);
@@ -106,7 +109,7 @@ export const requestSeller = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Seller request submitted successfully",
+            message: "Seller application submitted successfully",
         });
     } catch (error) {
         const statusCode = error.message === "You are already a seller" ? 400 : 500;
