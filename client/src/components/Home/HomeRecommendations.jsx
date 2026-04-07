@@ -92,7 +92,7 @@ export default function HomeRecommendations() {
               Top Picks Based on <span className="text-emerald-600">Your Eco Profile</span>
             </h2>
             <p className="mt-2 text-slate-500 max-w-xl">
-              Ranked by Smart Eco Score — calculated from your budget, green priorities, and transit needs.
+              Ranked by Smart Eco Score calculated from your budget, green priorities, and transit needs.
             </p>
           </div>
 

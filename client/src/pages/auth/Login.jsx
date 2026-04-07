@@ -118,6 +118,9 @@ export default function Login() {
         }
 
         setSuccess("Account created successfully.");
+        await fetchBackendUser();
+        navigate("/preference-setup", { replace: true });
+        return;
       } else {
         // Backend login should work for seeded/admin/seller users even without Firebase accounts.
         await axios.post(
