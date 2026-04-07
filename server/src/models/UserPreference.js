@@ -35,6 +35,10 @@ const userPreferenceSchema = new mongoose.Schema(
             type: [String],
             default: [],
         },
+        isDefault: {
+            type: Boolean,
+            default: true,
+        },
     },
     { timestamps: true }
 );

@@ -131,7 +131,28 @@ export default function Recommendations() {
 }
 
 function RecommendationCard({ property, rank }) {
-  const { smartScore, scoringBreakdown, mobility } = property;
+  const [aiInsight, setAiInsight] = useState(property.aiInsight || null);
+  const [isAiLoading, setIsAiLoading] = useState(!property.aiInsight && rank <= 3);
+  const { smartScore, scoringBreakdown } = property;
+
+  useEffect(() => {
+    // Only fetch AI insight if it's not already present and it's one of the top matches
+    if (!aiInsight && rank <= 3) {
+      const fetchInsight = async () => {
+        try {
+          const res = await axios.get(`${API_BASE_URL}/api/recommendations/ai-insight/${property._id}`, { withCredentials: true });
+          if (res.data?.success) {
+            setAiInsight(res.data.insight);
+          }
+        } catch (err) {
+          console.error("Failed to fetch AI insight:", err);
+        } finally {
+          setIsAiLoading(false);
+        }
+      };
+      fetchInsight();
+    }
+  }, [property._id, rank, aiInsight]);
   
   return (
     <div className="group relative flex flex-col bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500">
@@ -162,6 +183,21 @@ function RecommendationCard({ property, rank }) {
 
       {/* Score Breakdown Area */}
       <div className="p-6 flex-1 flex flex-col">
+        {isAiLoading ? (
+          <div className="mb-4 bg-emerald-50/50 border border-emerald-100/50 p-3 rounded-2xl flex gap-3 items-center animate-pulse">
+            <Sparkles className="text-emerald-300 shrink-0" size={18} />
+            <div className="space-y-2 flex-1">
+              <div className="h-2 bg-emerald-100 rounded-full w-3/4"></div>
+              <div className="h-2 bg-emerald-100 rounded-full w-1/2"></div>
+            </div>
+          </div>
+        ) : aiInsight ? (
+          <div className="mb-4 bg-emerald-50 border border-emerald-100 p-3 rounded-2xl flex gap-3 items-start shadow-sm shadow-emerald-100/50 animate-in fade-in duration-700">
+             <Sparkles className="text-emerald-500 shrink-0 mt-0.5" size={18} />
+             <p className="text-sm text-emerald-900 leading-relaxed font-medium tracking-tight">"{aiInsight}"</p>
+          </div>
+        ) : null}
+        
         <div className="flex items-center justify-between mb-6">
           <div className="flex flex-col">
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Smart Eco Score</span>

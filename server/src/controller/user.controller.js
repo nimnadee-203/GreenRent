@@ -15,6 +15,8 @@ export const getUserData = async (req, res) => {
         email: user.email,
         role: user.role,
         sellerRequest: user.sellerRequest,
+        isPreferenceSet: user.isPreferenceSet,
+        preferences: user.preferences,
       }
     });
   } catch (error) {

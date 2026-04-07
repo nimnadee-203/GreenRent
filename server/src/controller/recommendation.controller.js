@@ -25,6 +25,54 @@ export const getRecommendations = async (req, res) => {
   }
 };
 
+export const getSingleRecommendationInsight = async (req, res) => {
+  try {
+    const user = req.user;
+    const { propertyId } = req.params;
+
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const userId = user._id || user.id;
+    const insight = await recommendationService.getSingleInsight(userId, propertyId);
+
+    return res.status(200).json({
+      success: true,
+      insight,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch AI insight",
+      error: error.message,
+    });
+  }
+};
+
+export const getUserPreferences = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Unauthorized: User context missing" });
+    }
+
+    const userId = user._id || user.id;
+    const preferences = await recommendationService.getUserPreferences(userId);
+
+    return res.status(200).json({
+      success: true,
+      preferences,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch preferences",
+      error: error.message,
+    });
+  }
+};
+
 export const savePreferences = async (req, res) => {
   try {
     const user = req.user;

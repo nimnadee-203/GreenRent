@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import { 
   ChevronRight, 
   ChevronLeft, 
@@ -29,6 +30,7 @@ const STEPS = [
 
 export default function PreferenceSetup() {
   const navigate = useNavigate();
+  const { fetchBackendUser } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -67,6 +69,7 @@ export default function PreferenceSetup() {
     setIsLoading(true);
     try {
       await axios.put(`${API_BASE_URL}/api/recommendations/preferences`, prefs, { withCredentials: true });
+      await fetchBackendUser(); // Sync the global context
       navigate('/recommendations');
     } catch (error) {
       console.error('Error saving preferences:', error);
@@ -168,7 +171,7 @@ export default function PreferenceSetup() {
                 </label>
                 <div className="space-y-4">
                   {[
-                    { id: 'High', label: 'Maximum Impact', desc: 'Prioritize properties with highest energy ratings and renewable tech.' },
+                    { id: 'High', label: 'Maximum Impact', desc: 'Prioritize properties with highest energy ratings and renewable tech.' }  ,
                     { id: 'Medium', label: 'Balanced Choice', desc: 'Good energy efficiency with reasonable rent prices.' },
                     { id: 'Low', label: 'Entry Level', desc: 'Focus on budget with basic eco features like LED lighting.' }
                   ].map(priority => (

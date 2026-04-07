@@ -77,6 +77,11 @@ export default function Login() {
       return;
     }
 
+    if (isSignUp && form.password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+
     setIsLoading(true);
     const normalizedEmail = form.email.trim().toLowerCase();
 
