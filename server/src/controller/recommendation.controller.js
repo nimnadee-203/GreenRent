@@ -13,6 +13,7 @@ export const getRecommendations = async (req, res) => {
 
     return res.status(200).json({
       success: true,
+      count: recommendations.length,
       recommendations,
     });
   } catch (error) {
@@ -24,9 +25,32 @@ export const getRecommendations = async (req, res) => {
   }
 };
 
-/**
- * NEW: Standalone Mobility Check for Viva Demonstration
- */
+export const savePreferences = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Unauthorized: User context missing" });
+    }
+
+    const userId = user._id || user.id;
+    const preferenceData = req.body;
+
+    const updatedPrefs = await recommendationService.saveUserPreferences(userId, preferenceData);
+
+    return res.status(200).json({
+      success: true,
+      message: "Preferences saved successfully",
+      preferences: updatedPrefs,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to save preferences",
+      error: error.message,
+    });
+  }
+};
+
 export const getMobilityHandler = async (req, res) => {
   try {
     const { lat, lon } = req.query;
@@ -59,12 +83,11 @@ export const resetPreferences = async (req, res) => {
     }
 
     const userId = user._id || user.id;
-    const preferences = await recommendationService.resetPreferences(userId);
+    await recommendationService.resetPreferences(userId);
 
     return res.status(200).json({
       success: true,
       message: "Preferences reset to default",
-      preferences,
     });
   } catch (error) {
     const statusCode = error.message === "User not found" ? 404 : 500;
