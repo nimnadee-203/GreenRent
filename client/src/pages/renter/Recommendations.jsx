@@ -14,7 +14,8 @@ import {
   Calendar,
   Settings,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  LayoutGrid
 } from 'lucide-react';
 import Navbar from '../../components/Home/Navbar';
 
@@ -69,13 +70,22 @@ export default function Recommendations() {
             </p>
           </div>
           
-          <Link 
-            to="/preference-setup" 
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 hover:border-emerald-300 transition-all shadow-sm"
-          >
-            <Settings size={18} className="text-emerald-500" />
-            Update Preferences
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link 
+              to="/" 
+              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10"
+            >
+              <LayoutGrid size={18} />
+              Browse All
+            </Link>
+            <Link 
+              to="/preference-setup" 
+              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 hover:border-emerald-300 transition-all shadow-sm"
+            >
+              <Settings size={18} className="text-emerald-500" />
+              Update Preferences
+            </Link>
+          </div>
         </div>
 
         {/* Loading State */}

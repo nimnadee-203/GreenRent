@@ -118,9 +118,6 @@ export default function Login() {
         }
 
         setSuccess("Account created successfully.");
-        // Redirect to preference setup for new users
-        navigate("/preference-setup", { replace: true });
-        return;
       } else {
         // Backend login should work for seeded/admin/seller users even without Firebase accounts.
         await axios.post(
