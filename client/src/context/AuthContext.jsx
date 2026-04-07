@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-  const fetchBackendUser = async () => {
+  const fetchBackendUser = async (retryCount = 0) => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/user/data`, {
         withCredentials: true,
@@ -23,7 +23,17 @@ export const AuthProvider = ({ children }) => {
         setBackendUser(response.data.userData);
       }
     } catch (error) {
-      console.error("Failed to fetch backend user data", error);
+      // If 401 and we haven't retried yet, try once more after a short delay
+      // This helps with race conditions on localhost cookie setting
+      if (error.response?.status === 401 && retryCount < 1) {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        return fetchBackendUser(retryCount + 1);
+      }
+      
+      // Silence 401 errors in console (standard for guests)
+      if (error.response?.status !== 401) {
+        console.error("Failed to fetch backend user data", error);
+      }
       setBackendUser(null);
     }
   };

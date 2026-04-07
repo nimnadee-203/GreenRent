@@ -2,7 +2,36 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Navbar from '../../components/Home/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { Link, Navigate } from 'react-router-dom';
-import { CalendarDays, Clock3, CreditCard, Eye, Home, MapPin, MessageSquarePlus, Pencil, Search, Star, Trash2, XCircle } from 'lucide-react';
+import { 
+  CalendarDays, 
+  Clock3, 
+  CreditCard, 
+  Eye, 
+  Home, 
+  MapPin, 
+  MessageSquarePlus, 
+  Pencil, 
+  Search, 
+  Star, 
+  Trash2, 
+  XCircle,
+  User,
+  Mail,
+  Shield,
+  Zap,
+  Droplets,
+  Wind,
+  Recycle,
+  BatteryCharging,
+  Sun,
+  ArrowUpRight,
+  Settings,
+  Sparkles,
+  TrendingUp,
+  LayoutGrid,
+  ChevronRight,
+  Bus
+} from 'lucide-react';
 import axios from 'axios';
 import SellerApplicationModal from '../../components/seller/SellerApplicationModal';
 
@@ -55,6 +84,18 @@ const formatRemaining = (ms) => {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
+function PreferenceItem({ icon: Icon, label, value }) {
+  return (
+    <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100/50 group/item hover:bg-emerald-100/50 transition-colors">
+      <div className="flex items-center gap-2 mb-1">
+        <Icon size={14} className="text-emerald-500" />
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</span>
+      </div>
+      <p className="font-bold text-slate-900 truncate capitalize">{value}</p>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { currentUser, backendUser, fetchBackendUser } = useAuth();
   const [bookings, setBookings] = useState([]);
@@ -87,7 +128,14 @@ export default function Dashboard() {
   const [reviewText, setReviewText] = useState('');
   const [livingDuration, setLivingDuration] = useState('< 3 months');
   const [wouldRecommend, setWouldRecommend] = useState(true);
+  const [recommendations, setRecommendations] = useState([]);
+  const [topMatch, setTopMatch] = useState(null);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [, setClockNow] = useState(Date.now());
+
+  // Derive userPrefs directly from backendUser for instant synchronization
+  const userPrefs = backendUser?.preferences;
+  const isPreferenceSet = backendUser?.isPreferenceSet;
 
   const userRole = backendUser?.role;
   const isAdmin = userRole === 'admin';
@@ -258,14 +306,30 @@ export default function Dashboard() {
     try {
       setBookingsLoading(true);
       setBookingsError('');
+      
+      // Fetch Bookings
       const response = await axios.get(`${API_BASE_URL}/api/bookings/my`, { withCredentials: true });
       setBookings(Array.isArray(response.data?.bookings) ? response.data.bookings : []);
+      
+      // Fetch Recommendations Summary
+      setRecommendationsLoading(true);
+      const recRes = await axios.get(`${API_BASE_URL}/api/recommendations`, { withCredentials: true });
+      
+      if (recRes.data?.success) {
+        setRecommendations(recRes.data.recommendations || []);
+        if (recRes.data.recommendations?.length > 0) {
+          setTopMatch(recRes.data.recommendations[0]);
+        }
+      }
+      
       await fetchMyReviews();
     } catch (error) {
+      console.error("Dashboard fetch error:", error);
       setBookingsError(error?.response?.data?.message || 'Failed to load your dashboard data.');
       setBookings([]);
     } finally {
       setBookingsLoading(false);
+      setRecommendationsLoading(false);
     }
   };
 
@@ -742,40 +806,177 @@ export default function Dashboard() {
       <Navbar />
 
       <main className="w-full px-4 sm:px-6 lg:px-10 xl:px-14 py-8 sm:py-10">
-        <section className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-white/80 backdrop-blur-sm shadow-sm mb-8">
-          <div className="absolute -top-20 -right-12 w-64 h-64 rounded-full bg-emerald-200/50 blur-3xl" />
-          <div className="absolute -bottom-24 -left-8 w-52 h-52 rounded-full bg-teal-200/40 blur-3xl" />
-          <div className="relative p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div>
-              <p className="text-sm uppercase tracking-wider text-emerald-700 font-semibold">Renter Space</p>
-              <h1 className="text-3xl md:text-4xl font-black text-slate-900 mt-1">Welcome, {userName}</h1>
-              <p className="text-slate-600 mt-2">Track bookings, revisit your stays, and submit reviews only for properties you have booked.</p>
+        {/* Profile & Recommendation Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
+          {/* 1 & 2: User Profile & Preferences */}
+          <section className="lg:col-span-8 space-y-8">
+            <div className="bg-white rounded-[2rem] border border-emerald-100 shadow-sm overflow-hidden relative group transition-all hover:shadow-xl hover:shadow-emerald-500/5">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full -mr-20 -mt-20 blur-3xl opacity-50 group-hover:opacity-100 transition-opacity" />
+              
+              <div className="p-8 relative z-10">
+                <div className="flex flex-col md:flex-row gap-8 items-start md:items-center mb-10">
+                  <div className="relative">
+                    <img 
+                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userName}`} 
+                      alt="Avatar" 
+                      className="w-28 h-28 rounded-3xl bg-emerald-50 border-2 border-emerald-200 p-1 shadow-lg shadow-emerald-500/10"
+                    />
+                    <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-2 rounded-xl border-4 border-white shadow-lg">
+                      <Shield size={16} />
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-3 mb-2">
+                       <h1 className="text-3xl font-black text-slate-900 tracking-tight">{userName}</h1>
+                       <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-200">
+                         {userRole?.toUpperCase() || 'USER'}
+                       </span>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 text-slate-500 font-medium capitalize">
+                        <Mail size={16} className="text-emerald-500" />
+                        {backendUser?.email}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg ${hasPendingSellerRequest ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                           {isSeller ? 'Approved Seller' : hasPendingSellerRequest ? 'Seller Status: Pending' : 'Standard User Account'}
+                        </div>
+                        {(!isSeller && !hasPendingSellerRequest) && (
+                          <button 
+                            onClick={() => { setSellerUpgradeError(''); setSellerUpgradeSuccess(''); setIsSellerFormOpen(true); }}
+                            className="text-xs font-black text-emerald-600 hover:underline flex items-center gap-1"
+                          >
+                            <ArrowUpRight size={14} /> Request Seller Account
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Link to="/preference-setup" className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10">
+                       <Settings size={18} /> {isPreferenceSet ? 'Edit Preferences' : 'Set Preferences'}
+                    </Link>
+                  </div>
+                </div>
+
+                {/* User Preferences Grid */}
+                <div className="border-t border-emerald-50 pt-8 mt-4">
+                  <div className="flex items-center gap-2 mb-6 text-slate-400">
+                    <Sparkles size={16} className="text-emerald-500" />
+                    <span className="text-xs font-black uppercase tracking-widest">{!isPreferenceSet ? 'Using System Defaults' : 'My Living Preferences'}</span>
+                  </div>
+                  
+                  {isPreferenceSet ? (
+                    <>
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <PreferenceItem icon={CreditCard} label="Max Budget" value={`${(userPrefs?.budgetMax || 0).toLocaleString()} LKR`} />
+                        <PreferenceItem icon={Home} label="Property" value={userPrefs?.propertyType || 'Any'} />
+                        <PreferenceItem icon={TrendingUp} label="Eco priority" value={userPrefs?.ecoPriority || 'Medium'} />
+                        <PreferenceItem icon={Bus} label="Transport" value={userPrefs?.transportPreference || 'Any'} />
+                      </div>
+
+                      {userPrefs?.greenAmenities?.length > 0 && (
+                        <div className="mt-6 flex flex-wrap gap-2">
+                          {userPrefs.greenAmenities.map((amenity, i) => (
+                            <span key={i} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100 rounded-lg">
+                              + {amenity.split(/(?=[A-Z])/).join(' ')}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="p-6 bg-emerald-50/30 rounded-2xl border border-dashed border-emerald-200 text-center">
+                      <p className="text-sm text-slate-500 mb-4 font-medium italic">"Currently using system defaults. Upgrade your profile for better matching."</p>
+                      <Link to="/preference-setup" className="text-emerald-700 font-bold text-sm hover:underline flex items-center justify-center gap-2">
+                        <Sparkles size={14} className="text-emerald-500" /> Let's Personalize Your Profile
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="flex gap-3 flex-wrap">
-              <button
-                type="button"
-                onClick={() => {
-                  setSellerUpgradeError('');
-                  setSellerUpgradeSuccess('');
-                  setIsSellerFormOpen(true);
-                }}
-                disabled={hasPendingSellerRequest}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-200 bg-white text-emerald-700 font-semibold hover:bg-emerald-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <Home size={16} />
-                {hasPendingSellerRequest ? 'Application Pending' : 'Become a Seller'}
-              </button>
-              <Link to="/properties" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
-                <Search size={16} />
-                Find Properties
-              </Link>
-              <Link to="/wishlist" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
-                <Star size={16} />
-                Wishlist
-              </Link>
+          </section>
+
+          {/* 3: Top Recommendation Summary */}
+          <section className="lg:col-span-4 h-full">
+            <div className="h-full bg-slate-900 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl flex flex-col">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl" />
+              
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="flex items-center justify-between mb-8">
+                   <div className="px-3 py-1 bg-emerald-500/20 border border-emerald-500/30 rounded-full text-emerald-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                     <Sparkles size={12} /> Your Top Match
+                   </div>
+                   <Link to="/recommendations" className="text-white/50 hover:text-white transition-colors">
+                     <ChevronRight size={24} />
+                   </Link>
+                </div>
+
+                {recommendationsLoading ? (
+                  <div className="space-y-4 animate-pulse">
+                    <div className="h-8 bg-white/10 rounded-lg w-3/4" />
+                    <div className="h-32 bg-white/10 rounded-2xl" />
+                  </div>
+                ) : topMatch ? (
+                  <div className="flex-1 flex flex-col">
+                    <h2 className="text-3xl font-black mb-1 line-clamp-1">{topMatch.title}</h2>
+                    <span className="text-emerald-400 font-bold flex items-center gap-1 mb-6">
+                      <MapPin size={14} /> {topMatch.location?.city}
+                    </span>
+
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 mb-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-xs font-black uppercase tracking-widest text-white/40">Smart Score</span>
+                        <div className="text-2xl font-black text-emerald-400">{topMatch.smartScore}<span className="text-xs text-white/20 ml-1">/100</span></div>
+                      </div>
+                      <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${topMatch.smartScore}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5 flex gap-3 items-start mb-8">
+                       <Sparkles size={18} className="text-emerald-400 shrink-0 mt-1" />
+                       <DashboardTopMatchInsight propertyId={topMatch._id} initialInsight={topMatch.aiInsight} />
+                    </div>
+
+                    <Link to="/recommendations" className="mt-auto w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-center transition-all flex items-center justify-center gap-2">
+                       View All Recommendations <ArrowUpRight size={18} />
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center">
+                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/10">
+                      <LayoutGrid size={28} className="text-emerald-400" />
+                    </div>
+                    
+                    <h3 className="text-xl font-bold mb-2">
+                       {isPreferenceSet ? "Refining Your Matches" : "Find Your Perfect Fit"}
+                    </h3>
+                    
+                    <p className="text-white/60 mb-8 max-w-[240px] mx-auto text-sm leading-relaxed">
+                      {isPreferenceSet 
+                        ? "We found potential matches! Click below to see all properties matching your criteria." 
+                        : "Personalize your eco-profile to find your perfect green-home match."}
+                    </p>
+                    
+                    <div className="w-full space-y-3">
+                      <Link to="/recommendations" className="block w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-center transition-all shadow-lg shadow-emerald-600/20">
+                         View Matching Properties
+                      </Link>
+                      
+                      <Link to="/preference-setup" className="block w-full py-4 bg-white/10 hover:bg-white/20 text-white border border-white/10 rounded-2xl font-black text-center transition-all">
+                         {isPreferenceSet ? "Update My Preferences" : "Start Preference Setup"}
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
 
         {sellerUpgradeError && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{sellerUpgradeError}</div>
@@ -789,6 +990,7 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Existing Quick Stats */}
         <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
           {dashboardStats.map((stat) => (
             <div key={stat.label} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
@@ -1152,4 +1354,29 @@ export default function Dashboard() {
       />
     </div>
   );
+}
+
+function DashboardTopMatchInsight({ propertyId, initialInsight }) {
+  const [insight, setInsight] = useState(initialInsight);
+  const [loading, setLoading] = useState(!initialInsight);
+
+  useEffect(() => {
+    if (!initialInsight && propertyId) {
+      const fetchInsight = async () => {
+        try {
+          const res = await axios.get(`${API_BASE_URL}/api/recommendations/ai-insight/${propertyId}`, { withCredentials: true });
+          if (res.data?.success) setInsight(res.data.insight);
+        } catch (err) {
+          console.error("AI Insight failed:", err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchInsight();
+    }
+  }, [propertyId, initialInsight]);
+
+  if (loading) return <p className="text-sm text-emerald-50/60 leading-relaxed animate-pulse">Our AI is generating a personalized match report for you...</p>;
+  
+  return <p className="text-sm text-emerald-50/90 leading-relaxed italic">"{insight || 'This property perfectly aligns with your eco-living goals and budget.'}"</p>;
 }

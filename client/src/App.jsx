@@ -22,6 +22,8 @@ import Contact from './pages/company/Contact';
 import Careers from './pages/company/Careers';
 import Press from './pages/company/Press';
 import EcoScoreExplained from './pages/renter/EcoScoreExplained';
+import PreferenceSetup from './pages/auth/PreferenceSetup';
+import Recommendations from './pages/renter/Recommendations';
 
 function App() {
   return (
@@ -49,6 +51,8 @@ function App() {
         <Route path='/login' element={<Login />} />
         <Route path='/add-apartment' element={<AddApartment />} />
         <Route path='/my-listings' element={<MyListings />} />
+        <Route path='/preference-setup' element={<PreferenceSetup />} />
+        <Route path='/recommendations' element={<Recommendations />} />
       </Routes>
     </div>
   );

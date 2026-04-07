@@ -9,8 +9,11 @@ import {
 } from 'lucide-react';
 import Navbar from '../../components/Home/Navbar';
 import Footer from '../../components/Home/Footer';
+import HomeRecommendations from '../../components/Home/HomeRecommendations';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Home() {
+  const { backendUser } = useAuth();
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <Navbar />
@@ -50,6 +53,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {backendUser && <HomeRecommendations />}
 
         <section className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

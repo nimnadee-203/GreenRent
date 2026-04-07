@@ -1,25 +1,18 @@
 import jwt from "jsonwebtoken";
 
-/**
- * Authenticate JWT token from request header
- * Attaches user object to req.user if valid
- */
+
 export const authenticate = (req, res, next) => {
   try {
-    // Get token from header or cookie
-    let token = req.cookies?.token;
-    
-    if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
-      token = req.headers.authorization.substring(7);
-    }
+    // Get token from header
+    const authHeader = req.headers.authorization;
 
-    if (!token) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         message: "Access denied. No token provided."
       });
     }
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
-    
+
     // Attach user info to request
     req.user = {
       id: decoded.id,
@@ -47,14 +40,14 @@ export const authenticate = (req, res, next) => {
 export const authorize = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ 
-        message: "Authentication required." 
+      return res.status(401).json({
+        message: "Authentication required."
       });
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        message: `Access denied. Required role: ${allowedRoles.join(" or ")}. Your role: ${req.user.role}` 
+      return res.status(403).json({
+        message: `Access denied. Required role: ${allowedRoles.join(" or ")}. Your role: ${req.user.role}`
       });
     }
 
@@ -62,18 +55,15 @@ export const authorize = (...allowedRoles) => {
   };
 };
 
-/**
- * Optional authentication - doesn't fail if no token
- * Useful for public routes that want to know if user is logged in
- */
+
 export const optionalAuth = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.substring(7);
       const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
-      
+
       req.user = {
         id: decoded.id,
         email: decoded.email,
@@ -85,6 +75,6 @@ export const optionalAuth = (req, res, next) => {
     // Silently fail - user just won't be authenticated
     req.user = null;
   }
-  
+
   next();
 };

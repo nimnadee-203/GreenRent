@@ -77,6 +77,11 @@ export default function Login() {
       return;
     }
 
+    if (isSignUp && form.password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+
     setIsLoading(true);
     const normalizedEmail = form.email.trim().toLowerCase();
 
@@ -118,6 +123,9 @@ export default function Login() {
         }
 
         setSuccess("Account created successfully.");
+        await fetchBackendUser();
+        navigate("/preference-setup", { replace: true });
+        return;
       } else {
         // Backend login should work for seeded/admin/seller users even without Firebase accounts.
         await axios.post(

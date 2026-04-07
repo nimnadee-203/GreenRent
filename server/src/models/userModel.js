@@ -45,6 +45,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    isPreferenceSet: {
+      type: Boolean,
+      default: false,
+    },
     preferences: {
       location: {
         type: String,
@@ -67,6 +71,14 @@ const userSchema = new mongoose.Schema(
         type: String,
         enum: ["apartment", "house", "studio", "townhouse", "any"],
         default: "any"
+      },
+      transportPreference: {
+        type: String,
+        default: "Any"
+      },
+      greenAmenities: {
+        type: [String],
+        default: []
       }
     },
     wishlist: {

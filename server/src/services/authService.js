@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import userModel from '../models/userModel.js';
+import UserPreference from '../models/UserPreference.js';
 import transporter from '../config/nodemailer.js';
 
 export const registerUser = async (name, email, password) => {
@@ -20,6 +21,15 @@ export const registerUser = async (name, email, password) => {
         email: normalizedEmail,
         password: hashedPassword,
         avatar
+    });
+
+    // Initialize default eco-preferences in dedicated collection
+    await UserPreference.create({ 
+        userId: user._id,
+        budgetMax: 500000,
+        propertyType: "Any",
+        ecoPriority: "Medium",
+        transportPreference: "Any"
     });
 
     const token = generateToken(user._id, user.role, user.email, user.name);
