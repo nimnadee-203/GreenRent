@@ -1,0 +1,35 @@
+config:
+  target: "http://localhost:5000"
+  phases:
+    - name: "warm-up"
+      duration: 20
+      arrivalRate: 1
+      rampTo: 2
+    - name: "booking-load"
+      duration: 40
+      arrivalRate: 2
+      rampTo: 4
+  http:
+    timeout: 30
+  defaults:
+    headers:
+      Content-Type: "application/json"
+scenarios:
+  - name: "POST /api/bookings"
+    flow:
+      - post:
+          url: "/api/bookings"
+          headers:
+            Authorization: "Bearer {{ $processEnvironment.USER_TOKEN }}"
+          json:
+            apartmentId: "{{ $processEnvironment.BOOKING_PROPERTY_ID }}"
+            stayType: "short"
+            checkInDate: "{{ $processEnvironment.BOOKING_CHECK_IN }}"
+            checkOutDate: "{{ $processEnvironment.BOOKING_CHECK_OUT }}"
+            numberOfGuests: 2
+  - name: "GET /api/bookings/my"
+    flow:
+      - get:
+          url: "/api/bookings/my"
+          headers:
+            Authorization: "Bearer {{ $processEnvironment.USER_TOKEN }}"

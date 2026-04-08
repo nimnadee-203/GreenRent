@@ -1,0 +1,49 @@
+config:
+  target: "http://localhost:5000"
+  phases:
+    - name: "warm-up"
+      duration: 20
+      arrivalRate: 1
+      rampTo: 2
+    - name: "eco-rating-load"
+      duration: 40
+      arrivalRate: 2
+      rampTo: 4
+  http:
+    timeout: 30
+  defaults:
+    headers:
+      Content-Type: "application/json"
+scenarios:
+  - name: "GET /api/eco-ratings"
+    flow:
+      - get:
+          url: "/api/eco-ratings"
+  - name: "POST /api/eco-ratings"
+    flow:
+      - post:
+          url: "/api/eco-ratings"
+          headers:
+            Authorization: "Bearer {{ $processEnvironment.SELLER_TOKEN }}"
+          json:
+            listingId: "{{ $processEnvironment.ECO_LISTING_ID }}"
+            location:
+              latitude: 6.9271
+              longitude: 79.8612
+              address: "Colombo 03, Sri Lanka"
+            criteria:
+              energyRating: "A"
+              solarPanels: true
+              ledLighting: true
+              efficientAc: true
+              waterSavingTaps: true
+              rainwaterHarvesting: false
+              waterMeter: true
+              recyclingAvailable: true
+              compostAvailable: false
+              transportDistance: "< 1 km"
+              evCharging: false
+              goodVentilationSunlight: true
+            evidenceLinks:
+              - "https://example.com/evidence-1.jpg"
+            notes: "Performance test eco rating"

@@ -1,0 +1,19 @@
+config:
+  target: "http://localhost:5000"
+  phases:
+    - name: "auth-load"
+      duration: 60
+      arrivalRate: 10
+  http:
+    timeout: 20
+  defaults:
+    headers:
+      Content-Type: "application/json"
+scenarios:
+  - name: "POST /api/auth/login"
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ $processEnvironment.AUTH_EMAIL }}"
+            password: "{{ $processEnvironment.AUTH_PASSWORD }}"
