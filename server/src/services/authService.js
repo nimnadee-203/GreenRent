@@ -64,6 +64,38 @@ export const loginUser = async (email, password) => {
     return { user, token };
 };
 
+export const socialLogin = async (name, email, avatar) => {
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    
+    let user = await userModel.findOne({ email: normalizedEmail });
+
+    if (!user) {
+        // Create new user if they don't exist
+        user = await userModel.create({
+            name,
+            email: normalizedEmail,
+            avatar: avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
+            // password omitted for social users
+        });
+
+        // Initialize default eco-preferences in dedicated collection
+        await UserPreference.create({ 
+            userId: user._id,
+            budgetMax: 500000,
+            propertyType: "Any",
+            ecoPriority: "Medium",
+            transportPreference: "Any"
+        });
+
+        // Sending welcome email asynchronously
+        sendWelcomeEmail(normalizedEmail).catch(err => console.error('Error sending welcome email:', err));
+    }
+
+    const token = generateToken(user._id, user.role, user.email, user.name);
+
+    return { user, token };
+};
+
 export const processSellerRequest = async (user, businessData) => {
     if (user.role === "seller") {
         throw new Error("You are already a seller");

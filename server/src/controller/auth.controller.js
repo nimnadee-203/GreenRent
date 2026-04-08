@@ -138,3 +138,35 @@ export const approveSeller = async (req, res) => {
     }
 };
 
+//Google login
+export const googleLogin = async (req, res) => {
+    const { email, name, avatar } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ success: false, message: "Email is required for Google login" });
+    }
+
+    try {
+        const { user, token } = await authService.socialLogin(name, email, avatar);
+
+        res.cookie('token', token, cookieOptions);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Google login successful',
+            token,
+            user: {
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                avatar: user.avatar,
+                isPreferenceSet: user.isPreferenceSet
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
