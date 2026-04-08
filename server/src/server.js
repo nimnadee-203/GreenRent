@@ -29,6 +29,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
+  '*', // Allow all origins (for development only, remove in production)
   process.env.CLIENT_URL,
 ].filter(Boolean);
 
