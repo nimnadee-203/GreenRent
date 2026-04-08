@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Navbar from "../../components/Home/Navbar";
 import Footer from "../../components/Home/Footer";
+import HomeRecommendations from "../../components/Home/HomeRecommendations";
 import PropertyFilterBar from "../../components/PropertyListing/PropertyFilterBar";
 import { useAuth } from "../../context/AuthContext";
 
@@ -344,6 +345,13 @@ export default function PropertyListing() {
             </div>
           </div>
         </section>
+      )}
+
+      {/* Show personalized top picks for logged-in users only */}
+      {backendUser && (
+        <div className="border-b border-slate-200">
+          <HomeRecommendations />
+        </div>
       )}
 
       <PropertyFilterBar
