@@ -191,8 +191,10 @@ export default function Login() {
 
       await fetchBackendUser();
       setSuccess("Google login successful.");
-      
-      if (backendUser && backendUser.isPreferenceSet === false) {
+
+      if (shouldResumeBookingFlow) {
+        navigate(redirectTarget, { replace: true, state: redirectState });
+      } else if (backendUser && backendUser.isPreferenceSet === false) {
         navigate("/preference-setup", { replace: true });
       } else {
         navigate(redirectTarget, { replace: true, state: redirectState });

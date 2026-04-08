@@ -305,28 +305,15 @@ export default function BookingDetailsModal({
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="block text-sm">
-              <span>Stay Type</span>
-              <select
-                value={stayType}
-                onChange={(event) => setStayType(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-              >
-                <option value="short">Short stay</option>
-                <option value="long">Long stay</option>
-              </select>
-            </label>
+            <div className="block text-sm rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 md:col-span-1">
+              <span className="block font-medium text-slate-700">Stay Type</span>
+              <span className="mt-1 block text-slate-900">{stayType === "long" ? "Long stay" : "Short stay"}</span>
+            </div>
             {stayType === "long" && (
-              <label className="block text-sm">
-                <span>Months</span>
-                <input
-                  type="number"
-                  min={1}
-                  value={months}
-                  onChange={(event) => setMonths(Number(event.target.value) || 1)}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-                />
-              </label>
+              <div className="block text-sm rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 md:col-span-1">
+                <span className="block font-medium text-slate-700">Months</span>
+                <span className="mt-1 block text-slate-900">{months} month{months > 1 ? "s" : ""}</span>
+              </div>
             )}
             {stayType === "short" && (
               <label className="block text-sm">

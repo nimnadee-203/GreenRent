@@ -77,5 +77,35 @@ describe("BookingDetailsModal", () => {
 
     expect(screen.getByRole("button", { name: /confirm booking/i })).toBeInTheDocument();
     expect(screen.getByText(/selected option/i)).toBeInTheDocument();
+    expect(screen.getByText(/^short stay$/i)).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: /stay type/i })).not.toBeInTheDocument();
+  });
+
+  test("shows static long stay details in the confirm modal", () => {
+    render(
+      <MemoryRouter>
+        <BookingDetailsModal
+          property={{ _id: "p1", title: "Eco Apartment", location: { address: "12 Green St" }, maxGuests: 3, price: 1000 }}
+          propertyId="p1"
+          selectedOption={{ type: "Standard", guests: 2 }}
+          checkInDate="2030-01-01"
+          checkOutDate="2030-06-01"
+          backendUser={null}
+          currentUser={null}
+          isAuthenticated={true}
+          onClose={jest.fn()}
+          navigate={jest.fn()}
+          defaultStayType="long"
+          defaultMonths={5}
+        />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/^stay type$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^long stay$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^months$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^5 months$/i)).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: /stay type/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("spinbutton", { name: /months/i })).not.toBeInTheDocument();
   });
 });
