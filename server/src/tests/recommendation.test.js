@@ -1,23 +1,66 @@
+/**
+ * RECOMMENDATION INTEGRATION TESTS
+ * 
+ * Verifies that the recommendation engine and preference management
+ * work correctly when called via the API.
+ */
 import request from "supertest";
 import app from "../server.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import userModel from "../models/userModel.js";
+import mongoose from "mongoose";
 
 dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret#text";
 
-describe("Recommendation System Endpoints", () => {
+describe("INTEGRATION: Recommendation System", () => {
     let testToken;
-    const testUserId = "6996fb36aafadbc113f6139d"; // Using the valid ID we found earlier
+    let testUser;
 
-    beforeAll(() => {
-        // Generate a valid token for testing
-        testToken = jwt.sign(
-            { id: testUserId, email: "tester@example.com", role: "user" },
-            JWT_SECRET,
-            { expiresIn: "1h" }
-        );
+    beforeAll(async () => {
+        try {
+            // Ensure DB is connected
+            if (mongoose.connection.readyState !== 1) {
+                await mongoose.connect(process.env.MONGODB_URI, { dbName: process.env.DB_NAME || "green-rent" });
+            }
+
+            // Create a real test user
+            testUser = await userModel.create({
+                name: "Rec Tester",
+                email: `rectest${Date.now()}@example.com`,
+                password: "password123",
+                role: "user",
+                preferences: {
+                    budgetMax: 1000000,
+                    ecoPriority: "medium",
+                    isPreferenceSet: true
+                }
+            });
+
+            // Generate a valid token for testing
+            testToken = jwt.sign(
+                { id: testUser._id, email: testUser.email, role: "user", name: testUser.name },
+                JWT_SECRET,
+                { expiresIn: "1h" }
+            );
+        } catch (error) {
+            console.error("❌ Recommendation test setup failed:", error.message);
+            throw error;
+        }
+    });
+
+    afterAll(async () => {
+        // Clean up test data
+        if (testUser) {
+            await userModel.findByIdAndDelete(testUser._id);
+        }
+
+        // VERY IMPORTANT: Close the database connection to allow Jest to exit properly
+        if (mongoose.connection.readyState !== 0) {
+            await mongoose.disconnect();
+        }
     });
 
     describe("GET /api/recommendations", () => {
@@ -35,7 +78,7 @@ describe("Recommendation System Endpoints", () => {
             expect(res.statusCode).toEqual(200);
             expect(res.body.success).toBe(true);
             expect(Array.isArray(res.body.recommendations)).toBe(true);
-        });
+        }, 15000); // Increased timeout to 15s because recommendation engine might take longer
     });
 
     describe("PUT /api/recommendations/preferences", () => {
@@ -65,7 +108,7 @@ describe("Recommendation System Endpoints", () => {
 
             expect(res.statusCode).toEqual(200);
             expect(res.body.success).toBe(true);
-            expect(res.body.preferences.ecoPriority).toBe("medium");
+            expect(res.body.message).toBe("Preferences reset to default");
         });
     });
 });

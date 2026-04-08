@@ -17,6 +17,7 @@ export const getRecommendations = async (req, res) => {
       recommendations,
     });
   } catch (error) {
+    console.error("❌ Recommendation Controller Error:", error);
     const statusCode = error.message === "User not found" ? 404 : 500;
     return res.status(statusCode).json({
       success: false,
