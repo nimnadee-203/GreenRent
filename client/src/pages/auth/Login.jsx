@@ -6,7 +6,7 @@ import {
   signInWithPopup,
   updateProfile,
 } from "firebase/auth";
-import { Eye, EyeOff, Mail, Lock, UserRound } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, UserRound, CheckCircle2, Circle } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Navbar from "../../components/Home/Navbar";
 import { auth, googleProvider, hasFirebaseConfig } from "../../config/firebase";
@@ -78,8 +78,12 @@ export default function Login() {
       return;
     }
 
-    if (isSignUp && form.password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    const hasMinLength = form.password.length >= 6;
+    const hasUppercase = /[A-Z]/.test(form.password);
+    const hasNumber = /[0-9]/.test(form.password);
+
+    if (isSignUp && (!hasMinLength || !hasUppercase || !hasNumber)) {
+      setError("Please ensure your password meets all requirements.");
       return;
     }
 
@@ -206,26 +210,26 @@ export default function Login() {
     }
   };
 
+  const hasMinLength = form.password.length >= 6;
+  const hasUppercase = /[A-Z]/.test(form.password);
+  const hasNumber = /[0-9]/.test(form.password);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-cyan-50">
       <Navbar />
 
       <main className="mx-auto grid min-h-[calc(100vh-80px)] max-w-[1280px] items-center gap-10 px-4 py-10 md:grid-cols-2 md:px-8">
-        <section>
-          <p className="text-xs uppercase tracking-[0.3em] text-emerald-700">Secure Access</p>
-          <h1 className="mt-3 text-4xl font-bold leading-tight text-slate-900 md:text-5xl">
-            Sign in to manage eco-friendly stays.
-          </h1>
-          <p className="mt-4 max-w-xl text-slate-600">
-            Use your email account or Google to continue. Your session stays synced with your property browsing
-            preferences.
-          </p>
-          <div className="mt-8 rounded-2xl border border-emerald-200 bg-white p-4 text-sm text-slate-600 shadow-sm">
-            <p className="font-semibold text-slate-800">Need Firebase setup?</p>
-            <p className="mt-1">
-              Add your Firebase Web App keys as <code>VITE_FIREBASE_*</code> in <code>client/.env</code>.
-            </p>
+        <section className="flex flex-col justify-center">
+          <div className="inline-flex items-center gap-2 self-start rounded-full bg-emerald-100/80 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-emerald-800 shadow-sm backdrop-blur-sm">
+            <Lock size={14} className="opacity-80" /> Secure Access
           </div>
+          <h1 className="mt-8 text-4xl font-extrabold leading-tight tracking-tight text-slate-900 md:text-5xl lg:text-6xl lg:leading-[1.1]">
+            Sign in to manage <br className="hidden md:block" />
+            <span className="bg-gradient-to-r from-emerald-600 to-cyan-500 bg-clip-text text-transparent">eco-friendly</span> stays.
+          </h1>
+          <p className="mt-6 text-lg leading-relaxed text-slate-600 md:max-w-lg">
+            Use your email account or Google to continue. Your session stays synced with your property browsing preferences to deliver smart, personalized recommendations.
+          </p>
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl md:p-8">
@@ -290,6 +294,21 @@ export default function Login() {
                   {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
+              
+              {isSignUp && (
+                <div className="mt-3 ml-1 space-y-1.5 text-xs text-slate-500">
+                  <p className="font-semibold text-slate-700">Password must contain:</p>
+                  <div className={`flex items-center gap-1.5 transition-colors ${hasMinLength ? 'text-emerald-600 font-medium' : ''}`}>
+                    {hasMinLength ? <CheckCircle2 size={14} /> : <Circle size={14} />} <span>At least 6 characters</span>
+                  </div>
+                  <div className={`flex items-center gap-1.5 transition-colors ${hasUppercase ? 'text-emerald-600 font-medium' : ''}`}>
+                    {hasUppercase ? <CheckCircle2 size={14} /> : <Circle size={14} />} <span>At least 1 uppercase letter</span>
+                  </div>
+                  <div className={`flex items-center gap-1.5 transition-colors ${hasNumber ? 'text-emerald-600 font-medium' : ''}`}>
+                    {hasNumber ? <CheckCircle2 size={14} /> : <Circle size={14} />} <span>At least 1 number</span>
+                  </div>
+                </div>
+              )}
             </label>
 
             {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
