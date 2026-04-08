@@ -20,6 +20,7 @@ export default function Login() {
   const { fetchBackendUser } = useAuth();
   const redirectTarget = location.state?.from || "/";
   const redirectState = location.state?.postLoginState || null;
+  const shouldResumeBookingFlow = Boolean(location.state?.postLoginState?.resumeAvailabilityFlow);
   const bookingNotice = location.state?.message || "";
   const [isSignUp, setIsSignUp] = useState(() => location.state?.mode === "signup");
   const [showPassword, setShowPassword] = useState(false);
@@ -124,7 +125,11 @@ export default function Login() {
 
         setSuccess("Account created successfully.");
         await fetchBackendUser();
-        navigate("/preference-setup", { replace: true });
+        if (shouldResumeBookingFlow) {
+          navigate(redirectTarget, { replace: true, state: redirectState });
+        } else {
+          navigate("/preference-setup", { replace: true });
+        }
         return;
       } else {
         // Backend login should work for seeded/admin/seller users even without Firebase accounts.
