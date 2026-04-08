@@ -89,6 +89,8 @@ export default function AdminBookings() {
   const [propertyFilter, setPropertyFilter] = useState("");
   const [showAllRows, setShowAllRows] = useState(false);
   const [notificationModalOpen, setNotificationModalOpen] = useState(false);
+  const surfaceCardClass = "rounded-3xl border border-white/60 bg-white/75 backdrop-blur-md shadow-[0_16px_45px_-24px_rgba(15,23,42,0.45)]";
+  const secondaryButtonClass = "inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200/80 bg-white/80 text-slate-700 font-semibold hover:bg-white hover:border-emerald-300 hover:text-emerald-700 transition-all duration-300";
 
   const isAdmin = backendUser?.role === "admin";
 
@@ -248,7 +250,7 @@ export default function AdminBookings() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#d1fae5_0%,_#f8fafc_48%,_#f1f5f9_100%)]">
         <Navbar />
         <main className="w-full max-w-5xl mx-auto px-4 md:px-8 py-10">
           <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800">
@@ -264,12 +266,14 @@ export default function AdminBookings() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#d1fae5_0%,_#f8fafc_48%,_#f1f5f9_100%)]">
       <Navbar />
 
       <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm mb-6">
-          <div className="p-5 md:p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+        <section className="relative overflow-hidden rounded-3xl border border-emerald-100/70 bg-gradient-to-br from-white/85 via-emerald-50/65 to-cyan-50/60 backdrop-blur-sm shadow-[0_24px_60px_-28px_rgba(16,185,129,0.4)] mb-6">
+          <div className="absolute -top-20 -right-12 w-64 h-64 rounded-full bg-emerald-300/45 blur-3xl" />
+          <div className="absolute -bottom-24 -left-8 w-52 h-52 rounded-full bg-cyan-300/35 blur-3xl" />
+          <div className="relative p-5 md:p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-emerald-700 font-bold mb-1">Admin Space</p>
               <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3">
@@ -281,7 +285,7 @@ export default function AdminBookings() {
               <button
                 type="button"
                 onClick={() => setNotificationModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 bg-red-50 text-red-700 font-semibold hover:bg-red-100 transition"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 bg-red-50/90 text-red-700 font-semibold hover:bg-red-100 transition-all duration-300"
               >
                 <Bell className="w-4 h-4" />
                 Notifications
@@ -289,14 +293,14 @@ export default function AdminBookings() {
                   {refundRequestNotifications.length}
                 </span>
               </button>
-              <Link to="/my-listings" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
+              <Link to="/my-listings" className={secondaryButtonClass}>
                 <ArrowLeft className="w-4 h-4" /> Back to Overview & Listings
               </Link>
             </div>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 mb-5 shadow-sm">
+        <section className={`${surfaceCardClass} p-4 md:p-5 mb-5`}>
           <div className="flex items-center justify-between gap-3 mb-3">
             <p className="text-sm font-bold text-slate-800">Filters</p>
             <button
@@ -314,7 +318,7 @@ export default function AdminBookings() {
                 type="date"
                 value={fromDate}
                 onChange={(event) => setFromDate(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-xl border border-slate-300 bg-white/90 px-3 py-2 text-sm"
               />
             </label>
 
@@ -324,7 +328,7 @@ export default function AdminBookings() {
                 type="date"
                 value={toDate}
                 onChange={(event) => setToDate(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-xl border border-slate-300 bg-white/90 px-3 py-2 text-sm"
               />
             </label>
 
@@ -335,7 +339,7 @@ export default function AdminBookings() {
                 value={userFilter}
                 onChange={(event) => setUserFilter(event.target.value)}
                 placeholder="Name, email, or user id"
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-xl border border-slate-300 bg-white/90 px-3 py-2 text-sm"
               />
             </label>
 
@@ -344,7 +348,7 @@ export default function AdminBookings() {
               <select
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-xl border border-slate-300 bg-white/90 px-3 py-2 text-sm"
               >
                 <option value="all">All</option>
                 <option value="pending">Pending</option>
@@ -362,7 +366,7 @@ export default function AdminBookings() {
                 value={propertyFilter}
                 onChange={(event) => setPropertyFilter(event.target.value)}
                 placeholder="Title, address, or property id"
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-xl border border-slate-300 bg-white/90 px-3 py-2 text-sm"
               />
             </label>
           </div>
@@ -375,16 +379,16 @@ export default function AdminBookings() {
         </div>
 
         {loading ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">Loading bookings...</div>
+          <div className={`${surfaceCardClass} p-6 text-slate-600`}>Loading bookings...</div>
         ) : error ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-700 shadow-sm">{error}</div>
+          <div className="rounded-2xl border border-red-200 bg-red-50/90 p-6 text-red-700 shadow-sm">{error}</div>
         ) : filteredBookings.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600 shadow-sm">No bookings found for selected filters.</div>
+          <div className={`${surfaceCardClass} p-6 text-slate-600`}>No bookings found for selected filters.</div>
         ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+          <div className={`${surfaceCardClass} overflow-hidden`}>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1200px] text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
+                <thead className="bg-slate-100/80 border-b border-slate-200 text-slate-600">
                   <tr>
                     <th className="px-4 py-3 text-left font-semibold">No.</th>
                     <th className="px-4 py-3 text-left font-semibold">Date</th>
@@ -403,7 +407,7 @@ export default function AdminBookings() {
                     const bookingActionLoading = Boolean(actionLoadingById[booking._id]);
 
                     return (
-                      <tr key={booking._id} className="border-b border-slate-100 hover:bg-slate-50/80 align-top">
+                      <tr key={booking._id} className="border-b border-slate-100 hover:bg-white/80 align-top">
                         <td className="px-4 py-3 text-slate-500 font-semibold">{index + 1}</td>
                         <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
                           {toDisplayDate(booking?.createdAt)}
@@ -433,7 +437,7 @@ export default function AdminBookings() {
                             <button
                               type="button"
                               onClick={() => setSelectedBooking(booking)}
-                              className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
+                              className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-blue-100"
                             >
                               <Eye className="w-3.5 h-3.5" />
                               View
@@ -443,7 +447,7 @@ export default function AdminBookings() {
                               type="button"
                               disabled={bookingActionLoading || booking?.status === "cancelled"}
                               onClick={() => handleCancelBooking(booking)}
-                              className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-amber-100 disabled:opacity-50"
+                              className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-amber-100 disabled:opacity-50"
                             >
                               <XCircle className="w-3.5 h-3.5" />
                               Cancel
@@ -453,7 +457,7 @@ export default function AdminBookings() {
                               type="button"
                               disabled={bookingActionLoading}
                               onClick={() => handleDeleteBooking(booking)}
-                              className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-rose-100 disabled:opacity-50"
+                              className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-rose-100 disabled:opacity-50"
                             >
                               <Trash2 className="w-3.5 h-3.5" /> Delete
                             </button>
@@ -485,7 +489,7 @@ export default function AdminBookings() {
 
       {selectedBooking && (
         <div className="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+          <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900">Booking Full Details</h3>
               <button
@@ -584,7 +588,7 @@ export default function AdminBookings() {
 
       {notificationModalOpen && (
         <div className="fixed inset-0 z-[130] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+          <div className="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <Bell className="w-5 h-5 text-indigo-600" /> Refund Notifications
