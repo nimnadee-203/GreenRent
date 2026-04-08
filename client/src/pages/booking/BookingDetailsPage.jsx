@@ -3,6 +3,8 @@ import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Navbar from "../../components/Home/Navbar";
 import Footer from "../../components/Home/Footer";
+import BookingDetailsHeaderCard from "../../components/booking/BookingDetailsHeaderCard";
+import BookingDetailsForm from "../../components/booking/BookingDetailsForm";
 import {
   getDailyRate,
   getMonthlyRate,
@@ -132,147 +134,48 @@ const BookingDetailsPage = () => {
           <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-red-700">{error}</div>
         ) : (
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">{property.title}</h1>
-              <p className="text-slate-600 mb-1">{property.location?.address}</p>
-              <p className="text-sm text-slate-500">{property.bedrooms || 1} bedroom(s), {property.bathrooms || 1} bathroom(s)</p>
-              {selectedOption && (
-                <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                  <h2 className="text-slate-900 font-semibold mb-1">Selected Option</h2>
-                  <p className="text-sm">
-                    {selectedOption.type} · {selectedOption.guests} · {stayType === "short" ? formatLkr(dailyPrice) : formatLkr(monthlyPrice)} per {stayType === "short" ? "night" : "month"}
-                  </p>
-                  {stayType === "short" ? (
-                    <p className="text-xs text-slate-500 mt-1">Total for {nights} night{nights > 1 ? "s" : ""}: {formatLkr(shortStayTotal)} ({formatLkr(dailyPrice)} × {nights})</p>
-                  ) : (
-                    <p className="text-xs text-slate-500 mt-1">Total for {months} month{months > 1 ? "s" : ""}: {formatLkr(longStayTotal)} ({formatLkr(monthlyPrice)} × {months})</p>
-                  )}
-                </div>
-              )}
-            </div>
+            <BookingDetailsHeaderCard
+              property={property}
+              selectedOption={selectedOption}
+              stayType={stayType}
+              dailyPrice={dailyPrice}
+              monthlyPrice={monthlyPrice}
+              nights={nights}
+              shortStayTotal={shortStayTotal}
+              months={months}
+              longStayTotal={longStayTotal}
+              formatLkr={formatLkr}
+            />
 
-            <form onSubmit={submitBooking} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-              <h2 className="text-2xl font-bold">Booking Details</h2>
-              <p className="text-sm text-slate-500">Please enter your contact info and travel dates.</p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="block">
-                  <span className="text-sm font-medium text-slate-700">Stay Type</span>
-                  <select
-                    value={stayType}
-                    onChange={(e) => setStayType(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-emerald-500 focus:ring focus:ring-emerald-200"
-                  >
-                    <option value="short">Short stay</option>
-                    <option value="long">Long stay</option>
-                  </select>
-                </label>
-
-                {stayType === "long" && (
-                  <label className="block">
-                    <span className="text-sm font-medium text-slate-700">Months</span>
-                    <input
-                      type="number"
-                      min={1}
-                      value={months}
-                      onChange={(e) => setMonths(Number(e.target.value) || 1)}
-                      required
-                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-emerald-500 focus:ring focus:ring-emerald-200"
-                    />
-                  </label>
-                )}
-
-                <label className="block">
-                  <span className="text-sm font-medium text-slate-700">Full Name</span>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-emerald-500 focus:ring focus:ring-emerald-200"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-medium text-slate-700">Email</span>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-emerald-500 focus:ring focus:ring-emerald-200"
-                  />
-                </label>
-
-                <label className="block md:col-span-2">
-                  <span className="text-sm font-medium text-slate-700">Phone</span>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    required
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-emerald-500 focus:ring focus:ring-emerald-200"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-medium text-slate-700">Check-in</span>
-                  <input
-                    type="date"
-                    value={checkInDate}
-                    onChange={(e) => setCheckInDate(e.target.value)}
-                    required
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-emerald-500 focus:ring focus:ring-emerald-200"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-medium text-slate-700">Check-out</span>
-                  <input
-                    type="date"
-                    value={checkOutDate}
-                    onChange={(e) => setCheckOutDate(e.target.value)}
-                    required
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-emerald-500 focus:ring focus:ring-emerald-200"
-                  />
-                </label>
-              </div>
-
-              <label className="block">
-                <span className="text-sm font-medium text-slate-700">Additional notes</span>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-emerald-500 focus:ring focus:ring-emerald-200"
-                  rows={4}
-                  placeholder="Special requests, arrival time, etc."
-                />
-              </label>
-
-              {stayType === "long" ? (
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-                  Total for {months} month{months > 1 ? "s" : ""}: {formatLkr(longStayTotal)} ({formatLkr(monthlyPrice)} × {months})
-                </div>
-              ) : (
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-                  Total for {nights} night{nights > 1 ? "s" : ""}: {formatLkr(shortStayTotal)} ({formatLkr(dailyPrice)} × {nights})
-                </div>
-              )}
-              {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
-              {successMessage && <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{successMessage}</div>}
-
-              <div className="flex gap-3 items-center">
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-6 py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition disabled:opacity-50"
-                >
-                  {submitting ? "Submitting..." : "Confirm Booking"}
-                </button>
-
-                <Link to={`/booking/${id}`} className="text-sm text-slate-500 hover:text-slate-700">Back to options</Link>
-              </div>
-            </form>
+            <BookingDetailsForm
+              onSubmit={submitBooking}
+              stayType={stayType}
+              setStayType={setStayType}
+              months={months}
+              setMonths={setMonths}
+              fullName={fullName}
+              setFullName={setFullName}
+              email={email}
+              setEmail={setEmail}
+              phone={phone}
+              setPhone={setPhone}
+              checkInDate={checkInDate}
+              setCheckInDate={setCheckInDate}
+              checkOutDate={checkOutDate}
+              setCheckOutDate={setCheckOutDate}
+              notes={notes}
+              setNotes={setNotes}
+              dailyPrice={dailyPrice}
+              monthlyPrice={monthlyPrice}
+              nights={nights}
+              shortStayTotal={shortStayTotal}
+              longStayTotal={longStayTotal}
+              formatLkr={formatLkr}
+              error={error}
+              successMessage={successMessage}
+              submitting={submitting}
+              bookingId={id}
+            />
           </div>
         )}
       </main>

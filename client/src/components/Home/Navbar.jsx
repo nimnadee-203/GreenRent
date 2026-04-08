@@ -78,17 +78,19 @@ const Navbar = () => {
                                         </p>
                                     </div>
                                     <div className="p-1">
-                                        <Menu.Item>
-                                            {({ active }) => (
-                                                <Link
-                                                    to="/dashboard"
-                                                    className={`${active ? 'bg-emerald-50 text-emerald-700' : 'text-slate-700'} group flex w-full items-center rounded-xl px-3 py-2 text-sm transition-colors`}
-                                                >
-                                                    <LayoutDashboard className="mr-3 h-4 w-4" />
-                                                    Dashboard
-                                                </Link>
-                                            )}
-                                        </Menu.Item>
+                                        {backendUser?.role !== 'admin' && (
+                                            <Menu.Item>
+                                                {({ active }) => (
+                                                    <Link
+                                                        to="/dashboard"
+                                                        className={`${active ? 'bg-emerald-50 text-emerald-700' : 'text-slate-700'} group flex w-full items-center rounded-xl px-3 py-2 text-sm transition-colors`}
+                                                    >
+                                                        <LayoutDashboard className="mr-3 h-4 w-4" />
+                                                        Dashboard
+                                                    </Link>
+                                                )}
+                                            </Menu.Item>
+                                        )}
                                         
                                         {(backendUser?.role === 'seller' || backendUser?.role === 'admin') && (
                                             <>
@@ -210,7 +212,9 @@ const Navbar = () => {
                         {sessionUser ? (
                             <>
                                 <div className="h-px bg-slate-200 my-1" />
-                                <Link to="/dashboard" onClick={() => setMobileOpen(false)} className="px-2 py-2 rounded-lg text-slate-700 hover:bg-slate-100">Dashboard</Link>
+                                {backendUser?.role !== 'admin' && (
+                                    <Link to="/dashboard" onClick={() => setMobileOpen(false)} className="px-2 py-2 rounded-lg text-slate-700 hover:bg-slate-100">Dashboard</Link>
+                                )}
                                 {(backendUser?.role === 'seller' || backendUser?.role === 'admin') && (
                                     <>
                                         <Link to="/my-listings" onClick={() => setMobileOpen(false)} className="px-2 py-2 rounded-lg text-slate-700 hover:bg-slate-100">My Listings</Link>

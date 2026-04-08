@@ -30,7 +30,8 @@ import {
   TrendingUp,
   LayoutGrid,
   ChevronRight,
-  Bus
+  Bus,
+  Heart
 } from 'lucide-react';
 import axios from 'axios';
 import SellerApplicationModal from '../../components/seller/SellerApplicationModal';
@@ -857,6 +858,9 @@ export default function Dashboard() {
                   <div className="flex items-center gap-2">
                     <Link to="/preference-setup" className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10">
                        <Settings size={18} /> {isPreferenceSet ? 'Edit Preferences' : 'Set Preferences'}
+                    </Link>
+                    <Link to="/wishlist" className="flex items-center gap-2 px-6 py-3 bg-white text-slate-700 rounded-2xl font-bold border border-slate-200 hover:bg-slate-50 transition-all shadow-sm">
+                      <Heart size={18} className="text-rose-500" /> Wishlist
                     </Link>
                   </div>
                 </div>

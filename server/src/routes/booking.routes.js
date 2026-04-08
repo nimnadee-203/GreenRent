@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../middleware/auth.js";
+import userAuth from "../middleware/user.auth.js";
 
 import {
   createBookingHandler,
@@ -37,28 +38,28 @@ router.post("/check-availability", checkAvailabilityHandler);
  */
 
 // Create booking
-router.post("/", authenticate, createBookingHandler);
+router.post("/", userAuth, createBookingHandler);
 
 // Get logged-in user's bookings
-router.get("/my", authenticate, getMyBookingsHandler);
+router.get("/my", userAuth, getMyBookingsHandler);
 
 // Get single booking by ID (user can only view their own booking)
-router.get("/:id", authenticate, getBookingByIdHandler);
+router.get("/:id", userAuth, getBookingByIdHandler);
 
 // Update own booking
-router.put("/:id", authenticate, updateBookingHandler);
+router.put("/:id", userAuth, updateBookingHandler);
 
 // Update payment status (for own booking)
-router.put("/:id/payment", authenticate, updatePaymentStatusHandler);
+router.put("/:id/payment", userAuth, updatePaymentStatusHandler);
 
 // Expire booking when payment timeout elapsed
-router.put("/:id/expire", authenticate, expireBookingHandler);
+router.put("/:id/expire", userAuth, expireBookingHandler);
 
 // Cancel booking
-router.put("/:id/cancel", authenticate, cancelBookingHandler);
+router.put("/:id/cancel", userAuth, cancelBookingHandler);
 
 // Request refund for cancelled paid booking
-router.put("/:id/refund-request", authenticate, requestRefundHandler);
+router.put("/:id/refund-request", userAuth, requestRefundHandler);
 
 
 /**
@@ -68,22 +69,22 @@ router.put("/:id/refund-request", authenticate, requestRefundHandler);
  */
 
 // Get all bookings (Admin only)
-router.get("/", authenticate, authorize("admin"), getAllBookingsHandler);
+router.get("/", userAuth, authorize("admin"), getAllBookingsHandler);
 
 // Update booking status (Admin or Landlord)
 router.put(
   "/:id/status",
-  authenticate,
+  userAuth,
   authorize("admin", "landlord"),
   updateBookingStatusHandler
 );
 
 // Process refund (Admin only)
-router.put("/:id/refund", authenticate, authorize("admin"), processRefundByAdminHandler);
-router.put("/:id/refund/reject", authenticate, authorize("admin"), rejectRefundByAdminHandler);
+router.put("/:id/refund", userAuth, authorize("admin"), processRefundByAdminHandler);
+router.put("/:id/refund/reject", userAuth, authorize("admin"), rejectRefundByAdminHandler);
 
 // Delete booking permanently (Admin only)
-router.delete("/:id", authenticate, authorize("admin"), deleteBookingHandler);
+router.delete("/:id", userAuth, authorize("admin"), deleteBookingHandler);
 
 
 export default router;
