@@ -163,15 +163,6 @@ export default function PropertyReviewsSection({ vm }) {
         </div>
       )}
 
-      {canReviewApartment && (
-        <button 
-          onClick={() => setShowReviewModal(true)}
-          className="w-full mt-4 bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center"
-        >
-          <ShieldCheck className="w-4 h-4 mr-2" />
-          Review Apartment
-        </button>
-      )}
     </div>
   );
 }

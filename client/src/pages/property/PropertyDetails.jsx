@@ -1113,6 +1113,8 @@ const PropertyDetails = () => {
                 </div>
               </div>
             )}
+
+            <PropertyReviewsSection vm={detailsViewModel} />
           </div>
 
           {/* Sidebar */}
@@ -1222,7 +1224,7 @@ const PropertyDetails = () => {
                     )}
 
                     <div className="my-6 grid grid-cols-2 gap-4">
-                      {ecoRating.criteria && Object.entries(ecoRating.criteria).slice(0, 4).map(([k, v]) => (
+                      {ecoRating.criteria && Object.entries(ecoRating.criteria).map(([k, v]) => (
                         <div key={k} className="bg-white/10 rounded-lg p-2.5 backdrop-blur-sm">
                           <p className="text-[10px] text-emerald-100 uppercase tracking-wider mb-1">{k.replace(/([A-Z])/g, ' $1').trim()}</p>
                           <p className="font-semibold text-sm truncate">
@@ -1295,12 +1297,12 @@ const PropertyDetails = () => {
                     Review Apartment
                   </button>
                 )}
+
              </div>
 
           </div>
         </div>
 
-        <PropertyReviewsSection vm={detailsViewModel} />
       </main>
 
       <Footer />
@@ -1481,8 +1483,8 @@ const ReviewModal = ({ propertyId, ecoRatingId, onClose, onSuccess }) => {
   const renderStep2 = () => (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200">
       <div>
-        <h3 className="text-lg font-bold text-slate-900 mb-1">Verify Landlord Claims</h3>
-        <p className="text-sm text-slate-500 mb-4">Did the apartment actually have these features? Click True, False, or leave blank if unsure.</p>
+        <h3 className="text-lg font-bold text-slate-900 mb-1">Tenant Verified Features</h3>
+        <p className="text-sm text-slate-500 mb-4">Verify which landlord-listed eco features were actually available while you stayed. Choose Yes, No, or leave blank if unsure.</p>
         
         <div className="grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto pr-2 rounded-xl">
           {Object.entries(verification).map(([key, value]) => (

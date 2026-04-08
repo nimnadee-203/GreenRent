@@ -9,6 +9,73 @@ import AddApartmentStageTwoForm from '../../components/eco-rating/AddApartmentSt
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
+const toGeocodeQuery = (location = {}) => {
+  return [
+    location.displayAddress,
+    location.address,
+    location.city,
+    location.state,
+    location.country,
+  ]
+    .filter((part) => typeof part === 'string' && part.trim())
+    .map((part) => part.trim())
+    .join(', ');
+};
+
+const pickCoordinates = (location = {}) => {
+  const fromNested = location.coordinates || {};
+  const latCandidate = fromNested.lat ?? location.latitude;
+  const lngCandidate = fromNested.lng ?? location.longitude;
+
+  if (
+    latCandidate === null ||
+    latCandidate === undefined ||
+    latCandidate === '' ||
+    lngCandidate === null ||
+    lngCandidate === undefined ||
+    lngCandidate === ''
+  ) {
+    return null;
+  }
+
+  const lat = Number(latCandidate);
+  const lng = Number(lngCandidate);
+
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return { lat, lng };
+  }
+
+  return null;
+};
+
+const geocodeFromOpenStreetMap = async (location = {}) => {
+  const query = toGeocodeQuery(location);
+  if (!query) return null;
+
+  try {
+    const response = await axios.get('https://nominatim.openstreetmap.org/search', {
+      params: {
+        q: query,
+        format: 'json',
+        limit: 1,
+      },
+      timeout: 6000,
+    });
+
+    const first = Array.isArray(response.data) ? response.data[0] : null;
+    const lat = Number(first?.lat);
+    const lng = Number(first?.lon);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return null;
+    }
+
+    return { lat, lng };
+  } catch (_error) {
+    return null;
+  }
+};
+
 const INITIAL_FORM = {
   title: '',
   description: '',
@@ -238,18 +305,21 @@ export default function AddApartment() {
       const response = await axios.post(`${API_BASE_URL}/api/properties`, payload, { withCredentials: true });
       setCreatedPropertyId(response.data._id);
       
-      // Check if address was successfully geocoded
-      const hasCoordinates = response.data.location?.coordinates?.lat && response.data.location?.coordinates?.lng;
-      
-      if (hasCoordinates) {
-        setEcoForm(prev => ({ 
-          ...prev, 
-          latitude: response.data.location.coordinates.lat || prev.latitude, 
-          longitude: response.data.location.coordinates.lng || prev.longitude 
+      const locationFromResponse = response?.data?.location || {};
+
+      let coordinates = pickCoordinates(locationFromResponse);
+      if (!coordinates) {
+        coordinates = await geocodeFromOpenStreetMap(locationFromResponse);
+      }
+
+      if (coordinates) {
+        setEcoForm(prev => ({
+          ...prev,
+          latitude: coordinates.lat,
+          longitude: coordinates.lng,
         }));
         setSuccess('Apartment listed successfully! Let\'s build its Eco-Profile.');
       } else {
-        // Address couldn't be geocoded, but property was created
         setSuccess('Apartment listed successfully! The address couldn\'t be located on the map yet, but your property has been created. You can view it on the map once the address is verified.');
       }
       

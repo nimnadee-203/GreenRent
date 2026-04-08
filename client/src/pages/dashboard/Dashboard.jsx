@@ -46,6 +46,15 @@ const REVIEW_DEFAULTS = {
   greenAmenities: 5,
 };
 
+const VERIFICATION_DEFAULTS = {
+  solarPanels: null,
+  ledLighting: null,
+  efficientAc: null,
+  waterSavingTaps: null,
+  recyclingAvailable: null,
+  goodVentilationSunlight: null,
+};
+
 const livingDurationOptions = ['< 3 months', '3-6 months', '6-12 months', '1-2 years', '> 2 years'];
 
 const statusBadgeClass = {
@@ -125,7 +134,9 @@ export default function Dashboard() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelStep, setCancelStep] = useState(1);
   const [cancelError, setCancelError] = useState('');
+  const [reviewStep, setReviewStep] = useState(1);
   const [criteria, setCriteria] = useState({ ...REVIEW_DEFAULTS });
+  const [verification, setVerification] = useState({ ...VERIFICATION_DEFAULTS });
   const [reviewText, setReviewText] = useState('');
   const [livingDuration, setLivingDuration] = useState('< 3 months');
   const [wouldRecommend, setWouldRecommend] = useState(true);
@@ -487,7 +498,9 @@ export default function Dashboard() {
       setSelectedBooking(booking);
       setSelectedEcoRatingId(ecoRatingId);
       setEditingReviewId(existingReview?._id || '');
+      setReviewStep(1);
       setCriteria(existingReview?.criteria ? { ...REVIEW_DEFAULTS, ...existingReview.criteria } : { ...REVIEW_DEFAULTS });
+      setVerification(existingReview?.verification ? { ...VERIFICATION_DEFAULTS, ...existingReview.verification } : { ...VERIFICATION_DEFAULTS });
       setReviewText(existingReview?.review || '');
       setLivingDuration(existingReview?.livingDuration || '< 3 months');
       setWouldRecommend(typeof existingReview?.wouldRecommend === 'boolean' ? existingReview.wouldRecommend : true);
@@ -504,6 +517,8 @@ export default function Dashboard() {
     setSelectedBooking(null);
     setSelectedEcoRatingId('');
     setEditingReviewId('');
+    setReviewStep(1);
+    setVerification({ ...VERIFICATION_DEFAULTS });
     setReviewError('');
   };
 
@@ -539,10 +554,16 @@ export default function Dashboard() {
     try {
       setReviewLoading(true);
       setReviewError('');
+      const cleanedVerification = {};
+      for (const key in verification) {
+        if (verification[key] !== null) cleanedVerification[key] = verification[key];
+      }
+
       const payload = {
         listingId: selectedBooking.apartmentId._id,
         ecoRatingId: selectedEcoRatingId,
         criteria,
+        verification: cleanedVerification,
         review: reviewText,
         livingDuration,
         wouldRecommend,
@@ -579,6 +600,13 @@ export default function Dashboard() {
     const status = booking?.status;
     const eligibleStatus = status === 'confirmed' || status === 'completed';
     return Boolean(eligibleStatus && listingId && myReviewsByListing[listingId]?._id);
+  };
+
+  const handleVerificationClick = (key, value) => {
+    setVerification((prev) => ({
+      ...prev,
+      [key]: prev[key] === value ? null : value,
+    }));
   };
 
   // Redirect admins and sellers to their dedicated workspaces
@@ -1294,58 +1322,108 @@ export default function Dashboard() {
             </div>
 
             <form onSubmit={submitReview} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
-              {Object.entries(criteria).map(([key, value]) => (
-                <div key={key}>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-semibold text-slate-700 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</label>
-                    <span className="text-sm font-bold text-emerald-700">{value}/10</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="10"
-                    value={value}
-                    onChange={(event) => setCriteria((prev) => ({ ...prev, [key]: Number(event.target.value) }))}
-                    className="w-full accent-emerald-600"
-                  />
-                </div>
-              ))}
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Living Duration</label>
-                <select value={livingDuration} onChange={(event) => setLivingDuration(event.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5">
-                  {livingDurationOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
+              {reviewStep === 1 && (
+                <>
+                  {Object.entries(criteria).map(([key, value]) => (
+                    <div key={key}>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-semibold text-slate-700 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</label>
+                        <span className="text-sm font-bold text-emerald-700">{value}/10</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="10"
+                        value={value}
+                        onChange={(event) => setCriteria((prev) => ({ ...prev, [key]: Number(event.target.value) }))}
+                        className="w-full accent-emerald-600"
+                      />
+                    </div>
                   ))}
-                </select>
-              </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Review</label>
-                <textarea
-                  rows={4}
-                  value={reviewText}
-                  onChange={(event) => setReviewText(event.target.value)}
-                  placeholder="Share your real experience as a renter"
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 resize-none"
-                />
-              </div>
-
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" checked={wouldRecommend} onChange={(event) => setWouldRecommend(event.target.checked)} />
-                I would recommend this property
-              </label>
-
-              {reviewError && (
-                <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">{reviewError}</div>
+                  <div className="flex gap-3 pt-1">
+                    <button type="button" onClick={closeReviewModal} className="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50">Cancel</button>
+                    <button type="button" onClick={() => setReviewStep(2)} className="w-1/2 py-2.5 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800">Next Step</button>
+                  </div>
+                </>
               )}
 
-              <div className="flex gap-3 pt-1">
-                <button type="button" onClick={closeReviewModal} className="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50">Cancel</button>
-                <button type="submit" disabled={reviewLoading} className="w-1/2 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-60">
-                  {reviewLoading ? 'Saving...' : editingReviewId ? 'Save Changes' : 'Submit Review'}
-                </button>
-              </div>
+              {reviewStep === 2 && (
+                <>
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900 mb-1">Tenant Verified Features</h4>
+                    <p className="text-sm text-slate-500 mb-4">Confirm whether these eco features were actually available. Select Yes or No, or leave blank if unsure.</p>
+                    <div className="grid grid-cols-1 gap-3 max-h-[320px] overflow-y-auto pr-1">
+                      {Object.entries(verification).map(([key, value]) => (
+                        <div key={key} className="flex items-center justify-between bg-white border border-slate-200 p-3 rounded-lg shadow-sm">
+                          <span className="text-sm font-medium capitalize text-slate-700">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleVerificationClick(key, true)}
+                              className={`px-3 py-1 text-xs font-semibold rounded-md border transition ${value === true ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                            >
+                              Yes
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleVerificationClick(key, false)}
+                              className={`px-3 py-1 text-xs font-semibold rounded-md border transition ${value === false ? 'bg-red-50 text-red-700 border-red-200' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                            >
+                              No
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-1">
+                    <button type="button" onClick={() => setReviewStep(1)} className="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50">Back</button>
+                    <button type="button" onClick={() => setReviewStep(3)} className="w-1/2 py-2.5 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800">Next Step</button>
+                  </div>
+                </>
+              )}
+
+              {reviewStep === 3 && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Living Duration</label>
+                    <select value={livingDuration} onChange={(event) => setLivingDuration(event.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5">
+                      {livingDurationOptions.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Review</label>
+                    <textarea
+                      rows={4}
+                      value={reviewText}
+                      onChange={(event) => setReviewText(event.target.value)}
+                      placeholder="Share your real experience as a renter"
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2.5 resize-none"
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" checked={wouldRecommend} onChange={(event) => setWouldRecommend(event.target.checked)} />
+                    I would recommend this property
+                  </label>
+
+                  {reviewError && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm px-3 py-2">{reviewError}</div>
+                  )}
+
+                  <div className="flex gap-3 pt-1">
+                    <button type="button" onClick={() => setReviewStep(2)} className="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50">Back</button>
+                    <button type="submit" disabled={reviewLoading} className="w-1/2 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 disabled:opacity-60">
+                      {reviewLoading ? 'Saving...' : editingReviewId ? 'Save Changes' : 'Submit Review'}
+                    </button>
+                  </div>
+                </>
+              )}
             </form>
           </div>
         </div>

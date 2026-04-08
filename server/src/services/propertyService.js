@@ -19,6 +19,35 @@ const buildGeocodeQuery = (location = {}) => {
   return parts.join(", ");
 };
 
+const buildGeocodeCandidates = (location = {}) => {
+  const unique = new Set();
+
+  const push = (parts = []) => {
+    const query = parts
+      .filter((part) => typeof part === "string" && part.trim())
+      .map((part) => part.trim())
+      .join(", ");
+
+    if (query) {
+      unique.add(query);
+    }
+  };
+
+  push([
+    location.displayAddress,
+    location.address,
+    location.city,
+    location.state,
+    location.country,
+  ]);
+  push([location.address, location.city, location.state, location.country]);
+  push([location.address, location.city, location.country]);
+  push([location.address, location.country]);
+  push([location.address]);
+
+  return Array.from(unique);
+};
+
 /**
  * Helper to geocode an address if coordinates are missing or if the address changed.
  * Returns the updated location object. Geocoding failures are non-blocking (coordinates remain null).
@@ -35,7 +64,14 @@ const geocodeIfNeeded = async (data, existingLocation = null) => {
 
   if (addressChanged || coordinatesMissing) {
     try {
-      const geo = await geocodeAddress(geocodeQuery);
+      const candidates = buildGeocodeCandidates(location);
+      let geo = null;
+
+      for (const candidate of candidates) {
+        geo = await geocodeAddress(candidate);
+        if (geo) break;
+      }
+
       if (geo) {
         // Geocoding succeeded, update coordinates
         return {
