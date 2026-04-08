@@ -87,8 +87,8 @@ export default function AdminReviews() {
           <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
             <h1 className="text-xl font-bold">Admin Access Required</h1>
             <p className="mt-2 text-sm">Only admins can manage renter reviews.</p>
-            <Link to="/dashboard" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold border border-red-200 hover:bg-red-100">
-              <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+            <Link to="/my-listings" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold border border-red-200 hover:bg-red-100">
+              <ArrowLeft className="w-4 h-4" /> Back to Overview & Listings
             </Link>
           </div>
         </main>
@@ -113,20 +113,8 @@ export default function AdminReviews() {
               <p className="text-slate-600 mt-2">Hide, unhide, view, or delete user reviews from one place.</p>
             </div>
             <div className="flex gap-3 flex-wrap">
-              <Link to="/admin/bookings" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800 transition">
-                Booking Dashboard
-              </Link>
-              <Link to="/admin/sellers" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
-                Seller Management
-              </Link>
-              <Link to="/admin/listings" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
-                Listings View
-              </Link>
-              <Link to="/chat" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
-                Chat
-              </Link>
-              <Link to="/dashboard" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
-                <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+              <Link to="/my-listings" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
+                <ArrowLeft className="w-4 h-4" /> Back to Overview & Listings
               </Link>
             </div>
           </div>

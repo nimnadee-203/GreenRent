@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { ArrowLeft, SendHorizontal, UserRound, Megaphone, X, Search } from "lucide-react";
 import Navbar from "../../components/Home/Navbar";
 import { useAuth } from "../../context/AuthContext";
@@ -30,6 +30,7 @@ function getRelativeTime(dateString) {
 }
 
 export default function ChatPage() {
+  const location = useLocation();
   const { backendUser } = useAuth();
   const [contacts, setContacts] = useState([]);
   const [contactsLoading, setContactsLoading] = useState(true);
@@ -114,6 +115,14 @@ export default function ChatPage() {
     return () => clearInterval(timer);
   }, [canUseChat, selectedContactId]);
 
+  useEffect(() => {
+    if (backendUser?.role !== "admin") return;
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get("broadcast") === "1") {
+      setBroadcastModalOpen(true);
+    }
+  }, [backendUser?.role, location.search]);
+
   const sendMessage = async (event) => {
     event.preventDefault();
     const trimmed = text.trim();
@@ -190,8 +199,8 @@ export default function ChatPage() {
           <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
             <h1 className="text-xl font-bold">Chat access denied</h1>
             <p className="mt-2 text-sm">Only admins and landlords can use this chat.</p>
-            <Link to="/dashboard" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold border border-red-200 hover:bg-red-100">
-              <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+            <Link to="/my-listings" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold border border-red-200 hover:bg-red-100">
+              <ArrowLeft className="w-4 h-4" /> Back to Overview & Listings
             </Link>
           </div>
         </main>
@@ -210,27 +219,8 @@ export default function ChatPage() {
             <p className="text-slate-600 mt-1 text-sm">Use this space for moderation and listing communication.</p>
           </div>
           <div className="flex items-center flex-wrap justify-end gap-2">
-            {backendUser?.role === "admin" && (
-              <>
-                <button
-                  onClick={() => setBroadcastModalOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 mr-2"
-                >
-                  <Megaphone className="w-4 h-4" /> Message All Landlords
-                </button>
-                <Link to="/admin/listings" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
-                  Listings View
-                </Link>
-                <Link to="/admin/bookings" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
-                  Booking Dashboard
-                </Link>
-                <Link to="/admin/reviews" className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">
-                  Review Management
-                </Link>
-              </>
-            )}
-            <Link to="/dashboard" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
-              <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+            <Link to="/my-listings" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+              <ArrowLeft className="w-4 h-4" /> Back to Overview & Listings
             </Link>
           </div>
         </div>

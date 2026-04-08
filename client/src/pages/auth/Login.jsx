@@ -136,7 +136,6 @@ export default function Login() {
         }
         return;
       } else {
-        // Backend login should work for seeded/admin/seller users even without Firebase accounts.
         await axios.post(
           `${API_BASE_URL}/api/auth/login`,
           {
@@ -147,12 +146,10 @@ export default function Login() {
         );
         await fetchBackendUser();
 
-        // Optional Firebase sync for users that do have Firebase credentials.
         if (hasFirebaseConfig && auth) {
           try {
             await signInWithEmailAndPassword(auth, normalizedEmail, form.password);
           } catch (firebaseSyncError) {
-            // Ignore Firebase mismatch for backend-authenticated users.
           }
         }
 
@@ -182,7 +179,6 @@ export default function Login() {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
 
-      // Extract details for backend registration/login
       const payload = {
         name: user.displayName || "Google User",
         email: user.email,
@@ -190,14 +186,12 @@ export default function Login() {
         uid: user.uid,
       };
 
-      // Call backend to establish session cookie
       const response = await axios.post(`${API_BASE_URL}/api/auth/google-login`, payload, { withCredentials: true });
       const { user: backendUser } = response.data;
 
       await fetchBackendUser();
       setSuccess("Google login successful.");
       
-      // Redirect to preference setup if user is new/preferences not set
       if (backendUser && backendUser.isPreferenceSet === false) {
         navigate("/preference-setup", { replace: true });
       } else {
