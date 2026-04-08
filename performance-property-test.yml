@@ -1,0 +1,58 @@
+config:
+  target: "http://localhost:5000"
+  phases:
+    - name: "warm-up"
+      duration: 20
+      arrivalRate: 2
+      rampTo: 5
+    - name: "sustained"
+      duration: 40
+      arrivalRate: 5
+      rampTo: 8
+  http:
+    timeout: 30
+  defaults:
+    headers:
+      Content-Type: "application/json"
+scenarios:
+  - name: "GET /api/properties"
+    weight: 70
+    flow:
+      - get:
+          url: "/api/properties"
+  - name: "POST /api/properties"
+    weight: 30
+    flow:
+      - post:
+          url: "/api/properties"
+          headers:
+            Authorization: "Bearer {{ $processEnvironment.SELLER_TOKEN }}"
+          json:
+            title: "Artillery Test Apartment {{ $randomNumber(1000, 999999) }}"
+            description: "A modern eco-friendly apartment used for performance testing."
+            location:
+              address: "123 Green Street"
+              displayAddress: "123 Green Street, Colombo"
+              city: "Colombo"
+              state: "Western Province"
+              country: "Sri Lanka"
+              coordinates:
+                lat: 6.9271
+                lng: 79.8612
+            price: 85000
+            stayType: "long"
+            monthlyPrice: 85000
+            dailyPrice: 5000
+            area: 1200
+            bedrooms: 2
+            bathrooms: 1
+            maxGuests: 4
+            parking: true
+            propertyType: "apartment"
+            ecoFeatures:
+              solarPanels: true
+              ledLighting: true
+              waterSavingTaps: true
+              recyclingAvailable: true
+            images:
+              - "https://example.com/property-test-image.jpg"

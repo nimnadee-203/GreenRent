@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import Navbar from '../../components/Home/Navbar';
 import Footer from '../../components/Home/Footer';
+import FeaturedApartmentStrip from '../../components/Home/FeaturedApartmentStrip';
 import HomeRecommendations from '../../components/Home/HomeRecommendations';
 import { useAuth } from '../../context/AuthContext';
 
@@ -53,6 +54,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        <FeaturedApartmentStrip />
 
         {backendUser && <HomeRecommendations />}
 
