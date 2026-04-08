@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
@@ -17,7 +17,8 @@ import {
   Wind,
   Recycle,
   BatteryCharging,
-  Sun
+  Sun,
+  X
 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -41,6 +42,32 @@ export default function PreferenceSetup() {
     transportPreference: 'Public Transport',
     greenAmenities: []
   });
+
+  useEffect(() => {
+    const fetchExistingPrefs = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/recommendations/preferences`, { 
+          withCredentials: true 
+        });
+        
+        if (response.data.success && response.data.preferences) {
+          // Merge existing preferences with defaults in case some fields are missing
+          const existing = response.data.preferences;
+          setPrefs(prev => ({
+            budgetMax: existing.budgetMax || prev.budgetMax,
+            propertyType: existing.propertyType || prev.propertyType,
+            ecoPriority: existing.ecoPriority || prev.ecoPriority,
+            transportPreference: existing.transportPreference || prev.transportPreference,
+            greenAmenities: existing.greenAmenities || prev.greenAmenities
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load existing preferences:', error);
+      }
+    };
+
+    fetchExistingPrefs();
+  }, []);
 
   const handleNext = () => {
     if (currentStep < STEPS.length - 1) {
@@ -86,6 +113,15 @@ export default function PreferenceSetup() {
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-4xl mx-auto px-6 py-12 lg:py-20 flex flex-col min-h-screen relative z-10">
+        {/* Close Button */}
+        <button 
+          onClick={() => navigate('/dashboard')}
+          className="absolute top-6 right-6 lg:top-8 lg:right-8 p-3 rounded-full bg-slate-800/60 hover:bg-slate-700 text-slate-400 hover:text-white transition-all shadow-lg backdrop-blur-sm z-50"
+          title="Close without saving"
+        >
+          <X size={24} />
+        </button>
+
         {/* Header */}
         <div className="mb-12">
           <div className="flex items-center gap-2 mb-6">

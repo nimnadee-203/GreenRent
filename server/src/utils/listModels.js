@@ -10,16 +10,19 @@ const listModels = async () => {
         );
 
         const data = await res.json();
-        
+
         if (!data.models) {
-            console.log("❌ No models found. Response:", JSON.stringify(data, null, 2));
+            console.log("❌ No models found");
+            console.log(JSON.stringify(data, null, 2));
             return;
         }
 
-        console.log("🔥 Available Models:\n");
+        console.log("🔥 Available Gemini Models:\n");
 
         data.models.forEach((model) => {
-            console.log(model.name);
+            console.log("Model:", model.name);
+            console.log("Supported Methods:", model.supportedGenerationMethods);
+            console.log("----------------------------------");
         });
 
     } catch (error) {
