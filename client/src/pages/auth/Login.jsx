@@ -170,9 +170,30 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await signInWithPopup(auth, googleProvider);
-      setSuccess("Google login successful for browsing. Use Email Login for Add Apartment/My Listings.");
-      navigate(redirectTarget, { replace: true, state: redirectState });
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Extract details for backend registration/login
+      const payload = {
+        name: user.displayName || "Google User",
+        email: user.email,
+        avatar: user.photoURL,
+        uid: user.uid,
+      };
+
+      // Call backend to establish session cookie
+      const response = await axios.post(`${API_BASE_URL}/api/auth/google-login`, payload, { withCredentials: true });
+      const { user: backendUser } = response.data;
+
+      await fetchBackendUser();
+      setSuccess("Google login successful.");
+      
+      // Redirect to preference setup if user is new/preferences not set
+      if (backendUser && backendUser.isPreferenceSet === false) {
+        navigate("/preference-setup", { replace: true });
+      } else {
+        navigate(redirectTarget, { replace: true, state: redirectState });
+      }
     } catch (authError) {
       setError(normalizeFirebaseError(authError?.message));
     } finally {

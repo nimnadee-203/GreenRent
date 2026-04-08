@@ -7,7 +7,7 @@ import {
   savePreferences, 
   getUserPreferences,
   getSingleRecommendationInsight 
-} from "../controller/recommendation.controller.js";
+} from "../controllers/recommendation.controller.js";
 
 const router = express.Router();
 

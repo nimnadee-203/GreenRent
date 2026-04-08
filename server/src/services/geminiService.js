@@ -56,7 +56,7 @@ export const generateRecommendationInsight = async (userPrefs, property, userId 
 
         if (!apiKey) return null;
 
-        // Try Preferred Model 2.5, Fallback to 1.5 if capacity is low
+        // Use Gemini 1.5 Flash (Fast and Reliable)
         let modelName = "gemini-2.5-flash";
         let model = genAI.getGenerativeModel({ model: modelName });
 
@@ -91,15 +91,15 @@ Rules:
             // Priority Try (2.5)
             result = await Promise.race([
                 model.generateContent(prompt),
-                timeout(10000)
+                timeout(15000)
             ]);
         } catch (error) {
-            console.warn(`🔄 Model ${modelName} busy/unavailable. Falling back to 1.5-Flash.`);
-            modelName = "gemini-1.5-flash";
+            console.warn(`🔄 Model ${modelName} busy/unavailable. Falling back to 1.5-Pro.`);
+            modelName = "gemini-1.5-pro";
             model = genAI.getGenerativeModel({ model: modelName });
             result = await Promise.race([
                 model.generateContent(prompt),
-                timeout(10000)
+                timeout(15000)
             ]);
         }
 
@@ -107,7 +107,7 @@ Rules:
         if (!response || !response.text) throw new Error("Invalid AI response");
 
         const text = response.text().trim();
-        
+
         // 2. Save result to cache if we have userId
         if (userId) {
             await AIInsightCache.findOneAndUpdate(

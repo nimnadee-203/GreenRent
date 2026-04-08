@@ -1,0 +1,30 @@
+  ΓùÅ INTEGRATION: Recommendation System ΓÇ║ GET /api/recommendations ΓÇ║ should return recommendations for an authenticated user
+
+    thrown: "Exceeded timeout of 5000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+    [0m [90m 71 |[39m         })[33m;[39m
+     [90m 72 |[39m
+    [31m[1m>[22m[39m[90m 73 |[39m         it([32m"should return recommendations for an authenticated user"[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m    |[39m         [31m[1m^[22m[39m
+     [90m 74 |[39m             [36mconst[39m res [33m=[39m [36mawait[39m request(app)
+     [90m 75 |[39m                 [33m.[39m[36mget[39m([32m"/api/recommendations"[39m)
+     [90m 76 |[39m                 [33m.[39m[36mset[39m([32m"Authorization"[39m[33m,[39m [32m`Bearer ${testToken}`[39m)[33m;[39m[0m
+
+      at src/tests/recommendation.test.js:73:9
+      at src/tests/recommendation.test.js:66:5
+      at src/tests/recommendation.test.js:18:1
+
+  ΓùÅ INTEGRATION: Recommendation System ΓÇ║ DELETE /api/recommendations/preferences ΓÇ║ should reset user preferences
+
+    TypeError: Cannot read properties of undefined (reading 'ecoPriority')
+
+    [0m [90m 109 |[39m             expect(res[33m.[39mstatusCode)[33m.[39mtoEqual([35m200[39m)[33m;[39m
+     [90m 110 |[39m             expect(res[33m.[39mbody[33m.[39msuccess)[33m.[39mtoBe([36mtrue[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 111 |[39m             expect(res[33m.[39mbody[33m.[39mpreferences[33m.[39mecoPriority)[33m.[39mtoBe([32m"medium"[39m)[33m;[39m
+     [90m     |[39m                                         [31m[1m^[22m[39m
+     [90m 112 |[39m         })[33m;[39m
+     [90m 113 |[39m     })[33m;[39m
+     [90m 114 |[39m })[33m;[39m[0m
+
+      at Object.<anonymous> (src/tests/recommendation.test.js:111:41)
