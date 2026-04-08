@@ -1,5 +1,5 @@
 import express from 'express'
-import { addToWishlist, checkWishlist, getPendingSellerRequests, getPublicSellerProfile, getUserData, getWishlist, removeFromWishlist } from '../controller/user.controller.js';
+import { addToWishlist, checkWishlist, getPendingSellerRequests, getPublicSellerProfile, getUserData, getWishlist, removeFromWishlist } from '../controllers/user.controller.js';
 import userAuth from '../middleware/user.auth.js';
 import { isAdmin } from '../middleware/role.middleware.js';
 

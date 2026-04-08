@@ -1,5 +1,5 @@
 import express from 'express'
-import { login, logout, register, requestSeller, approveSeller, googleLogin } from '../controller/auth.controller.js';
+import { login, logout, register, requestSeller, approveSeller, googleLogin } from '../controllers/auth.controller.js';
 import { isAdmin } from '../middleware/role.middleware.js'
 import userAuth from '../middleware/user.auth.js';
 
