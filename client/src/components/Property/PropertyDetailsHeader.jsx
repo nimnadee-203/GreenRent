@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, Bed, Bath, Maximize, CheckCircle2, Heart, Share2, MessageCircle, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { MapPin, CheckCircle2, Heart, Share2, MessageCircle, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function PropertyDetailsHeader({ vm }) {
   const {
@@ -23,23 +23,8 @@ export default function PropertyDetailsHeader({ vm }) {
     isWishlisted,
     handleShareListing,
     shareFeedback,
-    summaryPrefersShortStay,
     hasMonthlyPrice,
     hasDailyPrice,
-    formatCurrency,
-    summaryRate,
-    summaryGuestCount,
-    setSummaryGuests,
-    includedGuests,
-    summaryExtraGuestFee,
-    summaryExtraGuests,
-    summaryAdditionalFee,
-    today,
-    checkInDate,
-    checkOutDate,
-    setCheckInDate,
-    setCheckOutDate,
-    isAtLeastThreeMonths,
   } = vm;
 
   return (

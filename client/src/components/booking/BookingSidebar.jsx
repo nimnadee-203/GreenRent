@@ -1,5 +1,4 @@
 import React from "react";
-import { CheckCircle2, MapPin, MessageCircle, Heart, Share2 } from "lucide-react";
 
 export default function BookingSidebar({ viewModel }) {
   const {
@@ -12,15 +11,6 @@ export default function BookingSidebar({ viewModel }) {
     summaryExtraGuests,
     summaryAdditionalFee,
     formatCurrency,
-    handleCheckAvailabilityClick,
-    scrollToSection,
-    mapSectionRef,
-    reviewsSectionRef,
-    handleWishlistToggle,
-    wishlistLoading,
-    isWishlisted,
-    handleShareListing,
-    shareFeedback,
   } = viewModel;
 
   return (
@@ -94,53 +84,6 @@ export default function BookingSidebar({ viewModel }) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 mt-1">
-        <button
-          onClick={handleCheckAvailabilityClick}
-          className="rounded-xl px-4 py-3 border border-emerald-200 bg-emerald-50 text-emerald-800 font-semibold hover:bg-emerald-100 transition-all flex items-center justify-center gap-2 min-w-[170px]"
-        >
-          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-          Check Availability
-        </button>
-        <button
-          onClick={() => scrollToSection(mapSectionRef)}
-          className="rounded-xl px-4 py-3 border border-slate-200 bg-white text-slate-900 font-semibold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 min-w-[170px]"
-        >
-          <MapPin className="w-5 h-5 text-emerald-600" />
-          View on Map
-        </button>
-        <button
-          onClick={() => scrollToSection(reviewsSectionRef)}
-          className="rounded-xl px-4 py-3 border border-slate-200 bg-white text-slate-900 font-semibold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 min-w-[170px]"
-        >
-          <MessageCircle className="w-5 h-5 text-emerald-600" />
-          View Reviews
-        </button>
-        <button
-          onClick={handleWishlistToggle}
-          disabled={wishlistLoading}
-          className={`rounded-xl px-4 py-3 border font-semibold transition-all flex items-center justify-center gap-2 min-w-[170px] ${
-            isWishlisted
-              ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
-              : "bg-white text-slate-900 border-slate-200 hover:bg-slate-50"
-          } ${wishlistLoading ? "opacity-70 cursor-not-allowed" : ""}`}
-        >
-          <Heart className={`w-5 h-5 ${isWishlisted ? "fill-rose-500 text-rose-500" : "text-rose-500"}`} />
-          {wishlistLoading ? "Saving..." : isWishlisted ? "Wishlisted" : "Add to Wishlist"}
-        </button>
-        <button
-          onClick={handleShareListing}
-          className="rounded-xl px-4 py-3 border border-slate-200 bg-white text-slate-900 font-semibold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 min-w-[140px]"
-        >
-          <Share2 className="w-5 h-5 text-slate-700" />
-          Share
-        </button>
-      </div>
-      {shareFeedback && (
-        <p className="mt-3 text-xs text-center font-medium text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 border border-emerald-100">
-          {shareFeedback}
-        </p>
-      )}
     </div>
   );
 }
