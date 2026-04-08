@@ -6,6 +6,7 @@ import Navbar from "../../components/Home/Navbar";
 import Footer from "../../components/Home/Footer";
 import PropertyCompareBar from "../../components/Property/PropertyCompareBar";
 import PropertyListingGrid from "../../components/Property/PropertyListingGrid";
+import HomeRecommendations from "../../components/Home/HomeRecommendations";
 import PropertyFilterBar from "../../components/Property/PropertyFilterBar";
 import { useAuth } from "../../context/AuthContext";
 
@@ -239,14 +240,14 @@ export default function PropertyListing() {
       typeof property.monthlyPrice === "number"
         ? property.monthlyPrice
         : stayType !== "short" && typeof property.price === "number"
-        ? property.price
-        : null;
+          ? property.price
+          : null;
     const dailyPrice =
       typeof property.dailyPrice === "number"
         ? property.dailyPrice
         : stayType === "short" && typeof property.price === "number"
-        ? property.price
-        : null;
+          ? property.price
+          : null;
 
     if (stayType === "short") {
       const value = dailyPrice ?? monthlyPrice ?? property.price ?? 0;
@@ -309,11 +310,32 @@ export default function PropertyListing() {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
 
-      <PropertyCompareBar
-        compareCount={compareIds.length}
-        onClear={clearCompareSelection}
-        onCompareNow={goToComparePage}
-      />
+      {compareIds.length > 0 && (
+        <section className="sticky top-16 z-30 border-y border-emerald-200 bg-emerald-50/95 backdrop-blur-sm">
+          <div className="w-full px-4 md:px-8 xl:px-12 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="text-sm font-semibold text-emerald-800">
+              {compareIds.length} / 3 selected for comparison
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={clearCompareSelection}
+                className="px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-800 text-sm font-semibold hover:bg-emerald-100"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={goToComparePage}
+                disabled={compareIds.length < 2}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Compare Now
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       <PropertyFilterBar
         filters={filters}
