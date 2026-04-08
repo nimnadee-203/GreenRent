@@ -109,9 +109,12 @@ export default function AdminListings() {
     return { total: listings.length, visible, hidden };
   }, [listings]);
 
+  const surfaceCardClass = "rounded-3xl border border-white/60 bg-white/75 backdrop-blur-md shadow-[0_16px_45px_-24px_rgba(15,23,42,0.45)]";
+  const secondaryButtonClass = "inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200/80 bg-white/80 text-slate-700 font-semibold hover:bg-white hover:border-emerald-300 hover:text-emerald-700 transition-all duration-300";
+
   if (backendUser?.role !== "admin") {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#d1fae5_0%,_#f8fafc_48%,_#f1f5f9_100%)]">
         <Navbar />
         <main className="w-full max-w-5xl mx-auto px-4 md:px-8 py-10">
           <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800">
@@ -127,13 +130,13 @@ export default function AdminListings() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#d1fae5_0%,_#f8fafc_48%,_#f1f5f9_100%)]">
       <Navbar />
 
       <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-        <section className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-white/80 backdrop-blur-sm shadow-sm mb-8">
-          <div className="absolute -top-20 -right-12 w-64 h-64 rounded-full bg-emerald-200/50 blur-3xl" />
-          <div className="absolute -bottom-24 -left-8 w-52 h-52 rounded-full bg-teal-200/40 blur-3xl" />
+        <section className="relative overflow-hidden rounded-3xl border border-emerald-100/70 bg-gradient-to-br from-white/85 via-emerald-50/65 to-cyan-50/60 backdrop-blur-sm shadow-[0_24px_60px_-28px_rgba(16,185,129,0.4)] mb-8">
+          <div className="absolute -top-20 -right-12 w-64 h-64 rounded-full bg-emerald-300/45 blur-3xl" />
+          <div className="absolute -bottom-24 -left-8 w-52 h-52 rounded-full bg-cyan-300/35 blur-3xl" />
           <div className="relative p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
               <p className="text-sm uppercase tracking-wider text-emerald-700 font-semibold mb-1">Admin Space</p>
@@ -143,7 +146,7 @@ export default function AdminListings() {
               <p className="text-slate-600 mt-2">Complete property database, including records hidden from public listing pages.</p>
             </div>
             <div className="flex gap-3 flex-wrap">
-              <Link to="/my-listings" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
+              <Link to="/my-listings" className={secondaryButtonClass}>
                 <ArrowLeft className="w-4 h-4" /> Back to Overview & Listings
               </Link>
             </div>
@@ -156,7 +159,7 @@ export default function AdminListings() {
           <StatCard label="Hidden by Eco Rules" value={counts.hidden} />
         </div>
 
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 mb-6">
+        <div className="rounded-3xl border border-amber-200/70 bg-gradient-to-br from-amber-50/90 to-orange-50/70 p-5 mb-6 shadow-[0_12px_40px_-24px_rgba(245,158,11,0.45)]">
           <div className="flex items-center justify-between gap-3 mb-4">
             <h2 className="text-lg font-bold text-amber-900 flex items-center gap-2">
               <Bell className="w-5 h-5" /> Review Notifications
@@ -177,7 +180,7 @@ export default function AdminListings() {
           <div className="mt-4">
             <Link
               to="/admin/reviews"
-              className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-white px-3.5 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100"
+              className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-white/90 px-3.5 py-2 text-sm font-semibold text-amber-800 hover:bg-white transition-all duration-300"
             >
               Open Review Management
             </Link>
@@ -185,18 +188,18 @@ export default function AdminListings() {
         </div>
 
         {loading && (
-          <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-500">Loading listings...</div>
+          <div className={`${surfaceCardClass} p-6 text-slate-500`}>Loading listings...</div>
         )}
 
         {!loading && error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-700">{error}</div>
+          <div className="rounded-2xl border border-red-200 bg-red-50/90 p-6 text-red-700 shadow-sm">{error}</div>
         )}
 
         {!loading && !error && (
-          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+          <div className={`${surfaceCardClass} overflow-hidden`}>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[980px] text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-slate-100/80 border-b border-slate-200">
                   <tr className="text-left text-slate-600">
                     <th className="px-4 py-3 font-semibold">Title</th>
                     <th className="px-4 py-3 font-semibold">Location</th>
@@ -231,7 +234,7 @@ export default function AdminListings() {
                             value={property.visibilityStatus || "auto"}
                             onChange={(e) => updateVisibilityStatus(property._id, e.target.value)}
                             disabled={savingVisibilityIds.includes(property._id)}
-                            className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-60"
+                            className="rounded-lg border border-slate-300 bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-60"
                           >
                             <option value="auto">auto</option>
                             <option value="visible">visible</option>
@@ -258,7 +261,7 @@ export default function AdminListings() {
                         <td className="px-4 py-3">
                           <Link
                             to={`/properties/${property._id}`}
-                            className="inline-flex rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                            className="inline-flex rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:from-emerald-500 hover:to-teal-500 transition-all duration-300"
                           >
                             Open
                           </Link>
@@ -278,9 +281,9 @@ export default function AdminListings() {
 
 function StatCard({ label, value }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="text-2xl font-bold text-slate-900 mt-1">{value}</p>
+    <div className="rounded-2xl border border-white/60 bg-white/75 backdrop-blur-md p-4 shadow-[0_10px_30px_-22px_rgba(15,23,42,0.5)]">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
+      <p className="text-2xl font-black text-slate-900 mt-1">{value}</p>
     </div>
   );
 }

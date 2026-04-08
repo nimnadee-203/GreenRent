@@ -388,16 +388,17 @@ export default function MyListings() {
     });
   }, [listings, listView]);
 
-  const menuButtonClass = "inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/80 backdrop-blur-md text-slate-700 font-semibold shadow-sm border border-slate-200/60 hover:shadow-md hover:border-emerald-300 hover:text-emerald-700 transition-all duration-300 hover:-translate-y-0.5";
+  const menuButtonClass = "inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/85 backdrop-blur-md text-slate-700 font-semibold shadow-sm border border-slate-200/70 hover:shadow-md hover:border-emerald-300 hover:text-emerald-700 transition-all duration-300 hover:-translate-y-0.5";
   const messageButtonClass = "inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold shadow-md border border-transparent hover:shadow-lg hover:from-indigo-500 hover:to-violet-500 transition-all duration-300 hover:-translate-y-0.5";
+  const statCardClass = "rounded-2xl border border-white/60 bg-white/75 backdrop-blur-md p-5 shadow-[0_16px_45px_-24px_rgba(15,23,42,0.45)]";
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#d1fae5_0%,_#f8fafc_45%,_#f8fafc_100%)] flex flex-col font-sans">
       <Navbar />
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 w-full">
-        <section className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-white/80 backdrop-blur-sm shadow-sm mb-8">
-          <div className="absolute -top-20 -right-12 w-64 h-64 rounded-full bg-emerald-200/50 blur-3xl" />
-          <div className="absolute -bottom-24 -left-8 w-52 h-52 rounded-full bg-teal-200/40 blur-3xl" />
+        <section className="relative overflow-hidden rounded-3xl border border-emerald-100/70 bg-gradient-to-br from-white/85 via-emerald-50/65 to-cyan-50/60 backdrop-blur-sm shadow-[0_24px_60px_-28px_rgba(16,185,129,0.4)] mb-8">
+          <div className="absolute -top-20 -right-12 w-64 h-64 rounded-full bg-emerald-300/45 blur-3xl" />
+          <div className="absolute -bottom-24 -left-8 w-52 h-52 rounded-full bg-cyan-300/35 blur-3xl" />
           <div className="relative p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
               <p className="text-sm uppercase tracking-wider text-emerald-700 font-semibold mb-1">Landlord Space</p>
@@ -441,7 +442,7 @@ export default function MyListings() {
         </section>
 
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+          <div className={statCardClass}>
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-500">Total Listings</p>
               <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
@@ -450,7 +451,7 @@ export default function MyListings() {
             </div>
             <p className="text-3xl font-black text-slate-900 mt-3">{listingCounts.all}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+          <div className={statCardClass}>
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-500">Visible to Public</p>
               <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
@@ -459,7 +460,7 @@ export default function MyListings() {
             </div>
             <p className="text-3xl font-black text-slate-900 mt-3">{listingCounts.visible}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+          <div className={statCardClass}>
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-500">Hidden / Action Required</p>
               <div className="w-9 h-9 rounded-xl bg-red-100 text-red-700 flex items-center justify-center">
@@ -513,21 +514,21 @@ export default function MyListings() {
               <button
                 type="button"
                 onClick={() => setListView('all')}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold border transition ${listView === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all duration-300 ${listView === 'all' ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-white/85 text-slate-700 border-slate-200 hover:bg-white'}`}
               >
                 All ({listingCounts.all})
               </button>
               <button
                 type="button"
                 onClick={() => setListView('visible')}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold border transition ${listView === 'visible' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all duration-300 ${listView === 'visible' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md' : 'bg-white/85 text-slate-700 border-slate-200 hover:bg-white'}`}
               >
                 Visible ({listingCounts.visible})
               </button>
               <button
                 type="button"
                 onClick={() => setListView('hidden')}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold border transition ${listView === 'hidden' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all duration-300 ${listView === 'hidden' ? 'bg-red-600 text-white border-red-600 shadow-md' : 'bg-white/85 text-slate-700 border-slate-200 hover:bg-white'}`}
               >
                 Hidden ({listingCounts.hidden})
               </button>
