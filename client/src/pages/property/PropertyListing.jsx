@@ -1,19 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 // Forced HMR update 
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import {
-  Bath,
-  Bed,
-  Heart,
-  Leaf,
-  MapPin,
-  RefreshCw,
-  Maximize2,
-} from "lucide-react";
 import Navbar from "../../components/Home/Navbar";
 import Footer from "../../components/Home/Footer";
-import PropertyFilterBar from "../../components/PropertyListing/PropertyFilterBar";
+import PropertyCompareBar from "../../components/Property/PropertyCompareBar";
+import PropertyListingGrid from "../../components/Property/PropertyListingGrid";
+import PropertyFilterBar from "../../components/Property/PropertyFilterBar";
 import { useAuth } from "../../context/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
@@ -31,9 +24,6 @@ const DEFAULT_FILTERS = {
 const TYPE_OPTIONS = ["apartment", "house", "studio", "townhouse", "other"];
 
 const AVAILABILITY_OPTIONS = ["available", "rented", "archived"];
-
-const FALLBACK_IMAGE =
-  "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1200&q=80";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -319,32 +309,11 @@ export default function PropertyListing() {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
 
-      {compareIds.length > 0 && (
-        <section className="sticky top-16 z-30 border-y border-emerald-200 bg-emerald-50/95 backdrop-blur-sm">
-          <div className="w-full px-4 md:px-8 xl:px-12 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <p className="text-sm font-semibold text-emerald-800">
-              {compareIds.length} / 3 selected for comparison
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={clearCompareSelection}
-                className="px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-800 text-sm font-semibold hover:bg-emerald-100"
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                onClick={goToComparePage}
-                disabled={compareIds.length < 2}
-                className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                Compare Now
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
+      <PropertyCompareBar
+        compareCount={compareIds.length}
+        onClear={clearCompareSelection}
+        onCompareNow={goToComparePage}
+      />
 
       <PropertyFilterBar
         filters={filters}
@@ -371,193 +340,26 @@ export default function PropertyListing() {
           </select>
         </div>
 
-        {isLoading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
-              <div key={index} className="animate-pulse rounded-xl border border-slate-200 bg-white overflow-hidden">
-                <div className="aspect-[16/10] bg-slate-200" />
-                <div className="p-4 space-y-2.5">
-                  <div className="h-6 w-3/4 rounded bg-slate-200" />
-                  <div className="h-4 w-1/2 rounded bg-slate-100" />
-                  <div className="h-4 w-2/3 rounded bg-slate-100" />
-                  <div className="h-8 w-1/3 rounded bg-slate-200 mt-4" />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!isLoading && error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-red-700">
-            <p className="font-semibold">Could not fetch apartments.</p>
-            <p className="mt-1 text-sm">{error}</p>
-            <button
-              onClick={fetchProperties}
-              type="button"
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
-            >
-              <RefreshCw size={16} /> Retry
-            </button>
-          </div>
-        )}
-
-        {!isLoading && !error && filteredProperties.length === 0 && (
-          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
-            <p className="text-lg font-semibold text-slate-800">No apartments matched your filters.</p>
-            <p className="mt-2 text-sm text-slate-500">Try broadening your search or clear all filters.</p>
-            <button
-              onClick={resetFilters}
-              type="button"
-              className="mt-4 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-            >
-              Reset Filters
-            </button>
-          </div>
-        )}
-
-        {!isLoading && !error && filteredProperties.length > 0 && (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-              {pagedProperties.map((property) => {
-                const primaryImage = property.images?.[0] || FALLBACK_IMAGE;
-                const location = toLocationLabel(property);
-                const ecoScore = toEcoScore(property);                  const airQuality = toAirQuality(property);                const bedrooms = property.bedrooms ?? property.beds ?? 1;
-                const bathrooms = property.bathrooms ?? property.baths ?? 1;
-                const { value: displayPrice, unit: priceUnit } = getPrimaryPriceInfo(property);
-                const selectedForCompare = compareIds.includes(property._id);
-
-                return (
-                  <Link
-                    to={`/properties/${property._id}`}
-                    key={property._id}
-                    className="block group h-full rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md hover:border-emerald-200"
-                  >
-                    <article className="h-full flex flex-col">
-                      <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
-                        <img
-                          src={primaryImage}
-                          alt={property.title}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          loading="lazy"
-                        />
-
-                        <button
-                          type="button"
-                          onClick={(e) => toggleCompareSelection(e, property._id)}
-                          className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-semibold border z-10 transition-colors ${
-                            selectedForCompare
-                              ? "bg-emerald-600 text-white border-emerald-600"
-                              : "bg-white/90 text-slate-700 border-slate-200 hover:bg-white"
-                          }`}
-                        >
-                          {selectedForCompare ? "Selected" : "Compare"}
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={wishlistingIds.includes(property._id)}
-                          className="absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-sm text-slate-400 hover:text-red-500 hover:bg-white transition-colors z-10 disabled:opacity-60 disabled:cursor-not-allowed"
-                          onClick={(e) => handleAddToWishlist(e, property._id)}
-                        >
-                        <Heart className="w-5 h-5" />
-                      </button>
-
-                        <div className="absolute bottom-3 left-3 flex items-center gap-2 flex-wrap">
-                          <div className={`inline-flex items-center border rounded-full px-2.5 py-1 text-sm ${ecoBadgeClass(ecoScore)}`}>
-                            <Leaf className="w-4 h-4 mr-1.5" />
-                            <span className="font-bold">{ecoScore}</span>
-                          </div>
-                          {airQuality !== null && (
-                            <div className="inline-flex items-center border rounded-full px-2.5 py-1 text-sm bg-sky-50 text-sky-700 border-sky-200" title="Air Quality Score">
-                              <span className="font-bold mr-1">{airQuality}</span>
-                              <span className="text-[10px] uppercase font-semibold">/ 10 AQ</span>
-                            </div>
-                          )}
-                      </div>
-                    </div>
-
-                    <div className="p-4">
-                      <h3 className="font-semibold text-lg leading-tight text-slate-900 line-clamp-1">{property.title}</h3>
-
-                      <div className="flex items-center text-slate-500 text-sm mt-1">
-                        <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-                        <span className="truncate">{location}</span>
-                      </div>
-
-                      <div className="flex items-center gap-3 mt-3 text-xs text-slate-600 flex-wrap">
-                        <div className="flex items-center">
-                          <Bed className="w-4 h-4 mr-1.5 text-slate-400" />
-                          <span>{bedrooms} Beds</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Bath className="w-4 h-4 mr-1.5 text-slate-400" />
-                          <span>{bathrooms} Baths</span>
-                        </div>
-                        {property.area && (
-                          <div className="flex items-center">
-                            <Maximize2 className="w-4 h-4 mr-1.5 text-slate-400" />
-                            <span>{Number(property.area).toLocaleString('en-LK')} sq.ft</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-baseline">
-                        <span className="text-xl font-bold text-slate-900">Rs {Number(displayPrice || 0).toLocaleString('en-LK')}</span>
-                        <span className="text-slate-500 text-xs ml-1">{priceUnit}</span>
-                      </div>
-                    </div>
-                  </article>
-                </Link>
-                );
-              })}
-            </div>
-
-            {totalPages > 1 && (
-              <div className="mt-12 flex justify-center">
-                <nav className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                    className="h-10 px-4 rounded-lg border border-slate-200 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-                  >
-                    Previous
-                  </button>
-
-                  {Array.from({ length: totalPages }).slice(0, 3).map((_, idx) => {
-                    const pageNumber = idx + 1;
-                    const isActive = pageNumber === currentPage;
-                    return (
-                      <button
-                        key={pageNumber}
-                        type="button"
-                        onClick={() => setCurrentPage(pageNumber)}
-                        className={`h-10 w-10 rounded-lg text-sm font-medium ${
-                          isActive
-                            ? "bg-emerald-600 text-white"
-                            : "text-slate-600 hover:bg-slate-100"
-                        }`}
-                      >
-                        {pageNumber}
-                      </button>
-                    );
-                  })}
-
-                  {totalPages > 3 && <span className="text-slate-400 px-2">...</span>}
-
-                  <button
-                    type="button"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                    className="h-10 px-4 rounded-lg border border-slate-200 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-                  >
-                    Next
-                  </button>
-                </nav>
-              </div>
-            )}
-          </>
-        )}
+        <PropertyListingGrid
+          isLoading={isLoading}
+          error={error}
+          filteredProperties={filteredProperties}
+          pagedProperties={pagedProperties}
+          totalPages={totalPages}
+          currentPage={currentPage}
+          onRetry={fetchProperties}
+          onResetFilters={resetFilters}
+          onPageChange={setCurrentPage}
+          ecoBadgeClass={ecoBadgeClass}
+          onToggleCompareSelection={toggleCompareSelection}
+          onAddToWishlist={handleAddToWishlist}
+          compareIds={compareIds}
+          wishlistingIds={wishlistingIds}
+          toLocationLabel={toLocationLabel}
+          toEcoScore={toEcoScore}
+          toAirQuality={toAirQuality}
+          getPrimaryPriceInfo={getPrimaryPriceInfo}
+        />
       </main>
 
       <Footer />

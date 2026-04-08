@@ -29,6 +29,12 @@ import {
 } from "lucide-react";
 import Navbar from "../../components/Home/Navbar";
 import Footer from "../../components/Home/Footer";
+import NearbyPlaces from "../../components/Property/NearbyPlaces";
+import PropertyDetailsHeader from "../../components/Property/PropertyDetailsHeader";
+import PropertyReviewsSection from "../../components/Property/PropertyReviewsSection";
+import PropertyReviewModal from "../../components/Property/PropertyReviewModal";
+import BookingSidebar from "../../components/booking/BookingSidebar";
+import BookingFlowModals from "../../components/booking/BookingFlowModals";
 import { useAuth } from "../../context/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
@@ -906,6 +912,94 @@ const PropertyDetails = () => {
     sectionRef?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const detailsViewModel = {
+    property,
+    images,
+    primaryImage,
+    currentImageIndex,
+    autoplayEnabled,
+    setAutoplayEnabled,
+    setIsLightboxOpen,
+    handlePrevImage,
+    handleNextImage,
+    propertyStayType,
+    toLocationLabel,
+    handleCheckAvailabilityClick,
+    scrollToSection,
+    mapSectionRef,
+    reviewsSectionRef,
+    handleWishlistToggle,
+    wishlistLoading,
+    isWishlisted,
+    handleShareListing,
+    shareFeedback,
+    summaryPrefersShortStay,
+    hasMonthlyPrice,
+    hasDailyPrice,
+    formatCurrency,
+    summaryRate,
+    summaryGuestCount,
+    setSummaryGuests,
+    includedGuests,
+    summaryExtraGuestFee,
+    summaryExtraGuests,
+    summaryAdditionalFee,
+    today,
+    monthNames,
+    currentYear,
+    currentMonthIndex,
+    yearOptions,
+    stayType,
+    checkInDate,
+    checkOutDate,
+    fromMonth,
+    fromYear,
+    toMonth,
+    toYear,
+    setCheckInDate,
+    setCheckOutDate,
+    setFromMonth,
+    setFromYear,
+    setToMonth,
+    setToYear,
+    setStayType,
+    setShowStayTypeModal,
+    setShowDatePickerModal,
+    setShowAvailabilityModal,
+    setShowAuthChoiceModal,
+    isAtLeastThreeMonths,
+    isLongStayStartFromCurrentOrFuture,
+    isLongStayRangeChronological,
+    getLongStayMonthCount,
+    availableStayTypes,
+    handleSelectStayType,
+    handleContinueToAvailability,
+    handleBookNow,
+    handleChooseAuthAction,
+    closeDatePickerModal,
+    availabilityLoading,
+    availabilityResult,
+    availabilityError,
+    showStayTypeModal,
+    showDatePickerModal,
+    showAvailabilityModal,
+    showAuthChoiceModal,
+    displayReviews,
+    averageScoreOutOfFive,
+    reviewsData,
+    ratingBuckets,
+    canReviewApartment,
+    setShowReviewModal,
+    backendUser,
+    reviewActionLoadingById,
+    moderateReview,
+    replyDrafts,
+    setReplyDrafts,
+    submitReply,
+    replySubmittingByReview,
+    replyError,
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
@@ -915,144 +1009,7 @@ const PropertyDetails = () => {
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to apartments
         </Link>
         
-        {/* Hero Section */}
-        <section className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch">
-          <div
-            className="xl:col-span-9 w-full h-[400px] md:h-[500px] rounded-2xl overflow-hidden shadow-lg relative group cursor-pointer"
-            onClick={() => setIsLightboxOpen(true)}
-          >
-            <img src={primaryImage} alt={property.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent pointer-events-none"></div>
-
-            {images.length > 1 && (
-              <>
-                <button
-                  onClick={handlePrevImage}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/30 hover:bg-white/50 backdrop-blur-md text-white p-2 rounded-full transition opacity-0 group-hover:opacity-100 z-10"
-                >
-                  <ChevronLeft className="w-6 h-6" />
-                </button>
-                <button
-                  onClick={handleNextImage}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/30 hover:bg-white/50 backdrop-blur-md text-white p-2 rounded-full transition opacity-0 group-hover:opacity-100 z-10"
-                >
-                  <ChevronRight className="w-6 h-6" />
-                </button>
-
-                <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-semibold tracking-wider z-10 pointer-events-none">
-                  {currentImageIndex + 1} / {images.length}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setAutoplayEnabled((prev) => !prev);
-                  }}
-                  className="absolute top-4 left-4 bg-black/50 hover:bg-black/65 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-semibold tracking-wider z-10"
-                  aria-pressed={autoplayEnabled}
-                  aria-label={autoplayEnabled ? "Turn autoplay off" : "Turn autoplay on"}
-                >
-                  Auto-play: {autoplayEnabled ? "On" : "Off"}
-                </button>
-              </>
-            )}
-
-            <div className="absolute bottom-6 left-6 right-6">
-              <div className="text-white max-w-3xl">
-                <span className="inline-block px-3 py-1 bg-emerald-500/90 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider mb-3">
-                  {property.propertyType || "Apartment"}
-                </span>
-                <h1 className="text-3xl md:text-5xl font-bold mb-2 text-white shadow-sm">{property.title}</h1>
-                <div className="flex items-center text-slate-200">
-                  <MapPin className="w-4 h-4 mr-1.5" />
-                  <span className="text-sm md:text-base">{toLocationLabel(property.location)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="xl:col-span-3">
-            <aside className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm flex flex-col gap-3">
-              <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 text-slate-900 text-center">
-                {propertyStayType === "both" ? (
-                  <>
-                    <p className="text-[10px] font-semibold text-slate-500 uppercase">Long Stay (Monthly)</p>
-                    <p className="text-xl md:text-2xl font-bold text-emerald-600 mb-2">
-                      Rs {Number(hasMonthlyPrice ? property.monthlyPrice : property.price).toLocaleString("en-LK")}
-                    </p>
-                    <p className="text-[10px] font-semibold text-slate-500 uppercase">Short Stay (Daily)</p>
-                    <p className="text-lg md:text-xl font-bold text-emerald-700">
-                      Rs {Number(hasDailyPrice ? property.dailyPrice : property.price).toLocaleString("en-LK")}
-                    </p>
-                  </>
-                ) : propertyStayType === "short" ? (
-                  <>
-                    <p className="text-xs font-semibold text-slate-500 uppercase">Daily Rent</p>
-                    <p className="text-2xl md:text-3xl font-bold text-emerald-600">
-                      Rs {Number(hasDailyPrice ? property.dailyPrice : property.price).toLocaleString("en-LK")}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-xs font-semibold text-slate-500 uppercase">Monthly Rent</p>
-                    <p className="text-2xl md:text-3xl font-bold text-emerald-600">
-                      Rs {Number(hasMonthlyPrice ? property.monthlyPrice : property.price).toLocaleString("en-LK")}
-                    </p>
-                  </>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-3 mt-1">
-              <button
-                onClick={handleCheckAvailabilityClick}
-                className="rounded-xl px-4 py-3 border border-emerald-200 bg-emerald-50 text-emerald-800 font-semibold hover:bg-emerald-100 transition-all flex items-center justify-center gap-2 min-w-[170px]"
-              >
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                Check Availability
-              </button>
-              <button
-                onClick={() => scrollToSection(mapSectionRef)}
-                className="rounded-xl px-4 py-3 border border-slate-200 bg-white text-slate-900 font-semibold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 min-w-[170px]"
-              >
-                <MapPin className="w-5 h-5 text-emerald-600" />
-                View on Map
-              </button>
-              <button
-                onClick={() => scrollToSection(reviewsSectionRef)}
-                className="rounded-xl px-4 py-3 border border-slate-200 bg-white text-slate-900 font-semibold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 min-w-[170px]"
-              >
-                <MessageCircle className="w-5 h-5 text-emerald-600" />
-                View Reviews
-              </button>
-              <button
-                onClick={handleWishlistToggle}
-                disabled={wishlistLoading}
-                className={`rounded-xl px-4 py-3 border font-semibold transition-all flex items-center justify-center gap-2 min-w-[170px] ${
-                  isWishlisted
-                    ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
-                    : "bg-white text-slate-900 border-slate-200 hover:bg-slate-50"
-                } ${wishlistLoading ? "opacity-70 cursor-not-allowed" : ""}`}
-              >
-                <Heart className={`w-5 h-5 ${isWishlisted ? "fill-rose-500 text-rose-500" : "text-rose-500"}`} />
-                {wishlistLoading ? "Saving..." : isWishlisted ? "Wishlisted" : "Add to Wishlist"}
-              </button>
-              <button
-                onClick={handleShareListing}
-                className="rounded-xl px-4 py-3 border border-slate-200 bg-white text-slate-900 font-semibold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 min-w-[140px]"
-              >
-                <Share2 className="w-5 h-5 text-slate-700" />
-                Share
-              </button>
-              </div>
-              {shareFeedback && (
-                <p className="mt-3 text-xs text-center font-medium text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 border border-emerald-100">
-                  {shareFeedback}
-                </p>
-              )}
-            </aside>
-          </div>
-        </section>
+        <PropertyDetailsHeader vm={detailsViewModel} />
 
         <div className="mt-0 grid grid-cols-1 lg:grid-cols-4 gap-8">
           
@@ -1135,57 +1092,7 @@ const PropertyDetails = () => {
               )}
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-5 gap-3">
-                <h2 className="text-xl font-bold text-slate-900">Nearby Places</h2>
-                <span className={`text-[11px] font-semibold px-2 py-1 rounded-full border ${
-                  nearbySource === "live"
-                    ? "text-emerald-700 bg-emerald-50 border-emerald-100"
-                    : "text-amber-700 bg-amber-50 border-amber-100"
-                }`}>
-                  {nearbySource === "live" ? "Live API" : "Live API unavailable"}
-                </span>
-              </div>
-              <p className="text-sm text-slate-500 mb-5">
-                Nearby essentials to help with daily commute, groceries, health, and schooling.
-              </p>
-
-              {nearbyLoading && (
-                <p className="text-sm text-slate-500 mb-4">Fetching nearby places...</p>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {nearbyPlaceSections.map((section) => {
-                  const places = nearbyPlacesByCategory[section.key] || [];
-
-                  return (
-                    <div key={section.key} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                      <h3 className="text-sm font-bold text-slate-800 mb-3">{section.title}</h3>
-
-                      {places.length === 0 ? (
-                        <p className="text-xs text-slate-500">No nearby data yet.</p>
-                      ) : (
-                        <div className="space-y-2.5">
-                          {places.slice(0, 3).map((place) => (
-                            <div key={place.name} className="rounded-lg bg-white border border-slate-200 px-3 py-2">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-slate-800 truncate">{place.name}</p>
-                                  <p className="text-xs text-slate-500 mt-0.5">{place.note}</p>
-                                </div>
-                                <span className="text-xs font-semibold text-emerald-700 whitespace-nowrap">
-                                  {place.distanceKm.toFixed(1)} km
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <NearbyPlaces nearbyPlaces={nearbyPlacesByCategory} nearbyLoading={nearbyLoading} />
 
             {/* Eco Features directly on property model */}
             {property.ecoFeatures && (
@@ -1210,74 +1117,7 @@ const PropertyDetails = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="p-4 md:p-5">
-                <h3 className="text-xl font-bold text-slate-900">Your price summary</h3>
-                <div className="mt-5 flex items-center justify-between gap-4 text-sm text-slate-700">
-                  <span>{summaryPrefersShortStay ? "Rate per night" : "Rate per month"}</span>
-                  <span className="text-base font-semibold text-slate-900">{formatCurrency(summaryRate)}</span>
-                </div>
-
-                <div className="mt-5 rounded-xl border border-slate-200 p-4">
-                  <p className="text-sm font-semibold text-slate-800">
-                    {summaryPrefersShortStay ? "Number of guests (short stay)" : "Occupancy"}
-                  </p>
-                  <div className="mt-3 flex items-start gap-3">
-                    {summaryPrefersShortStay ? (
-                      <input
-                        type="number"
-                        min="1"
-                        max="15"
-                        value={summaryGuestCount}
-                        onChange={(e) => {
-                          const nextValue = Number(e.target.value);
-                          if (!Number.isFinite(nextValue)) {
-                            setSummaryGuests(1);
-                            return;
-                          }
-                          setSummaryGuests(Math.max(1, Math.min(15, nextValue)));
-                        }}
-                        className="w-20 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-center text-base font-semibold text-slate-900 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100"
-                        aria-label="Number of guests for price summary"
-                      />
-                    ) : (
-                      <div className="min-w-[56px] rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-center text-base font-semibold text-slate-900">
-                        {summaryGuestCount}
-                      </div>
-                    )}
-                    <p className="text-sm leading-5 text-slate-500">
-                      {summaryPrefersShortStay
-                        ? `First ${includedGuests} guest${includedGuests > 1 ? "s" : ""} included; each extra guest + Rs ${summaryExtraGuestFee.toLocaleString("en-LK")}/night.`
-                        : "Monthly rentals are priced per month for the full property."}
-                    </p>
-                  </div>
-                  {summaryPrefersShortStay && (
-                    <p className="mt-3 text-sm text-slate-600">
-                      Extra guests: {summaryExtraGuests} (additional fee: {formatCurrency(summaryAdditionalFee)})
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="border-t border-emerald-100 bg-emerald-50/60 px-4 py-4 md:px-5">
-                <div className="flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-                      {summaryPrefersShortStay ? "Price" : "Monthly Price"}
-                    </p>
-                    <p className="mt-1 text-3xl font-bold text-slate-900">
-                      {formatCurrency(summaryRate + summaryAdditionalFee)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-slate-500">Includes taxes and charges</p>
-                    <p className="mt-1 text-base font-semibold text-slate-700">
-                      In property currency: LKR {Number(summaryRate + summaryAdditionalFee).toLocaleString("en-LK")}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <BookingSidebar viewModel={detailsViewModel} />
 
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
               <div className="flex items-center justify-between gap-3 mb-4">
@@ -1460,149 +1300,7 @@ const PropertyDetails = () => {
           </div>
         </div>
 
-        {/* Reviews List Section */}
-        <div ref={reviewsSectionRef} className="mt-8 bg-white rounded-2xl border border-slate-200 p-6 lg:p-10 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Renter Reviews & Confirmations</h2>
-              <p className="text-slate-500 text-sm mt-1">Actual feedback from previous and current tenants</p>
-            </div>
-          </div>
-
-          {displayReviews.length === 0 ? (
-            <div className="text-center py-12 px-4 border-2 border-dashed border-slate-100 rounded-xl">
-              <div className="mx-auto w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
-                <Star className="w-8 h-8 text-slate-300" />
-              </div>
-              <h3 className="text-lg font-medium text-slate-900">No reviews yet</h3>
-              <p className="text-slate-500 mt-1 max-w-sm mx-auto">This property hasn't received any renter reviews or eco-rating confirmations yet.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">      
-              {displayReviews.map((review) => (
-                <div key={review._id} className="p-5 border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-white transition-colors duration-200 shadow-sm hover:shadow-md h-full flex flex-col">
-                  {backendUser?.role === "admin" && (
-                    <div className="mb-3 flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => moderateReview(review._id, review.status === "approved" ? "hide" : "unhide")}
-                        disabled={Boolean(reviewActionLoadingById[review._id])}
-                        className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
-                      >
-                        {review.status === "approved" ? "Hide" : "Unhide"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moderateReview(review._id, "delete")}
-                        disabled={Boolean(reviewActionLoadingById[review._id])}
-                        className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
-                        {review.renterName?.charAt(0).toUpperCase() || "A"}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-900 text-sm">{review.renterName || "Anonymous"}</p>
-                        <p className="text-xs text-slate-500 flex items-center mt-0.5">
-                          <CalendarDays className="w-3 h-3 mr-1" /> {review.livingDuration}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-sm flex items-center gap-1.5">
-                      <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                      <span className="font-bold text-slate-800 text-xs">{review.totalScore}/10</span>
-                    </div>
-                  </div>
-
-                  <p className="text-sm text-slate-600 italic mb-4 flex-grow">"{review.review || 'No written comment provided.'}"</p>
-
-                  <div className="grid grid-cols-2 gap-2 mb-4">
-                    {Object.entries(review.criteria || {}).map(([key, value]) => (
-                      <div key={key} className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5">
-                        <p className="text-[10px] uppercase tracking-wide text-slate-500">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
-                        <p className="text-xs font-semibold text-slate-800">{value}/10</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-slate-600 mb-3">
-                    <span className={`font-semibold ${review.wouldRecommend ? 'text-emerald-700' : 'text-red-700'}`}>
-                      {review.wouldRecommend ? 'Recommended by renter' : 'Not recommended by renter'}
-                    </span>
-                    <span className="capitalize">{review.status === 'rejected' ? 'hidden' : (review.status || 'approved')}</span>
-                  </div>
-
-                  {review.verification && Object.keys(review.verification).length > 0 && (
-                    <div className="mt-auto pt-4 border-t border-slate-100">
-                      <p className="text-xs font-semibold text-slate-900 mb-2.5 uppercase tracking-wider">Tenant Verified Features:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(review.verification).map(([key, val]) => {
-                          if (val === null) return null;
-                          return (
-                            <span key={key} className={`inline-flex items-center px-2 py-1 rounded text-[10px] sm:text-xs font-medium border ${val ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
-                              {val ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <XCircle className="w-3 h-3 mr-1" />}
-                              {key.replace(/([A-Z])/g, ' $1').trim()}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mt-4 pt-4 border-t border-slate-100">
-                    <p className="text-xs font-semibold text-slate-900 mb-2 uppercase tracking-wider flex items-center gap-1">
-                      <MessageCircle className="w-3.5 h-3.5" /> Replies
-                    </p>
-
-                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                      {(review.replies || []).length === 0 ? (
-                        <p className="text-xs text-slate-500">No replies yet.</p>
-                      ) : (
-                        (review.replies || []).map((reply) => (
-                          <div key={reply._id} className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
-                            <p className="text-[11px] font-semibold text-slate-800">{reply.userName || "Anonymous"}</p>
-                            <p className="text-[11px] text-slate-600 mt-0.5">{reply.text}</p>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    <div className="mt-2.5 flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={replyDrafts[review._id] || ""}
-                        onChange={(event) => setReplyDrafts((prev) => ({ ...prev, [review._id]: event.target.value }))}
-                        placeholder="Write a reply..."
-                        className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs"
-                        maxLength={500}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => submitReply(review._id)}
-                        disabled={Boolean(replySubmittingByReview[review._id]) || !(replyDrafts[review._id] || '').trim()}
-                        className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-                      >
-                        <SendHorizontal className="w-3.5 h-3.5" /> Send
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {replyError && (
-            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {replyError}
-            </div>
-          )}
-        </div>
+        <PropertyReviewsSection vm={detailsViewModel} />
       </main>
 
       <Footer />
@@ -1653,10 +1351,10 @@ const PropertyDetails = () => {
 
       {/* Review Modal */}
       {showReviewModal && canReviewApartment && (
-        <ReviewModal 
-          propertyId={id} 
+        <PropertyReviewModal
+          propertyId={id}
           ecoRatingId={ecoRating?._id}
-          onClose={() => setShowReviewModal(false)} 
+          onClose={() => setShowReviewModal(false)}
           onSuccess={() => {
             setShowReviewModal(false);
             window.location.reload();
@@ -1664,331 +1362,7 @@ const PropertyDetails = () => {
         />
       )}
 
-      {/* Stay Type Selection Modal */}
-      {showStayTypeModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-slate-900">Select Your Stay Type</h2>
-              <button
-                onClick={() => setShowStayTypeModal(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-8 space-y-4">
-              <p className="text-slate-600 text-sm mb-6">How long are you planning to stay?</p>
-              
-              {availableStayTypes.includes("short") && (
-                <button
-                  onClick={() => handleSelectStayType("short")}
-                  className="w-full p-6 border-2 border-slate-200 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50 transition-all text-left group"
-                >
-                  <p className="text-lg font-bold text-slate-900 group-hover:text-emerald-700">Short Stay</p>
-                  <p className="text-sm text-slate-600 mt-2">Less than 3 months</p>
-                </button>
-              )}
-
-              {availableStayTypes.includes("long") && (
-                <button
-                  onClick={() => handleSelectStayType("long")}
-                  className="w-full p-6 border-2 border-slate-200 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50 transition-all text-left group"
-                >
-                  <p className="text-lg font-bold text-slate-900 group-hover:text-emerald-700">Long Stay</p>
-                  <p className="text-sm text-slate-600 mt-2">3 months or more</p>
-                </button>
-              )}
-
-              <button
-                onClick={() => setShowStayTypeModal(false)}
-                className="w-full bg-slate-100 text-slate-700 font-semibold py-3 rounded-xl hover:bg-slate-200 transition mt-6"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Date Picker Modal */}
-      {showDatePickerModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-slate-900">
-                {stayType === "short" ? "Select Dates" : "Select Months"}
-              </h2>
-              <button
-                onClick={closeDatePickerModal}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-8 space-y-5">
-              {/* SHORT STAY - Date Picker */}
-              {stayType === "short" && (
-                <>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Check-in Date</label>
-                    <input
-                      type="date"
-                      min={today}
-                      value={checkInDate}
-                      onChange={(e) => setCheckInDate(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Check-out Date</label>
-                    <input
-                      type="date"
-                      min={checkInDate || today}
-                      value={checkOutDate}
-                      onChange={(e) => setCheckOutDate(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  {checkInDate && checkOutDate && new Date(checkOutDate) <= new Date(checkInDate) && (
-                    <p className="text-sm text-red-600">Check-out date must be after check-in date.</p>
-                  )}
-                  {checkInDate && checkOutDate && new Date(checkOutDate) > new Date(checkInDate) && isAtLeastThreeMonths(checkInDate, checkOutDate) && (
-                    <p className="text-sm text-red-600">Short stay cannot be 3 months or more. Please choose Long Stay.</p>
-                  )}
-                </>
-              )}
-
-              {/* LONG STAY - Month Picker */}
-              {stayType === "long" && (
-                <>
-                  <div className="space-y-3">
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">From Month</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs text-slate-500 mb-1 block">Month</label>
-                        <select
-                          value={fromMonth}
-                          onChange={(e) => setFromMonth(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                        >
-                          <option value="">Select</option>
-                          {monthNames.map((month, monthIndex) => (
-                            <option
-                              key={month}
-                              value={month}
-                              disabled={fromYear === String(currentYear) && monthIndex < currentMonthIndex}
-                            >
-                              {month}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs text-slate-500 mb-1 block">Year</label>
-                        <select
-                          value={fromYear}
-                          onChange={(e) => setFromYear(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                        >
-                          <option value="">Select</option>
-                          {yearOptions.map((year) => (
-                            <option key={year} value={year}>{year}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">To Month</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs text-slate-500 mb-1 block">Month</label>
-                        <select
-                          value={toMonth}
-                          onChange={(e) => setToMonth(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                        >
-                          <option value="">Select</option>
-                          {monthNames.map((month, monthIndex) => (
-                            <option
-                              key={month}
-                              value={month}
-                              disabled={
-                                (toYear === String(currentYear) && monthIndex < currentMonthIndex) ||
-                                (fromMonth && fromYear && toYear === fromYear && monthIndex < monthNames.indexOf(fromMonth))
-                              }
-                            >
-                              {month}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs text-slate-500 mb-1 block">Year</label>
-                        <select
-                          value={toYear}
-                          onChange={(e) => setToYear(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                        >
-                          <option value="">Select</option>
-                          {yearOptions.map((year) => (
-                            <option key={year} value={year}>{year}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                  {fromMonth && fromYear && !isLongStayStartFromCurrentOrFuture(fromMonth, fromYear) && (
-                    <p className="text-sm text-red-600">Start month must be current month or later.</p>
-                  )}
-                  {fromMonth && fromYear && toMonth && toYear && !isLongStayRangeChronological(fromMonth, fromYear, toMonth, toYear) && (
-                    <p className="text-sm text-red-600">End month must be after start month.</p>
-                  )}
-                  {fromMonth && fromYear && toMonth && toYear && getLongStayMonthCount(fromMonth, fromYear, toMonth, toYear) > 0 && getLongStayMonthCount(fromMonth, fromYear, toMonth, toYear) < 3 && (
-                    <p className="text-sm text-red-600">Long stay must be at least 3 months.</p>
-                  )}
-                </>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={closeDatePickerModal}
-                  className="w-1/2 bg-slate-100 text-slate-700 font-semibold py-3 rounded-xl hover:bg-slate-200 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleContinueToAvailability}
-                  disabled={stayType === "short" 
-                    ? !checkInDate || !checkOutDate || checkInDate < today || new Date(checkOutDate) <= new Date(checkInDate) || isAtLeastThreeMonths(checkInDate, checkOutDate)
-                    : !fromMonth || !fromYear || !toMonth || !toYear || !isLongStayStartFromCurrentOrFuture(fromMonth, fromYear) || !isLongStayRangeChronological(fromMonth, fromYear, toMonth, toYear) || getLongStayMonthCount(fromMonth, fromYear, toMonth, toYear) < 3
-                  }
-                  className="w-1/2 bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Continue
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Availability Modal */}
-      {showAvailabilityModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-slate-900">Availability Check</h2>
-              <button
-                onClick={() => setShowAvailabilityModal(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-8 space-y-6">
-              {availabilityLoading ? (
-                <div className="text-center text-slate-600">Checking availability...</div>
-              ) : (
-                <>
-                  {availabilityResult && (
-                    <div className={`rounded-xl p-4 ${availabilityResult.available ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
-                      <p className={`text-lg font-bold ${availabilityResult.available ? 'text-emerald-700' : 'text-red-700'}`}>
-                        {availabilityResult.available ? 'Available!' : 'Not Available'}
-                      </p>
-                      <p className="text-sm text-slate-600 mt-1">
-                        {availabilityResult.stayType === 'short'
-                          ? `Duration: ${availabilityResult.checkInDate} → ${availabilityResult.checkOutDate}`
-                          : `Duration: ${availabilityResult.months} month${availabilityResult.months > 1 ? 's' : ''} (${availabilityResult.checkInDate} → ${availabilityResult.checkOutDate})`}
-                      </p>
-                    </div>
-                  )}
-
-                  {availabilityError && (
-                    <div className="rounded-xl p-4 bg-red-50 border border-red-200 text-red-700 text-sm">
-                      {availabilityError}
-                    </div>
-                  )}
-
-                  {!availabilityResult && !availabilityError && (
-                    <div className="rounded-xl p-4 bg-slate-50 border border-slate-200 text-sm text-slate-700">
-                      Please select stay type and duration to run availability.
-                    </div>
-                  )}
-                </>
-              )}
-
-              <div className="grid grid-cols-1 gap-3">
-                <button
-                  onClick={handleBookNow}
-                  disabled={!availabilityResult?.available || availabilityLoading}
-                  className="w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {availabilityResult?.available ? 'Book Now' : 'Book Now'}
-                </button>
-                <button
-                  onClick={() => setShowAvailabilityModal(false)}
-                  className="w-full bg-slate-100 text-slate-700 font-semibold py-3 rounded-xl hover:bg-slate-200 transition"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showAuthChoiceModal && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-slate-900">Continue Booking</h2>
-              <button
-                onClick={() => setShowAuthChoiceModal(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-8 space-y-5">
-              <div className="rounded-xl p-4 bg-amber-50 border border-amber-200 text-amber-900 text-sm">
-                To continue booking this apartment, please login or sign up first.
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleChooseAuthAction("login")}
-                  className="w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition"
-                >
-                  Login
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleChooseAuthAction("signup")}
-                  className="w-full bg-slate-100 text-slate-800 font-semibold py-3 rounded-xl hover:bg-slate-200 transition"
-                >
-                  Sign up
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowAuthChoiceModal(false)}
-                className="w-full text-sm text-slate-500 hover:text-slate-700 transition"
-              >
-                Not now
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <BookingFlowModals viewModel={detailsViewModel} />
     </div>
   );
 };

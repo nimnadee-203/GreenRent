@@ -3,10 +3,15 @@ import jwt from "jsonwebtoken";
 
 export const authenticate = (req, res, next) => {
   try {
-    // Get token from header
+    // Support either the cookie-based session used by the app or a bearer token.
+    const cookieToken = req.cookies?.token;
     const authHeader = req.headers.authorization;
+    const bearerToken = authHeader && authHeader.startsWith("Bearer ")
+      ? authHeader.substring(7)
+      : null;
+    const token = cookieToken || bearerToken;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!token) {
       return res.status(401).json({
         message: "Access denied. No token provided."
       });
