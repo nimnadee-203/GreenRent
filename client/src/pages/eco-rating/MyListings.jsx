@@ -388,6 +388,9 @@ export default function MyListings() {
     });
   }, [listings, listView]);
 
+  const menuButtonClass = "inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/80 backdrop-blur-md text-slate-700 font-semibold shadow-sm border border-slate-200/60 hover:shadow-md hover:border-emerald-300 hover:text-emerald-700 transition-all duration-300 hover:-translate-y-0.5";
+  const messageButtonClass = "inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold shadow-md border border-transparent hover:shadow-lg hover:from-indigo-500 hover:to-violet-500 transition-all duration-300 hover:-translate-y-0.5";
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#d1fae5_0%,_#f8fafc_45%,_#f8fafc_100%)] flex flex-col font-sans">
       <Navbar />
@@ -403,14 +406,36 @@ export default function MyListings() {
               </h1>
               <p className="text-slate-600 mt-2">Manage your properties, monitor visibility, and keep eco-ratings up to date.</p>
             </div>
-            <div className="flex gap-3 flex-wrap">
-              <Link to="/add-apartment" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
-                <Home size={16} />
-                List New Property
-              </Link>
-              <Link to="/chat" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
-                Chat
-              </Link>
+            <div className="w-full md:w-auto space-y-3">
+              <div className="flex flex-wrap md:justify-end gap-3">
+                <Link to="/add-apartment" className={menuButtonClass}>
+                  <Home size={18} className="text-emerald-500" />
+                  List New Property
+                </Link>
+                <Link to="/chat" className={menuButtonClass}>
+                  Chat
+                </Link>
+              </div>
+
+              {user?.role === "admin" && (
+                <div className="flex flex-wrap md:justify-end gap-3 mt-4">
+                  <Link to="/admin/listings" className={menuButtonClass}>
+                    Listings View
+                  </Link>
+                  <Link to="/admin/bookings" className={menuButtonClass}>
+                    Booking Dashboard
+                  </Link>
+                  <Link to="/admin/reviews" className={menuButtonClass}>
+                    Review Management
+                  </Link>
+                  <Link to="/admin/sellers" className={menuButtonClass}>
+                    Seller Management
+                  </Link>
+                  <Link to="/chat?broadcast=1" className={messageButtonClass}>
+                    Message All Landlords
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </section>
