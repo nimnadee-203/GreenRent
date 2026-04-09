@@ -7,6 +7,17 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
+// Attach JWT Bearer token to every Axios request if a token is stored.
+// This is the fallback for cross-origin deployments where cookies can't be sent.
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [backendUser, setBackendUser] = useState(null);
@@ -65,6 +76,8 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       // Continue to clear local auth state even if backend logout fails.
     }
+
+    localStorage.removeItem("token");
 
     if (auth) {
       await signOut(auth);

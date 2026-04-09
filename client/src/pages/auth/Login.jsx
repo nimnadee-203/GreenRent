@@ -103,7 +103,7 @@ export default function Login() {
         }
 
         try {
-          await axios.post(
+          const regResponse = await axios.post(
             `${API_BASE_URL}/api/auth/register`,
             {
               name: form.name.trim(),
@@ -112,9 +112,12 @@ export default function Login() {
             },
             { withCredentials: true }
           );
+          if (regResponse.data?.token) {
+            localStorage.setItem("token", regResponse.data.token);
+          }
         } catch (registerError) {
           if (registerError?.response?.status === 409) {
-            await axios.post(
+            const loginResponse = await axios.post(
               `${API_BASE_URL}/api/auth/login`,
               {
                 email: normalizedEmail,
@@ -122,6 +125,9 @@ export default function Login() {
               },
               { withCredentials: true }
             );
+            if (loginResponse.data?.token) {
+              localStorage.setItem("token", loginResponse.data.token);
+            }
           } else {
             throw registerError;
           }
@@ -136,7 +142,7 @@ export default function Login() {
         }
         return;
       } else {
-        await axios.post(
+        const loginResponse = await axios.post(
           `${API_BASE_URL}/api/auth/login`,
           {
             email: normalizedEmail,
@@ -144,6 +150,9 @@ export default function Login() {
           },
           { withCredentials: true }
         );
+        if (loginResponse.data?.token) {
+          localStorage.setItem("token", loginResponse.data.token);
+        }
         await fetchBackendUser();
 
         if (hasFirebaseConfig && auth) {
@@ -187,7 +196,10 @@ export default function Login() {
       };
 
       const response = await axios.post(`${API_BASE_URL}/api/auth/google-login`, payload, { withCredentials: true });
-      const { user: backendUser } = response.data;
+      const { user: backendUser, token: googleToken } = response.data;
+      if (googleToken) {
+        localStorage.setItem("token", googleToken);
+      }
 
       await fetchBackendUser();
       setSuccess("Google login successful.");
