@@ -3,6 +3,8 @@ import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { CreditCard, Shield, CheckCircle, ArrowLeft, RotateCcw, AlertTriangle, Download } from "lucide-react";
 import { jsPDF } from "jspdf";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import Navbar from "../../components/Home/Navbar";
 import Footer from "../../components/Home/Footer";
 import {
@@ -41,9 +43,9 @@ const PaymentPage = () => {
   const userDetails = routeUserDetails;
   const propertyId = property?._id || bookingData?.apartmentId?._id || bookingData?.apartmentId;
 
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
-  const [cvv, setCvv] = useState("");
+  const stripe = useStripe();
+  const elements = useElements();
+  const [clientSecret, setClientSecret] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [cardBrand, setCardBrand] = useState("visa");
@@ -86,6 +88,20 @@ const PaymentPage = () => {
           propertyData = propertyResponse.data;
         }
 
+        let secret = "";
+        try {
+          if (booking?._id) {
+            const { data } = await axios.post(
+              `${API_BASE_URL}/api/payments/create-payment-intent`,
+              { bookingId: booking._id },
+              { withCredentials: true }
+            );
+            secret = data.clientSecret;
+          }
+        } catch (err) {
+          console.error("Failed to init payment intent", err);
+        }
+
         if (isMounted) {
           setResolvedBookingData(booking);
           setResolvedProperty(propertyData || null);
@@ -94,6 +110,7 @@ const PaymentPage = () => {
               type: booking?.stayType === "long" ? "Long stay" : "Short stay",
             });
           }
+          setClientSecret(secret);
           setPaymentError("");
         }
       } catch (error) {
@@ -343,28 +360,50 @@ const PaymentPage = () => {
   const handlePayment = async (e) => {
     e.preventDefault();
     setPaymentError("");
+
+    if (!stripe || !elements || !clientSecret) {
+      setPaymentError("Stripe is not fully loaded. Please wait or check your connection.");
+      return;
+    }
+
     setProcessing(true);
 
     try {
-      // Simulate gateway processing delay
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+      const cardElement = elements.getElement(CardElement);
+      
+      const { paymentIntent, error } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardElement,
+          billing_details: {
+            name: `${firstName} ${lastName}`.trim(),
+          },
+        },
+      });
 
-      if (!bookingData?._id) {
-        throw new Error("Missing booking id for payment update.");
+      if (error) {
+        throw new Error(error.message);
       }
 
-      await axios.put(
-        `${API_BASE_URL}/api/bookings/${bookingData._id}/payment`,
-        { paymentStatus: "paid" },
-        { withCredentials: true }
-      );
+      if (paymentIntent.status === "succeeded") {
+        if (!bookingData?._id) {
+          throw new Error("Missing booking id for payment update.");
+        }
 
-      clearBookingTimer(bookingData._id);
-      setPaymentSuccess(true);
-      setProcessing(false);
+        await axios.put(
+          `${API_BASE_URL}/api/bookings/${bookingData._id}/payment`,
+          { paymentStatus: "paid" },
+          { withCredentials: true }
+        );
+
+        clearBookingTimer(bookingData._id);
+        setPaymentSuccess(true);
+      } else {
+        throw new Error("Payment did not succeed. Status: " + paymentIntent.status);
+      }
     } catch (error) {
+      setPaymentError(error?.response?.data?.message || error.message || "Payment failed. Please try again.");
+    } finally {
       setProcessing(false);
-      setPaymentError(error?.response?.data?.message || error.message || "Payment update failed. Please try again.");
     }
   };
 
@@ -589,49 +628,22 @@ const PaymentPage = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Card info</label>
-                <input
-                  type="text"
-                  value={cardNumber}
-                  disabled={actionsLocked}
-                  onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 '))}
-                  placeholder="1234 5678 9012 3456"
-                  maxLength="19"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Expiry Date
-                  </label>
-                  <input
-                    type="text"
-                    value={expiryDate}
-                    disabled={actionsLocked}
-                    onChange={(e) => setExpiryDate(e.target.value.replace(/\D/g, '').replace(/(\d{2})(?=\d)/g, '$1/'))}
-                    placeholder="MM/YY"
-                    maxLength="5"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    CVV
-                  </label>
-                  <input
-                    type="text"
-                    value={cvv}
-                    disabled={actionsLocked}
-                    onChange={(e) => setCvv(e.target.value.replace(/\D/g, ''))}
-                    placeholder="123"
-                    maxLength="4"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Card information</label>
+                <div className="w-full px-3 py-3 border border-slate-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent bg-white">
+                  <CardElement
+                    options={{
+                      style: {
+                        base: {
+                          fontSize: '16px',
+                          color: '#1e293b',
+                          '::placeholder': { color: '#94a3b8' },
+                          fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+                        },
+                        invalid: { color: '#ef4444' }
+                      },
+                      disabled: actionsLocked
+                    }}
                   />
                 </div>
               </div>
@@ -861,4 +873,14 @@ const PaymentPage = () => {
   );
 };
 
-export default PaymentPage;
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "pk_test_placeholder");
+
+const PaymentPageWrapper = () => {
+  return (
+    <Elements stripe={stripePromise}>
+      <PaymentPage />
+    </Elements>
+  );
+};
+
+export default PaymentPageWrapper;
