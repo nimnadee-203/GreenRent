@@ -21,10 +21,11 @@ await connectDB();
 
 const app = express();
 
-// Allowed Origins — add your deployed frontend URL via CLIENT_URL env variable on Render
+// Allowed Origins
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
+  "https://greenrent-frontend.onrender.com",
   process.env.CLIENT_URL,
 ].filter(Boolean);
 
@@ -38,6 +39,7 @@ const isLocalDevOrigin = (origin) => {
 };
 
 // CORS Configuration
+console.log("CORS allowed origins:", allowedOrigins);
 app.use(
   cors({
     credentials: true,
@@ -46,7 +48,8 @@ app.use(
       if (allowedOrigins.includes(origin) || isLocalDevOrigin(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("CORS policy: Origin not allowed"));
+        console.error(`CORS blocked origin: ${origin}`);
+        callback(new Error(`CORS policy: Origin '${origin}' not allowed`));
       }
     },
   })
