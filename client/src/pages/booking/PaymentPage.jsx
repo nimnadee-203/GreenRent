@@ -137,6 +137,22 @@ const PaymentPage = () => {
     };
   }, [id, routeBookingData, routeProperty, routeSelectedOption]);
 
+  // Derived booking values — computed here so they are available inside
+  // downloadReceipt even after paymentSuccess switches to the success view.
+  const stayType = bookingData?.stayType;
+  const nights = bookingData ? calculateNightsCeil(bookingData.checkInDate, bookingData.checkOutDate) : 0;
+  const monthsFromDates = bookingData
+    ? calculateMonthsFromDates(bookingData.checkInDate, bookingData.checkOutDate)
+    : 0;
+  const monthsForLong =
+    stayType === "long" && bookingData?.months != null && Number(bookingData.months) > 0
+      ? Number(bookingData.months)
+      : stayType === "long"
+        ? monthsFromDates
+        : null;
+  const dailyRate = property ? getDailyRate(property) : 0;
+  const monthlyRate = property ? getMonthlyRate(property) : 0;
+
   const formatInvoiceDate = (value) => {
     if (!value) return "-";
     const parsedDate = new Date(value);
@@ -167,7 +183,7 @@ const PaymentPage = () => {
     const bookingTypeLabel = selectedOption?.type || bookingData?.stayType || "Booking";
     const stayLabel = stayType === "long" ? "Long stay (monthly)" : "Short stay (nightly)";
     const paymentMethodLabel = `${cardBrand?.toUpperCase() || "CARD"} ${cardType ? `(${cardType})` : ""}`.trim();
-    const maskedCard = cardNumber ? `**** **** **** ${cardNumber.replace(/\s/g, "").slice(-4)}` : "Not provided";
+    const maskedCard = "Stripe (secured)";
     const bookingRef = bookingData?._id || "-";
     const lines = [
       ["Booking ID", bookingRef],
@@ -434,27 +450,12 @@ const PaymentPage = () => {
     );
   }
 
-  const stayType = bookingData.stayType;
-  const nights = calculateNightsCeil(bookingData.checkInDate, bookingData.checkOutDate);
-  const monthsFromDates = calculateMonthsFromDates(
-    bookingData.checkInDate,
-    bookingData.checkOutDate
-  );
-
   const paymentOptions = [
     { id: 'visa', label: 'Visa', icon: 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' },
     { id: 'mastercard', label: 'Mastercard', icon: 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg' },
     { id: 'amex', label: 'Amex', icon: 'https://upload.wikimedia.org/wikipedia/commons/3/30/American_Express_logo_%282018%29.svg' },
     { id: 'paypal', label: 'PayPal', icon: 'https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg' },
   ];
-  const monthsForLong =
-    stayType === "long" && bookingData.months != null && Number(bookingData.months) > 0
-      ? Number(bookingData.months)
-      : stayType === "long"
-        ? monthsFromDates
-        : null;
-  const dailyRate = getDailyRate(property);
-  const monthlyRate = getMonthlyRate(property);
   const actionsLocked = processing || timerExpired || bookingCancelled || cancellingBooking;
 
   if (paymentSuccess) {
