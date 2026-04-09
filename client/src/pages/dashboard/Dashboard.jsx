@@ -871,14 +871,14 @@ export default function Dashboard() {
                         <Mail size={16} className="text-emerald-500" />
                         {backendUser?.email}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg ${hasPendingSellerRequest ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <div className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-lg ${hasPendingSellerRequest ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
                            {isSeller ? 'Approved Seller' : hasPendingSellerRequest ? 'Seller Status: Pending' : 'Standard User Account'}
                         </div>
                         {(!isSeller && !hasPendingSellerRequest) && (
                           <button 
                             onClick={() => { setSellerUpgradeError(''); setSellerUpgradeSuccess(''); setIsSellerFormOpen(true); }}
-                            className="text-xs font-black text-emerald-600 hover:underline flex items-center gap-1"
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm shadow-emerald-500/20"
                           >
                             <ArrowUpRight size={14} /> Request Seller Account
                           </button>
