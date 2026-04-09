@@ -7,8 +7,13 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
+<<<<<<< HEAD
 // Attach JWT Bearer token to every Axios request if a token is stored.
 // This is the fallback for cross-origin deployments where cookies can't be sent.
+=======
+// Automatically attach the stored JWT as a Bearer token on every Axios request.
+// This is the cross-origin fix for Render deployments where cookies are blocked.
+>>>>>>> test-main
 axios.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {

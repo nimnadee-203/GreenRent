@@ -117,7 +117,11 @@ export default function Login() {
           }
         } catch (registerError) {
           if (registerError?.response?.status === 409) {
+<<<<<<< HEAD
             const loginResponse = await axios.post(
+=======
+            const loginResp = await axios.post(
+>>>>>>> test-main
               `${API_BASE_URL}/api/auth/login`,
               {
                 email: normalizedEmail,
@@ -125,8 +129,13 @@ export default function Login() {
               },
               { withCredentials: true }
             );
+<<<<<<< HEAD
             if (loginResponse.data?.token) {
               localStorage.setItem("token", loginResponse.data.token);
+=======
+            if (loginResp.data?.token) {
+              localStorage.setItem("token", loginResp.data.token);
+>>>>>>> test-main
             }
           } else {
             throw registerError;
