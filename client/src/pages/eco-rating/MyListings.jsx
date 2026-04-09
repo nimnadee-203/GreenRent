@@ -413,9 +413,6 @@ export default function MyListings() {
                   <Home size={18} className="text-emerald-500" />
                   List New Property
                 </Link>
-                <Link to="/chat" className={menuButtonClass}>
-                  Chat
-                </Link>
               </div>
 
               {user?.role === "admin" && (
