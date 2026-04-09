@@ -49,7 +49,7 @@ const buildGeocodeCandidates = (location = {}) => {
 };
 
 /**
- * Helper to geocode an address if coordinates are missing or if the address changed.
+ * Helper to geocode an address only when coordinates are missing.
  * Returns the updated location object. Geocoding failures are non-blocking (coordinates remain null).
  */
 const geocodeIfNeeded = async (data, existingLocation = null) => {
@@ -59,10 +59,9 @@ const geocodeIfNeeded = async (data, existingLocation = null) => {
     return data;
   }
 
-  const addressChanged = buildGeocodeQuery(existingLocation) !== geocodeQuery;
   const coordinatesMissing = !location.coordinates || (location.coordinates.lat === null && location.coordinates.lng === null);
 
-  if (addressChanged || coordinatesMissing) {
+  if (coordinatesMissing) {
     try {
       const candidates = buildGeocodeCandidates(location);
       let geo = null;
