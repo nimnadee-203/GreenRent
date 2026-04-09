@@ -16,45 +16,36 @@ import bookingRoutes from "./routes/booking.routes.js";
 import chatRoutes from "./routes/chat.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 
-
-dotenv.config();
-
 // Connect to Database
 await connectDB();
 
-
-
 const app = express();
 
-// Middlewares
+// Allowed Origins
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
-  '*', // Allow all origins (for development only, remove in production)
-  process.env.CLIENT_URL,
+  "https://greenrent-frontend.onrender.com", // Your deployed frontend
+  process.env.CLIENT_URL
 ].filter(Boolean);
 
-const isLocalDevOrigin = (origin) => {
-  try {
-    const url = new URL(origin);
-    return ["localhost", "127.0.0.1"].includes(url.hostname);
-  } catch {
-    return false;
-  }
-};
+// CORS Configuration
+app.use(
+  cors({
+    credentials: true,
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
 
-app.use(cors({
-  credentials: true,
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // allow non-browser clients (Postman)
-    if (allowedOrigins.includes(origin) || isLocalDevOrigin(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("CORS policy: Origin not allowed"));
-    }
-  }
-}));
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS policy: Origin not allowed"));
+      }
+    },
+  })
+);
 
+// Middlewares
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(cookieParser());
