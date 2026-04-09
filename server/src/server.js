@@ -14,6 +14,7 @@ import userRouter from "./routes/user.routes.js";
 import recommendationRouter from "./routes/recommendation.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import chatRoutes from "./routes/chat.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
 
 
 dotenv.config();
@@ -67,6 +68,7 @@ app.use("/api/renter-reviews", renterReviewRoutes);
 app.use("/api/properties", propertyRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/payments", paymentRoutes);
 
 app.get("/", (req, res) => {
   res.send("GreenRent API is running...");

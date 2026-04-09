@@ -3,6 +3,8 @@ import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { ArrowLeft, RotateCcw } from "lucide-react";
 import { jsPDF } from "jspdf";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import Navbar from "../../components/Home/Navbar";
 import Footer from "../../components/Home/Footer";
 import PaymentSuccessView from "../../components/booking/PaymentSuccessView";
@@ -45,9 +47,9 @@ const PaymentPage = () => {
   const userDetails = routeUserDetails;
   const propertyId = property?._id || bookingData?.apartmentId?._id || bookingData?.apartmentId;
 
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
-  const [cvv, setCvv] = useState("");
+  const stripe = useStripe();
+  const elements = useElements();
+  const [clientSecret, setClientSecret] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [cardBrand, setCardBrand] = useState("visa");
@@ -90,6 +92,20 @@ const PaymentPage = () => {
           propertyData = propertyResponse.data;
         }
 
+        let secret = "";
+        try {
+          if (booking?._id) {
+            const { data } = await axios.post(
+              `${API_BASE_URL}/api/payments/create-payment-intent`,
+              { bookingId: booking._id },
+              { withCredentials: true }
+            );
+            secret = data.clientSecret;
+          }
+        } catch (err) {
+          console.error("Failed to init payment intent", err);
+        }
+
         if (isMounted) {
           setResolvedBookingData(booking);
           setResolvedProperty(propertyData || null);
@@ -98,6 +114,7 @@ const PaymentPage = () => {
               type: booking?.stayType === "long" ? "Long stay" : "Short stay",
             });
           }
+          setClientSecret(secret);
           setPaymentError("");
         }
       } catch (error) {
@@ -347,28 +364,50 @@ const PaymentPage = () => {
   const handlePayment = async (e) => {
     e.preventDefault();
     setPaymentError("");
+
+    if (!stripe || !elements || !clientSecret) {
+      setPaymentError("Stripe is not fully loaded. Please wait or check your connection.");
+      return;
+    }
+
     setProcessing(true);
 
     try {
-      // Simulate gateway processing delay
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+      const cardElement = elements.getElement(CardElement);
+      
+      const { paymentIntent, error } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardElement,
+          billing_details: {
+            name: `${firstName} ${lastName}`.trim(),
+          },
+        },
+      });
 
-      if (!bookingData?._id) {
-        throw new Error("Missing booking id for payment update.");
+      if (error) {
+        throw new Error(error.message);
       }
 
-      await axios.put(
-        `${API_BASE_URL}/api/bookings/${bookingData._id}/payment`,
-        { paymentStatus: "paid" },
-        { withCredentials: true }
-      );
+      if (paymentIntent.status === "succeeded") {
+        if (!bookingData?._id) {
+          throw new Error("Missing booking id for payment update.");
+        }
 
-      clearBookingTimer(bookingData._id);
-      setPaymentSuccess(true);
-      setProcessing(false);
+        await axios.put(
+          `${API_BASE_URL}/api/bookings/${bookingData._id}/payment`,
+          { paymentStatus: "paid" },
+          { withCredentials: true }
+        );
+
+        clearBookingTimer(bookingData._id);
+        setPaymentSuccess(true);
+      } else {
+        throw new Error("Payment did not succeed. Status: " + paymentIntent.status);
+      }
     } catch (error) {
+      setPaymentError(error?.response?.data?.message || error.message || "Payment failed. Please try again.");
+    } finally {
       setProcessing(false);
-      setPaymentError(error?.response?.data?.message || error.message || "Payment update failed. Please try again.");
     }
   };
 
@@ -504,6 +543,7 @@ const PaymentPage = () => {
             onCancelBooking={handleCancelBooking}
           />
 
+<<<<<<< HEAD
           <PaymentSummaryCard
             property={property}
             selectedOption={selectedOption}
@@ -514,6 +554,245 @@ const PaymentPage = () => {
             nights={nights}
             monthsForLong={monthsForLong}
           />
+=======
+            <form onSubmit={handlePayment} className="space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-700 mb-3">Pay with</h3>
+                <div className="flex items-center flex-wrap gap-2 mb-4">
+                  {paymentOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      disabled={actionsLocked}
+                      onClick={() => setCardBrand(option.id)}
+                      className={`h-10 px-3 rounded-lg border transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                        cardBrand === option.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-slate-200 bg-white hover:border-slate-400'
+                      }`}
+                    >
+                      <img src={option.icon} alt={option.label} className="h-5" />
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative">
+                  <select
+                    value={cardType}
+                    disabled={actionsLocked}
+                    onChange={(e) => setCardType(e.target.value)}
+                    className="w-full appearance-none border border-slate-200 rounded-lg px-4 py-3 pr-10 bg-white text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer hover:border-slate-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="credit">Credit card</option>
+                    <option value="debit">Debit card</option>
+                  </select>
+                  <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">First name</label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    disabled={actionsLocked}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Last name</label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    disabled={actionsLocked}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Card information</label>
+                <div className="w-full px-3 py-3 border border-slate-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent bg-white">
+                  <CardElement
+                    options={{
+                      style: {
+                        base: {
+                          fontSize: '16px',
+                          color: '#1e293b',
+                          '::placeholder': { color: '#94a3b8' },
+                          fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+                        },
+                        invalid: { color: '#ef4444' }
+                      },
+                      disabled: actionsLocked
+                    }}
+                  />
+                </div>
+              </div>
+
+
+
+              <button
+                type="submit"
+                disabled={actionsLocked}
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                {processing || cancellingBooking ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    {cancellingBooking ? "Cancelling Booking..." : "Processing Payment..."}
+                  </>
+                ) : (
+                  <>
+                    <Shield className="w-4 h-4 mr-2" />
+                    Pay Now - Rs {bookingData?.totalPrice?.toLocaleString('en-LK')}
+                  </>
+                )}
+              </button>
+
+              {paymentError && (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {paymentError}
+                </p>
+              )}
+            </form>
+
+            {/* Action Buttons */}
+            <div className="mt-6 pt-6 border-t border-slate-200">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => navigate(`/booking/${propertyId}`, {
+                    state: {
+                      checkInDate: bookingData.checkInDate,
+                      checkOutDate: bookingData.checkOutDate,
+                      stayType: bookingData.stayType,
+                      selectedMonths: bookingData.months,
+                      numberOfGuests: bookingData.numberOfGuests,
+                      editMode: true,
+                      bookingData: bookingData,
+                      userDetails: userDetails
+                    }
+                  })}
+                  disabled={actionsLocked}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back / Edit Details
+                  </button>
+                <button
+                  onClick={handleCancelBooking}
+                  disabled={actionsLocked}
+                  className="flex-1 px-4 py-2 border border-red-300 text-red-700 rounded-lg font-medium hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel Booking
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Booking Summary */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">Payment summary</h3>
+
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Property</span>
+                  <span className="font-medium text-right max-w-[60%]">{property.title}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Option</span>
+                  <span className="font-medium">{selectedOption?.type}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Stay type</span>
+                  <span className="font-medium">
+                    {stayType === "long" ? "Long stay (monthly)" : "Short stay (nightly)"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Guests</span>
+                  <span className="font-medium">{bookingData?.numberOfGuests} guest{bookingData?.numberOfGuests !== 1 ? 's' : ''}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Check-in</span>
+                  <span className="font-medium">{bookingData?.checkInDate}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Check-out</span>
+                  <span className="font-medium">{bookingData?.checkOutDate}</span>
+                </div>
+                <hr className="my-3" />
+                {stayType === "short" ? (
+                  <div className="rounded-lg bg-slate-50 border border-slate-100 p-3 text-sm space-y-1">
+                    <div className="flex justify-between text-slate-700">
+                      <span>Rate</span>
+                      <span>{formatLkr(dailyRate)} / night</span>
+                    </div>
+                    <div className="flex justify-between text-slate-700">
+                      <span>Nights</span>
+                      <span>{nights}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600 text-xs pt-1">
+                      <span>Calculation</span>
+                      <span>
+                        {formatLkr(dailyRate)} × {nights}
+                      </span>
+                    </div>
+                    <div className="flex justify-between font-medium text-slate-900 pt-1 border-t border-slate-200">
+                      <span>Rent total</span>
+                      <span>{formatLkr(bookingData.totalPrice)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-lg bg-slate-50 border border-slate-100 p-3 text-sm space-y-1">
+                    <div className="flex justify-between text-slate-700">
+                      <span>Rate</span>
+                      <span>{formatLkr(monthlyRate)} / month</span>
+                    </div>
+                    <div className="flex justify-between text-slate-700">
+                      <span>Months</span>
+                      <span>{monthsForLong}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600 text-xs pt-1">
+                      <span>Calculation</span>
+                      <span>
+                        {formatLkr(monthlyRate)} × {monthsForLong}
+                      </span>
+                    </div>
+                    <div className="flex justify-between font-medium text-slate-900 pt-1 border-t border-slate-200">
+                      <span>Rent total</span>
+                      <span>{formatLkr(bookingData.totalPrice)}</span>
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-between text-lg font-bold">
+                  <span>Total due</span>
+                  <span className="text-blue-600">{formatLkr(bookingData?.totalPrice)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+              <div className="flex items-start">
+                <Shield className="w-5 h-5 text-emerald-600 mr-3 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-emerald-800 mb-1">Secure Payment</h4>
+                  <p className="text-sm text-emerald-700">
+                    Your payment information is encrypted and secure. We use industry-standard security measures to protect your data.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+>>>>>>> feature/user-management
         </div>
       </main>
 
@@ -532,4 +811,14 @@ const PaymentPage = () => {
   );
 };
 
-export default PaymentPage;
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "pk_test_placeholder");
+
+const PaymentPageWrapper = () => {
+  return (
+    <Elements stripe={stripePromise}>
+      <PaymentPage />
+    </Elements>
+  );
+};
+
+export default PaymentPageWrapper;
