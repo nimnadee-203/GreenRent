@@ -1,5 +1,6 @@
 import React from "react";
 import { ArrowLeft, CreditCard, Shield } from "lucide-react";
+import { CardElement } from "@stripe/react-stripe-js";
 
 export default function PaymentFormCard({
   handlePayment,
@@ -13,12 +14,6 @@ export default function PaymentFormCard({
   setFirstName,
   lastName,
   setLastName,
-  cardNumber,
-  setCardNumber,
-  expiryDate,
-  setExpiryDate,
-  cvv,
-  setCvv,
   processing,
   cancellingBooking,
   bookingData,
@@ -95,45 +90,23 @@ export default function PaymentFormCard({
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Card info</label>
-          <input
-            type="text"
-            value={cardNumber}
-            disabled={actionsLocked}
-            onChange={(event) => setCardNumber(event.target.value.replace(/\D/g, "").replace(/(\d{4})(?=\d)/g, "$1 "))}
-            placeholder="1234 5678 9012 3456"
-            maxLength="19"
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Expiry Date</label>
-            <input
-              type="text"
-              value={expiryDate}
-              disabled={actionsLocked}
-              onChange={(event) => setExpiryDate(event.target.value.replace(/\D/g, "").replace(/(\d{2})(?=\d)/g, "$1/"))}
-              placeholder="MM/YY"
-              maxLength="5"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">CVV</label>
-            <input
-              type="text"
-              value={cvv}
-              disabled={actionsLocked}
-              onChange={(event) => setCvv(event.target.value.replace(/\D/g, ""))}
-              placeholder="123"
-              maxLength="4"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-slate-700 mb-2">Card information</label>
+          <div className="w-full px-3 py-3 border border-slate-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent bg-white">
+            <CardElement
+              options={{
+                style: {
+                  base: {
+                    fontSize: "16px",
+                    color: "#1e293b",
+                    "::placeholder": { color: "#94a3b8" },
+                    fontFamily:
+                      'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                  },
+                  invalid: { color: "#ef4444" },
+                },
+                disabled: actionsLocked,
+              }}
             />
           </div>
         </div>
