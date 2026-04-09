@@ -653,6 +653,10 @@ export default function Dashboard() {
                   <Home size={16} />
                   Add Property
                 </Link>
+                <Link to="/chat" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
+                  <MessageSquarePlus size={16} />
+                  Chat
+                </Link>
                 <Link to="/my-listings" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition">
                   <Search size={16} />
                   My Listings

@@ -406,12 +406,6 @@ export default function AddApartment() {
                 </div>
                 <div className="flex md:absolute md:right-0 items-center gap-2">
                   <Link
-                    to="/chat"
-                    className="inline-flex items-center justify-center rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-2.5 text-sm font-bold text-emerald-700 hover:bg-emerald-100 shadow-sm"
-                  >
-                    Chat
-                  </Link>
-                  <Link
                     to="/my-listings"
                     className="inline-flex items-center justify-center rounded-xl bg-white border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 shadow-sm"
                   >
