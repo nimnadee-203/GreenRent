@@ -971,6 +971,21 @@ artillery run performance-property-test.yml
 
 Some write-path benchmarks require valid JWTs for real database users, especially for seller/admin routes.
 
+## Deployment
+
+### Frontend
+Platform: Render  
+Live URL: https://greenrent-frontend.onrender.com/
+
+### Backend
+Platform: Render  
+Live URL: https://greenrent-gakv.onrender.com/
+
+### Notes
+- Environment variables configured securely
+- Frontend connected to deployed backend API
+
+
 ## Useful Commands
 
 ### Backend
@@ -994,3 +1009,12 @@ npm test
 ## Assignment Notes
 
 This project includes property search, eco-rating, booking, renter review, recommendation, chat, and authentication flows. The API documentation above is organized to support assignment submission and grading.
+
+# Screenshots
+![Home Page](z_screenshots/image.png)
+![Login Page](z_screenshots/image-1.png)
+![Main Dashboard](z_screenshots/image-2.png)
+![Property Details](z_screenshots/image-4.png)
+![Booking Page](z_screenshots/image-3.png)
+![Listing & Rating Management](z_screenshots/image-5.png)
+
