@@ -7,13 +7,8 @@ const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-<<<<<<< HEAD
-// Attach JWT Bearer token to every Axios request if a token is stored.
-// This is the fallback for cross-origin deployments where cookies can't be sent.
-=======
 // Automatically attach the stored JWT as a Bearer token on every Axios request.
 // This is the cross-origin fix for Render deployments where cookies are blocked.
->>>>>>> test-main
 axios.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
@@ -45,7 +40,7 @@ export const AuthProvider = ({ children }) => {
         await new Promise(resolve => setTimeout(resolve, 800));
         return fetchBackendUser(retryCount + 1);
       }
-      
+
       // Silence 401 errors in console (standard for guests)
       if (error.response?.status !== 401) {
         console.error("Failed to fetch backend user data", error);
