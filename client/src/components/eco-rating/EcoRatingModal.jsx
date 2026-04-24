@@ -1,6 +1,7 @@
 import React from "react";
 import { BatteryCharging, CheckCircle2, Droplets, Leaf, Recycle, Sun, Wind, X, Zap } from "lucide-react";
 
+//  Open a popup to add or edit eco details for a property
 export default function EcoRatingModal({
   isOpen,
   activeProperty,

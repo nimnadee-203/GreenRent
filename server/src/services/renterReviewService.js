@@ -10,6 +10,7 @@ const CRITERIA_WEIGHTS = {
   greenAmenities: 0.2,
 };
 
+// round to next decimal place 
 const roundToOneDecimal = (value) => Math.round(value * 10) / 10;
 
 /**
@@ -18,11 +19,12 @@ const roundToOneDecimal = (value) => Math.round(value * 10) / 10;
 export const calculateReviewScore = (criteria) => {
   let score = 0;
   Object.keys(CRITERIA_WEIGHTS).forEach((key) => {
-    score += Number(criteria[key]) * CRITERIA_WEIGHTS[key];
+    score += Number(criteria[key]) * CRITERIA_WEIGHTS[key]; // add up to score 
   });
   return roundToOneDecimal(score);
 };
 
+// Checks if this renter is allowed to review this listing.
 const hasEligibleBookingForListing = async (renterId, listingId) => {
   const statusQuery = { $in: ["confirmed", "completed"] };
   const bookingQuery = {
@@ -30,6 +32,7 @@ const hasEligibleBookingForListing = async (renterId, listingId) => {
     status: statusQuery,
   };
 
+  // This checks whether renter id looks like a MongoDB ObjectId
   const isObjectId = mongoose.Types.ObjectId.isValid(renterId) && String(renterId).length === 24;
   if (isObjectId) {
     bookingQuery.$or = [
@@ -40,12 +43,13 @@ const hasEligibleBookingForListing = async (renterId, listingId) => {
     bookingQuery.userId = renterId;
   }
 
+  // search booking
   const eligibleBooking = await Booking.findOne(bookingQuery).select("_id");
   return Boolean(eligibleBooking);
 };
 
 /**
- * Create a new renter review
+ * check booking, calculate score, save review.
  */
 export const createRenterReview = async (data, renterId, renterName) => {
   const canReview = await hasEligibleBookingForListing(renterId, data.listingId);
@@ -53,7 +57,7 @@ export const createRenterReview = async (data, renterId, renterName) => {
     throw new Error("ReviewNotAllowedForUnbookedListing");
   }
 
-  const totalScore = calculateReviewScore(data.criteria);
+  const totalScore = calculateReviewScore(data.criteria); // calculate score
 
   const review = await RenterReview.create({
     ...data,
@@ -115,7 +119,7 @@ export const getReviewById = async (reviewId) => {
 };
 
 /**
- * Update a review (only by original creator or admin)
+ * Update a review (only by original creator or admin) check permission, merge changes, recalculate score, save.
  */
 export const updateRenterReview = async (reviewId, data, userId, userRole) => {
   const review = await RenterReview.findById(reviewId);
@@ -159,7 +163,7 @@ export const updateRenterReview = async (reviewId, data, userId, userRole) => {
 };
 
 /**
- * Delete a review (only by original creator or admin)
+ * Delete a review (only by original creator or admin) check permission and delete review.
  */
 export const deleteRenterReview = async (reviewId, userId, userRole) => {
   const review = await RenterReview.findById(reviewId);
@@ -226,6 +230,7 @@ export const getAverageRenterScores = async (listingId) => {
     status: "approved" 
   });
 
+  // if no review then 0 
   if (reviews.length === 0) {
     return null;
   }
@@ -240,6 +245,7 @@ export const getAverageRenterScores = async (listingId) => {
 
   let totalScore = 0;
 
+  // summ all review 
   reviews.forEach((review) => {
     Object.keys(avgCriteria).forEach((key) => {
       avgCriteria[key] += review.criteria[key];
@@ -247,6 +253,7 @@ export const getAverageRenterScores = async (listingId) => {
     totalScore += review.totalScore;
   });
 
+  // This turns totals into avarages
   Object.keys(avgCriteria).forEach((key) => {
     avgCriteria[key] = roundToOneDecimal(avgCriteria[key] / reviews.length);
   });
@@ -261,6 +268,7 @@ export const getAverageRenterScores = async (listingId) => {
   };
 };
 
+// admin review list with filters.
 export const getReviewsForAdmin = async (filter = {}) => {
   const query = {};
   if (filter.status) {
@@ -278,6 +286,7 @@ export const getReviewsForAdmin = async (filter = {}) => {
     .select("-__v");
 };
 
+//  add a new reply to review.
 export const addReplyToReview = async (reviewId, payload, user) => {
   const review = await RenterReview.findById(reviewId);
   if (!review) return null;
@@ -293,6 +302,7 @@ export const addReplyToReview = async (reviewId, payload, user) => {
   return review;
 };
 
+// Deletes one reply from a review.
 export const deleteReplyFromReview = async (reviewId, replyId, user) => {
   const review = await RenterReview.findById(reviewId);
   if (!review) return null;

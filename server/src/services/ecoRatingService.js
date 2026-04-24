@@ -15,13 +15,15 @@ const TRANSPORT_POINTS = {
   "> 3 km": 0,
 };
 
+// This makes sure score stays between 0 and 100.
 const capAt100 = (value) => Math.min(100, Math.max(0, value));
 
+// This calculates the main eco total score from the property features.
 export const calculateTotalScore = (criteria) => {
   let score = 0;
 
   score += ENERGY_RATING_POINTS[criteria.energyRating] ?? 0;
-  score += criteria.solarPanels ? 20 : 0;
+  score += criteria.solarPanels ? 20 : 0; // boolean feature points true = 20 / fales = 0
   score += criteria.ledLighting ? 10 : 0;
   score += criteria.efficientAc ? 10 : 0;
 
@@ -40,6 +42,7 @@ export const calculateTotalScore = (criteria) => {
   return capAt100(score);
 };
 
+// get air quality only if coordinates exist.
 const fetchAirQualityIfAvailable = async (location) => {
   if (!location || location.latitude === undefined || location.longitude === undefined) {
     return { airQualityScore: null, airQualityData: null };
@@ -49,6 +52,7 @@ const fetchAirQualityIfAvailable = async (location) => {
   return { airQualityScore: aqResult.score, airQualityData: aqResult.data };
 };
 
+// get air quality, calculate score, save eco rating, connect it to property.
 export const createEcoRating = async (data) => {
   const { airQualityScore, airQualityData } = await fetchAirQualityIfAvailable(
     data.location
@@ -75,27 +79,29 @@ export const createEcoRating = async (data) => {
   return ecoRating;
 };
 
+// Gets eco ratings from database
 export const listEcoRatings = async (filter = {}) => {
   return EcoRating.find(filter).sort({ createdAt: -1 });
 };
-
+// Gets one eco rating by id.
 export const getEcoRatingById = async (id) => {
   return EcoRating.findById(id);
 };
-
+// Updates an existing eco rating.
 export const updateEcoRating = async (id, data) => {
   const ecoRating = await EcoRating.findById(id);
   if (!ecoRating) {
     return null;
   }
-
+  // This gets old saved criteria.
   const currentCriteria = ecoRating.criteria
     ? ecoRating.criteria.toObject()
     : {};
+    // if new came then merge with old
   const nextCriteria = data.criteria
     ? { ...currentCriteria, ...data.criteria }
     : currentCriteria;
-
+  // get the air quality again 
   const { airQualityScore, airQualityData } = data.location
     ? await fetchAirQualityIfAvailable(data.location)
     : {
@@ -104,7 +110,7 @@ export const updateEcoRating = async (id, data) => {
       };
 
   const totalScore = calculateTotalScore(nextCriteria);
-
+  // recalculate
   ecoRating.set({
     ...data,
     criteria: nextCriteria,
@@ -120,7 +126,7 @@ export const updateEcoRating = async (id, data) => {
   await ecoRating.save();
   return ecoRating;
 };
-
+// delete 
 export const deleteEcoRating = async (id) => {
   return EcoRating.findByIdAndDelete(id);
 };

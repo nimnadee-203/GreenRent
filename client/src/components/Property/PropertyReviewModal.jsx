@@ -5,7 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000
 
 // review popup
 const ReviewModal = ({ propertyId, ecoRatingId, onClose, onSuccess }) => {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(1); // currunt step 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -30,6 +30,7 @@ const ReviewModal = ({ propertyId, ecoRatingId, onClose, onSuccess }) => {
   const [livingDuration, setLivingDuration] = useState("< 3 months");
   const [wouldRecommend, setWouldRecommend] = useState(true);
 
+  // Handle form submissionto submit the review
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!ecoRatingId) {
@@ -41,7 +42,7 @@ const ReviewModal = ({ propertyId, ecoRatingId, onClose, onSuccess }) => {
     for (const key in verification) {
       if (verification[key] !== null) cleanedVerification[key] = verification[key];
     }
-
+    // buid data object to send to backend
     const payload = {
       listingId: propertyId,
       ecoRatingId,
@@ -64,6 +65,7 @@ const ReviewModal = ({ propertyId, ecoRatingId, onClose, onSuccess }) => {
     }
   };
 
+  // This updates one verification field when user clicks it.
   const handleVerificationClick = (key, value) => {
     setVerification((prev) => ({
       ...prev,
