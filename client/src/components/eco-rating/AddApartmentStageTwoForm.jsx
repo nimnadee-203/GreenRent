@@ -4,6 +4,7 @@ import { BatteryCharging, CheckCircle2, Droplets, Leaf, MapPin, Recycle, Sun, Wi
 export default function AddApartmentStageTwoForm({
   ecoForm,
   onEcoFieldChange,
+  coordinateHint,
   error,
   isSubmitting,
   onSubmit,
@@ -17,17 +18,24 @@ export default function AddApartmentStageTwoForm({
           <InputWithIcon icon={MapPin} label="Latitude" type="number" step="any" value={ecoForm.latitude} onChange={onEcoFieldChange("latitude")} required />
           <InputWithIcon icon={MapPin} label="Longitude" type="number" step="any" value={ecoForm.longitude} onChange={onEcoFieldChange("longitude")} required />
         </div>
+        {coordinateHint && (
+          <p className="mt-3 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            {coordinateHint}
+          </p>
+        )}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
         <div className="flex flex-col">
           <label className="mb-1.5 block text-sm font-semibold text-slate-700">Energy Rating</label>
-          <select value={ecoForm.energyRating} onChange={onEcoFieldChange("energyRating")} className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-4 py-3.5 text-sm">
+          <select value={ecoForm.energyRating} onChange={onEcoFieldChange("energyRating")} required className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-4 py-3.5 text-sm">
+            <option value="" disabled>Select Energy Rating</option>
             <option value="A">A - Excellent</option><option value="B">B - Good</option><option value="C">C - Average</option><option value="D">D - Poor</option><option value="E">E - Very Poor</option>
           </select>
         </div>
         <div className="flex flex-col">
           <label className="mb-1.5 block text-sm font-semibold text-slate-700">Transport Distance</label>
-          <select value={ecoForm.transportDistance} onChange={onEcoFieldChange("transportDistance")} className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-4 py-3.5 text-sm">
+          <select value={ecoForm.transportDistance} onChange={onEcoFieldChange("transportDistance")} required className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-4 py-3.5 text-sm">
+            <option value="" disabled>Select Distance</option>
             <option value="< 1 km">{"< 1 km"}</option><option value="1-3 km">1-3 km</option><option value="> 3 km">{"> 3 km"}</option>
           </select>
         </div>
@@ -55,7 +63,7 @@ export default function AddApartmentStageTwoForm({
     </form>
   );
 }
-
+// Reusable input component with icon
 function InputWithIcon({ icon: Icon, label, ...props }) {
   return (
     <div className="flex flex-col">
@@ -64,7 +72,7 @@ function InputWithIcon({ icon: Icon, label, ...props }) {
     </div>
   );
 }
-
+// Reusable feature toggle component
 function FeatureToggle({ icon: Icon, label, checked, onChange }) {
   return (
     <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${checked ? "border-emerald-500 bg-emerald-50/50" : "border-slate-100 bg-white"}`}>

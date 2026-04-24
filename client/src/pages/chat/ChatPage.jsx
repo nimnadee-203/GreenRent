@@ -7,6 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
+// chat icon thing 
 function getInitials(name) {
   if (!name) return "?";
   const parts = name.split(" ").filter(Boolean);
@@ -14,6 +15,7 @@ function getInitials(name) {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
+// changes a full date into a small friendly time text.
 function getRelativeTime(dateString) {
   if (!dateString) return "";
   const d = new Date(dateString);
@@ -29,6 +31,7 @@ function getRelativeTime(dateString) {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
+// Main chat page component
 export default function ChatPage() {
   const location = useLocation();
   const { backendUser } = useAuth();
@@ -42,10 +45,12 @@ export default function ChatPage() {
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const messagesEndRef = useRef(null);
-  
+
+  // scroll to bottom of messages when new messages are loaded or sent
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+  // Broadcast message state
   const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
   const [broadcastText, setBroadcastText] = useState("");
   const [broadcasting, setBroadcasting] = useState(false);
@@ -54,9 +59,10 @@ export default function ChatPage() {
 
   const canUseChat = backendUser?.role === "admin" || backendUser?.role === "seller";
 
+  // Fetch chat contacts
   const fetchContacts = async () => {
     try {
-      setContactsLoading(true);
+      setContactsLoading(true); // Set loading state before fetching contacts
       const response = await axios.get(`${API_BASE_URL}/api/chat/contacts`, {
         withCredentials: true,
       });
@@ -74,6 +80,7 @@ export default function ChatPage() {
     }
   };
 
+  // Fetch messages for selected contact
   const fetchMessages = async (contactId) => {
     if (!contactId) {
       setMessages([]);
@@ -97,13 +104,15 @@ export default function ChatPage() {
     }
   };
 
+  // Initial load of contacts and messages, and setup polling
   useEffect(() => {
     if (!canUseChat) return;
     fetchContacts();
-    const timer = setInterval(fetchContacts, 12000);
-    return () => clearInterval(timer);
+    const timer = setInterval(fetchContacts, 12000); // Poll contacts every 12 seconds to update last message previews and new contacts
+    return () => clearInterval(timer); // Cleanup on unmount
   }, [canUseChat]);
 
+  // Fetch messages whenever selected contact changes
   useEffect(() => {
     if (!canUseChat || !selectedContactId) {
       setMessages([]);
@@ -115,14 +124,16 @@ export default function ChatPage() {
     return () => clearInterval(timer);
   }, [canUseChat, selectedContactId]);
 
+  // Scroll to bottom whenever messages change
   useEffect(() => {
-    if (backendUser?.role !== "admin") return;
+    if (backendUser?.role !== "admin") return; // only admin can send broadcast
     const searchParams = new URLSearchParams(location.search);
     if (searchParams.get("broadcast") === "1") {
       setBroadcastModalOpen(true);
     }
   }, [backendUser?.role, location.search]);
 
+  // Send a new message
   const sendMessage = async (event) => {
     event.preventDefault();
     const trimmed = text.trim();
@@ -146,6 +157,7 @@ export default function ChatPage() {
     }
   };
 
+  // Handle sending a broadcast message to all landlords (admin only)
   const handleBroadcast = async (event) => {
     event.preventDefault();
     const trimmed = broadcastText.trim();
@@ -174,18 +186,21 @@ export default function ChatPage() {
     }
   };
 
+  // Derive role label for display
   const roleLabel = useMemo(() => {
     if (backendUser?.role === "admin") return "Admin";
     if (backendUser?.role === "seller") return "Landlord";
     return "User";
   }, [backendUser?.role]);
 
+  // Filter contacts based on search query
   const filteredContacts = useMemo(() => {
     if (!searchQuery.trim()) return contacts;
     const lowerQuery = searchQuery.toLowerCase();
     return contacts.filter(contact => contact.name.toLowerCase().includes(lowerQuery));
   }, [contacts, searchQuery]);
 
+  // Get the currently selected contact object
   const selectedContact = useMemo(
     () => contacts.find((contact) => contact.id === selectedContactId) || null,
     [contacts, selectedContactId]
@@ -215,10 +230,23 @@ export default function ChatPage() {
         <main className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Admin • Landlord Chat</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">{backendUser?.role === "admin" ? "Admin • Landlord Chat" : "Landlord Chat"}</h1>
             <p className="text-slate-600 mt-1 text-sm">Use this space for moderation and listing communication.</p>
           </div>
           <div className="flex items-center flex-wrap justify-end gap-2">
+            {backendUser?.role === "admin" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setBroadcastError("");
+                  setBroadcastSuccess("");
+                  setBroadcastModalOpen(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
+              >
+                <Megaphone className="w-4 h-4" /> Message All Landlords
+              </button>
+            )}
             <Link to="/my-listings" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
               <ArrowLeft className="w-4 h-4" /> Back to Overview & Listings
             </Link>

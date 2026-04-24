@@ -29,13 +29,15 @@ export default function EcoRatingModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
               <div className="flex flex-col">
                 <label className="mb-2 block text-sm font-semibold text-slate-700">Energy Rating (EPC)</label>
-                <select value={ecoForm.energyRating} onChange={onEcoFieldChange("energyRating")} className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-4 py-3.5 text-sm font-medium text-slate-800 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10">
+                <select value={ecoForm.energyRating} onChange={onEcoFieldChange("energyRating")} required className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-4 py-3.5 text-sm font-medium text-slate-800 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10">
+                  <option value="" disabled>Select Energy Rating</option>
                   <option value="A">A - Excellent Energy Efficiency</option><option value="B">B - Good</option><option value="C">C - Average</option><option value="D">D - Poor</option><option value="E">E - Very Poor</option>
                 </select>
               </div>
               <div className="flex flex-col">
                 <label className="mb-2 block text-sm font-semibold text-slate-700">Public Transport Proximity</label>
-                <select value={ecoForm.transportDistance} onChange={onEcoFieldChange("transportDistance")} className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-4 py-3.5 text-sm font-medium text-slate-800 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10">
+                <select value={ecoForm.transportDistance} onChange={onEcoFieldChange("transportDistance")} required className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-4 py-3.5 text-sm font-medium text-slate-800 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10">
+                  <option value="" disabled>Select Distance</option>
                   <option value="< 1 km">Under 1 km (Optimal)</option><option value="1-3 km">1-3 km (Moderate)</option><option value="> 3 km">Over 3 km (Remote)</option>
                 </select>
               </div>
