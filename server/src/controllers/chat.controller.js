@@ -1,32 +1,37 @@
 import ChatMessage from "../models/ChatMessage.js";
 import userModel from "../models/userModel.js";
 
+// This makes one unique key for a conversation between 2 users.
 const buildConversationKey = (firstUserId, secondUserId) => {
   return [String(firstUserId), String(secondUserId)].sort().join(":");
 };
 
+// This checks whether 2 users are allowed to chat.
 const canMessageEachOther = (currentRole, targetRole) => {
   if (currentRole === "admin") return targetRole === "seller";
   if (currentRole === "seller") return targetRole === "admin";
   return false;
 };
 
+// This makes a clean safe contact object from a user.
 const toSafeContact = (user) => ({
   id: String(user?._id || ""),
   name: user?.name || user?.email || "Anonymous",
   email: user?.email || "",
   role: user?.role,
-});
+}); // Instead of sending full user data, it only sends the needed parts.
 
+// This gets the list of chat contacts for the logged-in user.
 export const listChatContactsHandler = async (req, res) => {
   try {
     const counterpartRole = req.user.role === "admin" ? "seller" : "admin";
 
     const users = await userModel
-      .find({ role: counterpartRole })
+      .find({ role: counterpartRole }) // load the user in other role
       .select("_id name email role")
       .lean();
 
+    // get recent messages 
     const recentMessages = await ChatMessage.find({
       $or: [{ senderId: req.user.id }, { recipientId: req.user.id }],
     })
@@ -35,6 +40,7 @@ export const listChatContactsHandler = async (req, res) => {
       .select("senderId senderName senderRole recipientId recipientName recipientRole text createdAt")
       .lean();
 
+    // save latest message by contact
     const latestByContactId = new Map();
 
     for (const message of recentMessages) {
@@ -53,6 +59,7 @@ export const listChatContactsHandler = async (req, res) => {
       }
     }
 
+    // For each user, it builds a contact object and adds latest message info if it exists.
     const contacts = users
       .map((user) => {
         const base = toSafeContact(user);
@@ -64,9 +71,9 @@ export const listChatContactsHandler = async (req, res) => {
         };
       })
       .sort((first, second) => {
-        if (!first.lastMessageAt && !second.lastMessageAt) return first.name.localeCompare(second.name);
-        if (!first.lastMessageAt) return 1;
-        if (!second.lastMessageAt) return -1;
+        if (!first.lastMessageAt && !second.lastMessageAt) return first.name.localeCompare(second.name); // sort newest message
+        if (!first.lastMessageAt) return 1; // no message goes last
+        if (!second.lastMessageAt) return -1; 
         return new Date(second.lastMessageAt) - new Date(first.lastMessageAt);
       });
 
@@ -77,18 +84,21 @@ export const listChatContactsHandler = async (req, res) => {
   }
 };
 
+// get all messages for one conversation.
 export const listChatMessagesHandler = async (req, res) => {
   try {
+    // get contactId
     const contactId = typeof req.query?.contactId === "string" ? req.query.contactId.trim() : "";
     if (!contactId) {
       return res.status(400).json({ message: "contactId query parameter is required" });
     }
 
+    // Load the selected contact.
     const contact = await userModel.findById(contactId).select("_id name email role").lean();
     if (!contact) {
       return res.status(404).json({ message: "Chat contact not found" });
     }
-
+    // User cannot chat with themselves
     if (String(contact._id) === String(req.user.id)) {
       return res.status(400).json({ message: "You cannot open a chat with yourself" });
     }
@@ -99,9 +109,10 @@ export const listChatMessagesHandler = async (req, res) => {
 
     const conversationKey = buildConversationKey(req.user.id, contact._id);
 
+    // get messages in this conversation, sorted by time ascending (oldest first) 
     const messages = await ChatMessage.find({ conversationKey })
       .sort({ createdAt: 1 })
-      .limit(300)
+      .limit(300) // This loads up to 300 messages in time order.
       .select("-__v");
 
     return res.status(200).json({
@@ -114,11 +125,14 @@ export const listChatMessagesHandler = async (req, res) => {
   }
 };
 
+// Save and send this message to the chosen user.
 export const sendChatMessageHandler = async (req, res) => {
   try {
+    // who should receive message
     const recipientId = typeof req.body?.recipientId === "string" ? req.body.recipientId.trim() : "";
     const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
 
+    // validation
     if (!recipientId) {
       return res.status(400).json({ message: "recipientId is required" });
     }
@@ -129,6 +143,7 @@ export const sendChatMessageHandler = async (req, res) => {
       return res.status(400).json({ message: "text must be 1000 characters or less" });
     }
 
+    // check recipient exists and can message
     const recipient = await userModel.findById(recipientId).select("_id name email role").lean();
     if (!recipient) {
       return res.status(404).json({ message: "Recipient not found" });
@@ -142,8 +157,10 @@ export const sendChatMessageHandler = async (req, res) => {
       return res.status(403).json({ message: "Chat is only allowed between admin and landlord accounts" });
     }
 
+    // build the conversation key
     const conversationKey = buildConversationKey(req.user.id, recipient._id);
 
+    // save the message
     const message = await ChatMessage.create({
       conversationKey,
       senderId: req.user.id,
@@ -155,6 +172,7 @@ export const sendChatMessageHandler = async (req, res) => {
       text,
     });
 
+    // response 
     return res.status(201).json({ message: "Message sent", data: message });
   } catch (error) {
     console.error("Send chat message error:", error);
@@ -162,6 +180,7 @@ export const sendChatMessageHandler = async (req, res) => {
   }
 };
 
+// This sends one message from admin to all sellers.
 export const sendBroadcastMessageHandler = async (req, res) => {
   try {
     if (req.user.role !== "admin") {
@@ -176,11 +195,13 @@ export const sendBroadcastMessageHandler = async (req, res) => {
       return res.status(400).json({ message: "text must be 1000 characters or less" });
     }
 
+    // Find all landlords/sellers.
     const sellers = await userModel.find({ role: "seller" }).select("_id name email role").lean();
     if (sellers.length === 0) {
       return res.status(400).json({ message: "No landlords found to broadcast to" });
     }
 
+    // For each seller, make one message object.
     const messagesToInsert = sellers.map((recipient) => {
       const conversationKey = buildConversationKey(req.user.id, recipient._id);
       return {
@@ -195,6 +216,7 @@ export const sendBroadcastMessageHandler = async (req, res) => {
       };
     });
 
+    // save messages in bulk
     await ChatMessage.insertMany(messagesToInsert);
 
     return res.status(201).json({ message: `Broadcast successfully sent to ${sellers.length} landlords` });

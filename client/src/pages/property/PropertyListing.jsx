@@ -222,7 +222,7 @@ export default function PropertyListing() {
     if (Number.isNaN(normalized)) return 0;
     return Math.max(0, Math.min(100, Math.round(normalized)));
   };
-
+ 
   const toAirQuality = (property) => {
     return property.ecoRatingId?.airQualityScore ?? null;
   };

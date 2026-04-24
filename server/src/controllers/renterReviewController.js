@@ -25,6 +25,7 @@ import {
  */
 export const createRenterReviewHandler = async (req, res) => {
   try {
+    // Validate input data
     const errors = validateRenterReviewCreate(req.body);
     if (errors.length) {
       return res.status(400).json({ errors });
@@ -61,11 +62,13 @@ export const createRenterReviewHandler = async (req, res) => {
  */
 export const getListingReviewsHandler = async (req, res) => {
   try {
+    // If URL gives status, use it, If not, only show approved reviews
     const { listingId } = req.params;
     const includeStatus = req.query.status 
       ? req.query.status.split(",")
       : ["approved"];
 
+    // Get data
     const reviews = await getReviewsByListing(listingId, includeStatus);
     const averages = await getAverageRenterScores(listingId);
 
@@ -80,7 +83,7 @@ export const getListingReviewsHandler = async (req, res) => {
 };
 
 /**
- * Get all reviews for an eco rating (Public)
+ * Get all reviews for one eco rating (Public)
  */
 export const getEcoRatingReviewsHandler = async (req, res) => {
   try {
@@ -134,6 +137,7 @@ export const getReviewByIdHandler = async (req, res) => {
  */
 export const updateRenterReviewHandler = async (req, res) => {
   try {
+    // Validate input data
     const errors = validateRenterReviewUpdate(req.body);
     if (errors.length) {
       return res.status(400).json({ errors });
@@ -208,6 +212,7 @@ export const updateReviewStatusHandler = async (req, res) => {
       return res.status(400).json({ errors });
     }
 
+    // update
     const review = await updateReviewStatus(
       req.params.id,
       req.body.status,
@@ -271,15 +276,17 @@ export const getListingAveragesHandler = async (req, res) => {
   }
 };
 
+// Gets review list for admin.
 export const getAdminReviewsHandler = async (req, res) => {
   try {
     const { status } = req.query;
     const reviews = await getReviewsForAdmin({ status });
 
+    // Count how many reviews are in each status for admin dashboard summary
     return res.status(200).json({
       reviews,
       notificationCount: reviews.length,
-      hiddenCount: reviews.filter((review) => review.status === "rejected").length,
+      hiddenCount: reviews.filter((review) => review.status === "rejected").length, 
     });
   } catch (error) {
     console.error("Get admin reviews error:", error);
@@ -287,8 +294,10 @@ export const getAdminReviewsHandler = async (req, res) => {
   }
 };
 
+// Adds a reply to a review.
 export const addReviewReplyHandler = async (req, res) => {
   try {
+    // Validate input data
     const errors = validateReviewReply(req.body);
     if (errors.length) {
       return res.status(400).json({ errors });
@@ -309,6 +318,7 @@ export const addReviewReplyHandler = async (req, res) => {
   }
 };
 
+// Deletes one reply from a review.
 export const deleteReviewReplyHandler = async (req, res) => {
   try {
     const updatedReview = await deleteReplyFromReview(req.params.id, req.params.replyId, req.user);

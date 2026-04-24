@@ -8,6 +8,7 @@ const OPEN_METEO_API_URL = "https://air-quality-api.open-meteo.com/v1/air-qualit
  * @param {number} lon - Longitude
  * @returns {Promise<object>} Air quality data including European AQI
  */
+// This function sends the coordinates to Open-Meteo and gets air quality data back.
 export const fetchAirQuality = async (lat, lon) => {
   try {
     const response = await axios.get(OPEN_METEO_API_URL, {
@@ -19,7 +20,7 @@ export const fetchAirQuality = async (lat, lon) => {
       timeout: 5000, // 5 second timeout
     });
 
-    const airQualityData = response.data;
+    const airQualityData = response.data; // stores the returned API data.
 
     if (!airQualityData || !airQualityData.current) {
       console.warn("Invalid air quality data received");
@@ -45,6 +46,8 @@ export const fetchAirQuality = async (lat, lon) => {
  * @param {number} europeanAqi - European Air Quality Index (0-125+)
  * @returns {number} Score between 0-10
  */
+
+// This converts the AQI value from Open-Meteo into your own score from 0 to 10.
 export const convertAQItoScore = (europeanAqi) => {
   if (europeanAqi === null || europeanAqi === undefined) {
     return 5; // Default to moderate if no data
@@ -64,6 +67,8 @@ export const convertAQItoScore = (europeanAqi) => {
  * @param {number} lon - Longitude
  * @returns {Promise<{score: number, data: object}>} Air quality score and raw data
  */
+
+// fetches air quality data
 export const getAirQualityScore = async (lat, lon) => {
   const airQualityData = await fetchAirQuality(lat, lon);
 
@@ -71,9 +76,10 @@ export const getAirQualityScore = async (lat, lon) => {
     return { score: null, data: null };
   }
 
-  const europeanAqi = airQualityData.current.european_aqi;
-  const score = convertAQItoScore(europeanAqi);
+  const europeanAqi = airQualityData.current.european_aqi; // read the AQI 
+  const score = convertAQItoScore(europeanAqi); // and calculate score
 
+  // then return 
   return {
     score,
     data: {

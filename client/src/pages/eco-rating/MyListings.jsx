@@ -19,7 +19,7 @@ const formatPrice = (value) => {
   }).format(value);
 };
 
-const INITIAL_ECO_FORM = { energyRating: 'C', solarPanels: false, ledLighting: false, efficientAc: false, waterSavingTaps: false, rainwaterHarvesting: false, waterMeter: false, recyclingAvailable: false, compostAvailable: false, transportDistance: '1-3 km', evCharging: false, goodVentilationSunlight: false };
+const INITIAL_ECO_FORM = { energyRating: '', solarPanels: false, ledLighting: false, efficientAc: false, waterSavingTaps: false, rainwaterHarvesting: false, waterMeter: false, recyclingAvailable: false, compostAvailable: false, transportDistance: '', evCharging: false, goodVentilationSunlight: false };
 
 export default function MyListings() {
   const [user, setUser] = useState(null);
@@ -50,9 +50,9 @@ export default function MyListings() {
     imageFiles: [],
     coverImageIndex: 0
   });
-  const [ecoModalOpen, setEcoModalOpen] = useState(false);
+  const [ecoModalOpen, setEcoModalOpen] = useState(false);  // just eco criteria checkboxes and dropdowns
   const [activeProperty, setActiveProperty] = useState(null);
-  const [ecoForm, setEcoForm] = useState(INITIAL_ECO_FORM);
+  const [ecoForm, setEcoForm] = useState(INITIAL_ECO_FORM); // loads initial eco values when opening the eco form
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchData = async () => {
@@ -97,6 +97,7 @@ export default function MyListings() {
     }
   };
 
+// Clears eco rating in the eco rating edit form. Provides a 1-hour window to update before listing is hidden.
   const clearEcoRating = async (id) => {
     if (!window.confirm("Are you sure you want to clear the current Eco-Rating? You will be given a strict 1-hour window to submit a new one before the listing is hidden.")) return;
     try {
@@ -224,8 +225,8 @@ export default function MyListings() {
       setUpdateModalOpen(false);
       fetchData();
     } catch (err) {
-      const errors = err?.response?.data?.errors;
-      const message = err?.response?.data?.message;
+      const errors = err?.response?.data?.errors; 
+      const message = err?.response?.data?.message; 
       const status = err?.response?.status;
       const details = Array.isArray(errors) && errors.length ? errors.join(" | ") : message;
 
@@ -284,9 +285,10 @@ export default function MyListings() {
     });
   };
 
-  const openEcoModal = (property) => {
+  
+  const openEcoModal = (property) => { // edit form buttion clicked - load existing rating if exists, otherwise start with blank form.
     setActiveProperty(property);
-    if (property.ecoRatingId) {
+    if (property.ecoRatingId) { 
       const criteria = property.ecoRatingId.criteria || {};
       setEcoForm({ ...INITIAL_ECO_FORM, ...criteria });
     } else {
@@ -297,6 +299,7 @@ export default function MyListings() {
 
   const onEcoFieldChange = (field) => (event) => setEcoForm((prev) => ({ ...prev, [field]: event.target.type === 'checkbox' ? event.target.checked : event.target.value }));
 
+  // Submits new eco rating or updates existing one. 
   const submitEcoRating = async (event) => {
     event.preventDefault(); setIsSubmitting(true);
     try {
@@ -350,8 +353,8 @@ export default function MyListings() {
     
     // Calculates deadline
     const deadline = property.ecoRatingClearedAt 
-      ? addHours(new Date(property.ecoRatingClearedAt), 1) 
-      : addHours(new Date(property.createdAt), 48);
+      ? addHours(new Date(property.ecoRatingClearedAt), 1) // If rating was cleared, 1 hour from that time
+      : addHours(new Date(property.createdAt), 48);// If never rated, 48 hours from listing creation
       
     if (isPast(deadline)) {
       return { status: 'hidden', label: 'Hidden (Missing Rating)', deadline, color: 'text-red-700 bg-red-50 border-red-200' };
@@ -389,7 +392,6 @@ export default function MyListings() {
   }, [listings, listView]);
 
   const menuButtonClass = "inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/85 backdrop-blur-md text-slate-700 font-semibold shadow-sm border border-slate-200/70 hover:shadow-md hover:border-emerald-300 hover:text-emerald-700 transition-all duration-300 hover:-translate-y-0.5";
-  const messageButtonClass = "inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold shadow-md border border-transparent hover:shadow-lg hover:from-indigo-500 hover:to-violet-500 transition-all duration-300 hover:-translate-y-0.5";
   const statCardClass = "rounded-2xl border border-white/60 bg-white/75 backdrop-blur-md p-5 shadow-[0_16px_45px_-24px_rgba(15,23,42,0.45)]";
 
   return (
@@ -429,8 +431,8 @@ export default function MyListings() {
                   <Link to="/admin/sellers" className={menuButtonClass}>
                     Seller Management
                   </Link>
-                  <Link to="/chat?broadcast=1" className={messageButtonClass}>
-                    Message All Landlords
+                  <Link to="/chat" className={menuButtonClass}>
+                    Chat
                   </Link>
                 </div>
               )}
@@ -438,6 +440,7 @@ export default function MyListings() {
           </div>
         </section>
 
+        
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <div className={statCardClass}>
             <div className="flex items-center justify-between">

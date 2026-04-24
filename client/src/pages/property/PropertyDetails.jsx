@@ -99,6 +99,7 @@ const PropertyDetails = () => {
     }
   });
 
+  // gets all reviews for one property from the backend.
   const fetchReviews = async (listingId) => {
     try {
       const revRes = await axios.get(`${API_BASE_URL}/api/renter-reviews/listing/${listingId}`);
@@ -112,6 +113,7 @@ const PropertyDetails = () => {
     }
   };
 
+  // adds a reply to one review.
   const submitReply = async (reviewId) => {
     const text = (replyDrafts[reviewId] || "").trim();
     if (!text) return;
@@ -132,7 +134,7 @@ const PropertyDetails = () => {
       setReplySubmittingByReview((prev) => ({ ...prev, [reviewId]: false }));
     }
   };
-
+ // admin manage review in property page, including delete, hide and unhide review.
   const moderateReview = async (reviewId, action) => {
     try {
       setReviewActionLoadingById((prev) => ({ ...prev, [reviewId]: true }));
@@ -318,6 +320,7 @@ const PropertyDetails = () => {
     fetchSellerInfo();
   }, [property?.ownerId]);
 
+  // it checks review permission 
   useEffect(() => {
     const checkReviewEligibility = async () => {
       if (!backendUser?.id && !backendUser?._id) {
@@ -1368,7 +1371,7 @@ const PropertyDetails = () => {
     </div>
   );
 };
-
+// Separate component for the review modal to keep things organized
 const ReviewModal = ({ propertyId, ecoRatingId, onClose, onSuccess }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);

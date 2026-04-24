@@ -10,8 +10,10 @@ import {
   validateEcoRatingUpdate,
 } from "../validators/ecoRatingValidators.js";
 
+// create new eco rating
 export const createEcoRatingHandler = async (req, res) => {
   try {
+    // validate input
     const errors = validateEcoRatingCreate(req.body);
     if (errors.length) {
       return res.status(400).json({ errors });
@@ -23,7 +25,7 @@ export const createEcoRatingHandler = async (req, res) => {
       createdBy: req.user.id,
     };
 
-    const ecoRating = await createEcoRating(ratingData);
+    const ecoRating = await createEcoRating(ratingData); // call the service files
     return res.status(201).json(ecoRating);
   } catch (error) {
     console.error("Create eco rating error:", error);
@@ -31,13 +33,15 @@ export const createEcoRatingHandler = async (req, res) => {
   }
 };
 
+// Gets eco ratings list.
 export const listEcoRatingsHandler = async (req, res) => {
   try {
+    // filter with listing id
     const filter = {};
     if (req.query.listingId) {
       filter.listingId = req.query.listingId;
     }
-
+    // the list of eco ratings 
     const ecoRatings = await listEcoRatings(filter);
     return res.status(200).json(ecoRatings);
   } catch (error) {
@@ -46,6 +50,7 @@ export const listEcoRatingsHandler = async (req, res) => {
   }
 };
 
+// get eco rating by id
 export const getEcoRatingByIdHandler = async (req, res) => {
   try {
     const ecoRating = await getEcoRatingById(req.params.id);
@@ -59,6 +64,7 @@ export const getEcoRatingByIdHandler = async (req, res) => {
   }
 };
 
+// update eco rating by id
 export const updateEcoRatingHandler = async (req, res) => {
   try {
     const errors = validateEcoRatingUpdate(req.body);
@@ -79,6 +85,7 @@ export const updateEcoRatingHandler = async (req, res) => {
   }
 };
 
+// delete eco rating by id
 export const deleteEcoRatingHandler = async (req, res) => {
   try {
     const ecoRating = await deleteEcoRating(req.params.id);

@@ -22,11 +22,43 @@ const toGeocodeQuery = (location = {}) => {
     .join(', ');
 };
 
+// into map coordinates like latitude and longitude
+const buildGeocodeCandidates = (location = {}) => {
+  const unique = new Set();
+
+  const push = (parts = []) => {
+    const query = parts
+      .filter((part) => typeof part === 'string' && part.trim())
+      .map((part) => part.trim())
+      .join(', ');
+
+    if (query) {
+      unique.add(query);
+    }
+  };
+
+  push([
+    location.displayAddress,
+    location.address,
+    location.city,
+    location.state,
+    location.country,
+  ]);
+  push([location.address, location.city, location.state, location.country]);
+  push([location.address, location.city, location.country]);
+  push([location.city, location.state, location.country]);
+  push([location.city, location.country]);
+  push([location.city]);
+
+  return Array.from(unique);
+};
+
 const pickCoordinates = (location = {}) => {
-  const fromNested = location.coordinates || {};
-  const latCandidate = fromNested.lat ?? location.latitude;
+  const fromNested = location.coordinates || {}; // some responses may have lat/lng directly under location, others may nest them under coordinates
+  const latCandidate = fromNested.lat ?? location.latitude; 
   const lngCandidate = fromNested.lng ?? location.longitude;
 
+  // check missing values before trying to convert to numbers
   if (
     latCandidate === null ||
     latCandidate === undefined ||
@@ -38,9 +70,11 @@ const pickCoordinates = (location = {}) => {
     return null;
   }
 
+  // values into numbers 
   const lat = Number(latCandidate);
   const lng = Number(lngCandidate);
 
+  //check numbers are valid coordinates
   if (Number.isFinite(lat) && Number.isFinite(lng)) {
     return { lat, lng };
   }
@@ -49,31 +83,33 @@ const pickCoordinates = (location = {}) => {
 };
 
 const geocodeFromOpenStreetMap = async (location = {}) => {
-  const query = toGeocodeQuery(location);
-  if (!query) return null;
+  const candidates = buildGeocodeCandidates(location);
+  if (!candidates.length) return null;
 
-  try {
-    const response = await axios.get('https://nominatim.openstreetmap.org/search', {
-      params: {
-        q: query,
-        format: 'json',
-        limit: 1,
-      },
-      timeout: 6000,
-    });
+  for (const query of candidates) {
+    try {
+      const response = await axios.get('https://nominatim.openstreetmap.org/search', {
+        params: {
+          q: query,
+          format: 'json',
+          limit: 1,
+        },
+        timeout: 6000,
+      });
 
-    const first = Array.isArray(response.data) ? response.data[0] : null;
-    const lat = Number(first?.lat);
-    const lng = Number(first?.lon);
+      const first = Array.isArray(response.data) ? response.data[0] : null;
+      const lat = Number(first?.lat);
+      const lng = Number(first?.lon);
 
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      return null;
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { lat, lng };
+      }
+    } catch (_error) {
+      // Try the next candidate
     }
-
-    return { lat, lng };
-  } catch (_error) {
-    return null;
   }
+
+  return null;
 };
 
 const INITIAL_FORM = {
@@ -97,7 +133,21 @@ const INITIAL_FORM = {
   maxGuests: '',
   parking: false,
 };
-const INITIAL_ECO_FORM = { latitude: '', longitude: '', energyRating: 'C', solarPanels: false, ledLighting: false, efficientAc: false, waterSavingTaps: false, rainwaterHarvesting: false, waterMeter: false, recyclingAvailable: false, compostAvailable: false, transportDistance: '1-3 km', evCharging: false, goodVentilationSunlight: false };
+const INITIAL_ECO_FORM = { 
+  latitude: '', 
+  longitude: '', 
+  energyRating: '', 
+  solarPanels: false, 
+  ledLighting: false, 
+  efficientAc: false, 
+  waterSavingTaps: false, 
+  rainwaterHarvesting: false, 
+  waterMeter: false, 
+  recyclingAvailable: false, 
+  compostAvailable: false, 
+  transportDistance: '', 
+  evCharging: false, 
+  goodVentilationSunlight: false };
 
 export default function AddApartment() {
   const navigate = useNavigate();
@@ -111,6 +161,7 @@ export default function AddApartment() {
   const [isSellerFormOpen, setIsSellerFormOpen] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [coordinateHint, setCoordinateHint] = useState('');
 
   const fetchUser = async () => {
     try {
@@ -131,7 +182,7 @@ export default function AddApartment() {
       ...prev,
       [field]: event.target.type === 'checkbox' ? event.target.checked : event.target.value,
     }));
-  const onEcoFieldChange = (field) => (event) => setEcoForm((prev) => ({ ...prev, [field]: event.target.type === 'checkbox' ? event.target.checked : event.target.value }));
+  const onEcoFieldChange = (field) => (event) => setEcoForm((prev) => ({ ...prev, [field]: event.target.type === 'checkbox' ? event.target.checked : event.target.value })); //
 
   const onImageFilesChange = (event) => {
     const selectedFiles = Array.from(event.target.files || []);
@@ -233,6 +284,7 @@ export default function AddApartment() {
 
   const handleStage1Submit = async (event) => {
     event.preventDefault(); setError(''); setSuccess(''); setIsSubmitting(true);
+    setCoordinateHint('');
 
     try {
       if ((form.stayType === 'long' || form.stayType === 'both') && (!form.monthlyPrice || Number(form.monthlyPrice) < 0)) {
@@ -306,10 +358,12 @@ export default function AddApartment() {
       setCreatedPropertyId(response.data._id);
       
       const locationFromResponse = response?.data?.location || {};
+      const locationForGeocode = toGeocodeQuery(locationFromResponse) ? locationFromResponse : payload.location;
 
       let coordinates = pickCoordinates(locationFromResponse);
+      const hasBackendCoordinates = Boolean(coordinates);
       if (!coordinates) {
-        coordinates = await geocodeFromOpenStreetMap(locationFromResponse);
+        coordinates = await geocodeFromOpenStreetMap(locationForGeocode);
       }
 
       if (coordinates) {
@@ -318,8 +372,12 @@ export default function AddApartment() {
           latitude: coordinates.lat,
           longitude: coordinates.lng,
         }));
+        if (!hasBackendCoordinates) {
+          setCoordinateHint('We auto-filled coordinates using the closest location match. Please double-check before publishing.');
+        }
         setSuccess('Apartment listed successfully! Let\'s build its Eco-Profile.');
       } else {
+        setCoordinateHint('We could not auto-find coordinates for this address. Please enter latitude and longitude manually.');
         setSuccess('Apartment listed successfully! The address couldn\'t be located on the map yet, but your property has been created. You can view it on the map once the address is verified.');
       }
       
@@ -436,6 +494,7 @@ export default function AddApartment() {
                 <AddApartmentStageTwoForm
                   ecoForm={ecoForm}
                   onEcoFieldChange={onEcoFieldChange}
+                  coordinateHint={coordinateHint}
                   error={error}
                   isSubmitting={isSubmitting}
                   onSubmit={handleStage2Submit}
